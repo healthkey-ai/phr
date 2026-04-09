@@ -11,6 +11,7 @@ import { useForm } from "react-hook-form";
 import { Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,8 +42,13 @@ export function SignUp() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ defaultValues: { agreeTerms: false } });
+
+  // Register the controlled checkbox so RHF tracks its required validation.
+  // (Radix Checkbox isn't a native input, so we wire it via setValue.)
+  const agreeTerms = watch("agreeTerms");
 
   const password = watch("password", "");
   const strength = passwordStrength(password);
@@ -153,18 +159,25 @@ export function SignUp() {
             )}
           </div>
 
-          <div className="flex items-start gap-2">
-            <input
+          <div className="flex items-start gap-3">
+            <Checkbox
               id="terms"
-              type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-input text-brand-700 focus:ring-brand-700"
+              className="mt-0.5"
+              checked={agreeTerms}
+              onCheckedChange={(c) =>
+                setValue("agreeTerms", Boolean(c), { shouldValidate: true })
+              }
+              aria-invalid={errors.agreeTerms ? "true" : "false"}
+            />
+            <input
+              type="hidden"
               {...register("agreeTerms", { required: "Please agree to continue" })}
             />
-            <Label htmlFor="terms" className="text-body font-normal text-foreground">
+            <Label htmlFor="terms" className="text-base font-normal text-foreground">
               I agree to the{" "}
-              <a href="/terms" className="text-brand-700 underline">Terms</a>
+              <a href="/terms" className="text-healthkey-link-primary underline">Terms</a>
               {" "}and{" "}
-              <a href="/privacy" className="text-brand-700 underline">Privacy Policy</a>
+              <a href="/privacy" className="text-healthkey-link-primary underline">Privacy Policy</a>
             </Label>
           </div>
           {errors.agreeTerms && (

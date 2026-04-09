@@ -10,6 +10,13 @@ import { useNavigate } from "react-router-dom";
 import { OnboardingStepShell } from "@/components/healthkey/OnboardingStepShell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { usePatientInfo, useUpdatePatientInfo, useFormSettings } from "@/features/patient-profile/api";
 
 export function Demographics() {
@@ -108,22 +115,25 @@ export function Demographics() {
 
         <div className="space-y-2">
           <Label htmlFor="gender">Gender</Label>
-          <select
-            id="gender"
-            value={values.gender}
-            onChange={(e) => {
-              setValues({ ...values, gender: e.target.value });
-              update.mutate({ gender: e.target.value });
+          <Select
+            // Radix Select forbids "" as a value, so we map empty → undefined.
+            value={values.gender || undefined}
+            onValueChange={(v) => {
+              setValues({ ...values, gender: v });
+              update.mutate({ gender: v });
             }}
-            className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-body-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2"
           >
-            <option value="">Choose…</option>
-            {formSettings?.gender.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="gender">
+              <SelectValue placeholder="Choose…" />
+            </SelectTrigger>
+            <SelectContent>
+              {formSettings?.gender.map((opt) => (
+                <SelectItem key={String(opt.value)} value={String(opt.value)}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

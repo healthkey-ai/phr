@@ -7,6 +7,13 @@ import { useNavigate } from "react-router-dom";
 import { OnboardingStepShell } from "@/components/healthkey/OnboardingStepShell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useFormSettings, usePatientInfo, useUpdatePatientInfo } from "@/features/patient-profile/api";
 
 const LIFESTYLE_FIELDS = [
@@ -40,24 +47,26 @@ export function Lifestyle() {
       isSaving={update.isPending}
     >
       <div className="space-y-5">
-        {LIFESTYLE_FIELDS.map((field) => (
-          <div key={field.key} className="space-y-2">
-            <Label htmlFor={field.key}>{field.label}</Label>
-            <select
-              id={field.key}
-              value={(details[field.key] as string) ?? ""}
-              onChange={(e) => setField(field.key, e.target.value)}
-              className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-body-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2"
-            >
-              <option value="">Choose…</option>
-              {formSettings?.[field.optionsKey].map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        ))}
+        {LIFESTYLE_FIELDS.map((field) => {
+          const current = (details[field.key] as string) || undefined;
+          return (
+            <div key={field.key} className="space-y-2">
+              <Label htmlFor={field.key}>{field.label}</Label>
+              <Select value={current} onValueChange={(v) => setField(field.key, v)}>
+                <SelectTrigger id={field.key}>
+                  <SelectValue placeholder="Choose…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {formSettings?.[field.optionsKey].map((opt) => (
+                    <SelectItem key={String(opt.value)} value={String(opt.value)}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          );
+        })}
 
         <div className="space-y-2">
           <Label htmlFor="occupation">Occupation</Label>

@@ -11,6 +11,13 @@ import { useNavigate } from "react-router-dom";
 
 import { OnboardingStepShell } from "@/components/healthkey/OnboardingStepShell";
 import { ThreeModeInput } from "@/components/healthkey/ThreeModeInput";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useFormSettings, usePatientInfo, useUpdatePatientInfo } from "@/features/patient-profile/api";
 
 export function Conditions() {
@@ -80,18 +87,23 @@ export function Conditions() {
         <p className="mb-3 text-body text-muted-foreground">
           If you have a cancer diagnosis, picking it here will unlock relevant fields and trial matching later.
         </p>
-        <select
-          value={patient?.disease ?? ""}
-          onChange={(e) => setDisease(e.target.value)}
-          aria-label="Cancer diagnosis"
-          className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-body-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2"
+        <Select
+          // Radix forbids "" as item value. Empty string in our data model means
+          // "no cancer diagnosis"; map to/from a sentinel "_none_" at the boundary.
+          value={patient?.disease ? patient.disease : "_none_"}
+          onValueChange={(v) => setDisease(v === "_none_" ? "" : v)}
         >
-          {formSettings?.diseases.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger aria-label="Cancer diagnosis">
+            <SelectValue placeholder="Choose…" />
+          </SelectTrigger>
+          <SelectContent>
+            {formSettings?.diseases.map((opt) => (
+              <SelectItem key={String(opt.value) || "_none_"} value={String(opt.value) || "_none_"}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </section>
     </OnboardingStepShell>
   );

@@ -2,11 +2,17 @@
  * Onboarding Family History — /onboarding/family
  * Per docs/patient-app-requirements.md §2.4.
  *
- * Toggle grid: relatives × conditions. Stored as nested object in details.familyHistory.
+ * Conditions × Relatives matrix. Implemented as a CSS grid with explicit
+ * track sizing so:
+ *  - Data columns are perfectly even (1fr each)
+ *  - Headers don't wrap mid-word (whitespace-normal + leading-tight)
+ *  - Sticky first column for the condition labels
+ *  - Horizontal scroll on very narrow screens (min-w fallback)
  */
 import { useNavigate } from "react-router-dom";
 
 import { OnboardingStepShell } from "@/components/healthkey/OnboardingStepShell";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useFormSettings, usePatientInfo, useUpdatePatientInfo } from "@/features/patient-profile/api";
 
 type FamilyHistory = Record<string, Record<string, boolean>>;
@@ -28,64 +34,108 @@ export function Family() {
     update.mutate({ details: { familyHistory: next } });
   };
 
+  const conditions = formSettings?.family_conditions ?? [];
+
+  // Shorten "Maternal/Paternal grandparent" so it wraps cleanly into a 50px
+  // column ("Maternal" / "GP"). Full label is announced via aria-label on the
+  // checkboxes below, so screen-reader users still get the unabbreviated form.
+  const relatives = (formSettings?.family_relatives ?? []).map((r) => ({
+    ...r,
+    shortLabel: String(r.label).replace("grandparent", "GP"),
+  }));
+
+  // Grid track sizing — picked to fit a 375px viewport (iPhone SE/13 mini):
+  //   343px available  =  86px label col  +  5 × 50px data cols  +  spare
+  // On wider screens, 1fr units expand the columns to fill the container.
+  const gridTemplate = `minmax(86px, 1.4fr) repeat(${relatives.length}, minmax(50px, 1fr))`;
+  const minWidth = 86 + relatives.length * 50;
+
   return (
     <OnboardingStepShell
       step={5}
       totalSteps={8}
       title="Family history"
-      description="Tap any condition that runs in your family."
+      description="Tap any condition that runs in your family. We use this to flag inherited risk."
       backTo="/onboarding/lifestyle"
       skipTo="/onboarding/summary"
       onContinue={() => navigate("/onboarding/summary")}
       isSaving={update.isPending}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              <th className="sticky left-0 bg-background p-2 text-left text-body font-semibold text-foreground">
-                <span className="sr-only">Condition</span>
-              </th>
-              {formSettings?.family_relatives.map((rel) => (
-                <th
-                  key={rel.value}
-                  className="p-2 text-center text-caption font-semibold text-foreground"
-                >
-                  {rel.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {formSettings?.family_conditions.map((cond) => (
-              <tr key={cond.value} className="border-t border-border">
-                <th
-                  scope="row"
-                  className="sticky left-0 bg-background p-2 text-left text-body font-medium text-foreground"
-                >
-                  {cond.label}
-                </th>
-                {formSettings.family_relatives.map((rel) => {
-                  const checked = Boolean(
-                    (familyHistory[String(rel.value)] ?? {})[String(cond.value)],
-                  );
-                  return (
-                    <td key={rel.value} className="p-2 text-center">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggle(String(rel.value), String(cond.value))}
-                        aria-label={`${cond.label} in ${rel.label}`}
-                        className="h-5 w-5 cursor-pointer rounded border-input text-brand-700 focus:ring-brand-700"
-                      />
-                    </td>
-                  );
-                })}
-              </tr>
+      <div
+        className="overflow-x-auto rounded-md border border-border bg-card"
+        role="region"
+        aria-label="Family history matrix"
+      >
+        <div role="grid" style={{ minWidth }} className="text-sm">
+          {/* Header row */}
+          <div
+            role="row"
+            className="grid border-b border-border bg-muted/50"
+            style={{ gridTemplateColumns: gridTemplate }}
+          >
+            <div
+              role="columnheader"
+              className="px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              Condition
+            </div>
+            {relatives.map((rel) => (
+              <div
+                key={rel.value}
+                role="columnheader"
+                className="px-0.5 py-2 text-center text-[11px] font-semibold leading-tight text-foreground"
+                title={rel.label}
+              >
+                {rel.shortLabel}
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+
+          {/* Body rows */}
+          {conditions.map((cond, idx) => (
+            <div
+              key={cond.value}
+              role="row"
+              className={[
+                "grid items-center transition-colors hover:bg-muted/40",
+                idx > 0 && "border-t border-border",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={{ gridTemplateColumns: gridTemplate }}
+            >
+              <div
+                role="rowheader"
+                className="px-2 py-3 text-left text-[13px] font-medium leading-tight text-foreground"
+              >
+                {cond.label}
+              </div>
+              {relatives.map((rel) => {
+                const relKey = String(rel.value);
+                const condKey = String(cond.value);
+                const checked = Boolean((familyHistory[relKey] ?? {})[condKey]);
+                return (
+                  <div
+                    key={rel.value}
+                    role="gridcell"
+                    className="flex items-center justify-center px-0.5 py-3"
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggle(relKey, condKey)}
+                      aria-label={`${cond.label} in ${rel.label}`}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
+
+      <p className="mt-3 text-caption text-muted-foreground">
+        * GP — grandparent
+      </p>
     </OnboardingStepShell>
   );
 }
