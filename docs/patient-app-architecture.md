@@ -67,13 +67,21 @@
 ### Data flow summary
 
 ```
-Patient browser ──HTTPS──▶ Django API ──▶ PostgreSQL (operational)
+Patient browser ──HTTPS──▶ Django API ──▶ PostgreSQL (operational + omop)
                                       ──▶ S3 (FHIR bundles, docs)
                                       ──▶ Redis (cache)
                                       ──▶ Celery ──▶ FHIR sync worker
                                                 ──▶ Doc processing worker
                                                 ──▶ OMOP ETL worker
                                                 ──▶ Trial matching worker
+
+Researcher ──API key──▶ /api/research/v1/* ──▶ research_api app
+                                            ──▶ ConsentFilter ──▶ OMOP read
+                                            ──▶ Anonymizer ──▶ JSON response
+
+Clinician  ──API key + grant token──▶ /api/clinical/v1/* ──▶ research_api app
+                                                          ──▶ AccessGrant validator
+                                                          ──▶ FHIR R4 bundle response
 ```
 
 ---
@@ -100,6 +108,7 @@ backend/
 │   ├── documents/              # Upload, storage, AI extraction pipeline
 │   ├── sharing/                # Access grants, SMART Health Links, QR codes
 │   ├── trials/                 # Trial matching, CDS recommendations
+│   ├── research_api/           # Anonymized cohort API (researchers) + clinician FHIR API
 │   ├── notifications/          # Push + email notifications
 │   └── audit/                  # Immutable audit log
 │
@@ -114,6 +123,7 @@ backend/
     ├── patient_profile/
     ├── fhir_sync/
     ├── sharing/
+    ├── research_api/
     └── e2e/                    # Full API flow tests
 ```
 
@@ -127,8 +137,10 @@ backend/
 │     │                  │                │                │                  │
 │     │                  ▼                ▼                ▼                  │
 │     │           fhir_sync ──────── documents ─────── trials                │
-│     │                  │                                                    │
-│     ▼                  ▼                                                    │
+│     │                  │                                  │                 │
+│     │                  ▼                                  ▼                 │
+│     │           research_api ◄──── (consented OMOP data, anonymized)        │
+│     ▼                  │                                                    │
 │  audit ◄──────── notifications                                              │
 │                                                                             │
 │  core/ (shared utilities — imported by all apps, no circular deps)          │
@@ -181,6 +193,16 @@ backend/
 - `MatchingJob` — Celery task: triggers when `PatientInfo` changes
 - Integration with cancerbot trial engine via internal API call
 - `StandardOfCareResult` — NCCN/guideline recommendations cached per patient
+
+#### `research_api`
+- `ResearcherAccount` — credentialed researcher org: name, contact, credentialing docs, status
+- `APIKey` — issued per `ResearcherAccount`: hashed key, scopes, rate limit tier, expires_at, revoked_at
+- `ResearchConsent` — patient opt-in: patient FK, consent_scope (categories), studies allowed, revoked_at
+- `AnonymizationProfile` — defines de-identification rules: which fields drop/generalise per consent tier
+- `cohort.py` — query layer: builds anonymized cohort views from OMOP + consented PatientInfo
+- `serializers.py` — OMOP-aligned JSON for `/api/research/v1/*` and FHIR R4 for `/api/clinical/v1/*`
+- All endpoints stateless, API-key authenticated, rate-limited (DRF throttle classes)
+- Every call logged in `audit_auditlog` with `actor_type=research_api_key`, query params, result count
 
 #### `audit`
 - `AuditLog` — immutable append-only log: `actor_id`, `action`, `resource_type`, `resource_id`, `scopes`, `timestamp`
@@ -637,34 +659,49 @@ PATIENT_INFO_DETAILS_SCHEMA = {
 
 ### 5.1 Encryption Model
 
+> **Zero-knowledge is NOT a requirement.** The server holds the keys and operates on plaintext PHI in memory. This is a deliberate trade-off (see §10.2) — server-side trial matching, conflict detection, OMOP ETL, and the researcher API all require the server to read patient data. Compliance comes from HIPAA-grade infrastructure (encrypted at rest, encrypted in transit, BAA-covered vendors, audit logging), not from client-side key custody.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         ENCRYPTION LAYERS                                   │
 │                                                                             │
 │  Layer 1: Transport (TLS 1.3)                                               │
 │  ──────────────────────────                                                 │
-│  All traffic client ↔ server via HTTPS/TLS 1.3                              │
+│  All client ↔ server traffic via HTTPS/TLS 1.3 (HSTS enforced)              │
+│  All researcher/clinician API traffic via mutual TLS optional               │
 │                                                                             │
-│  Layer 2: At-Rest Encryption (AES-256-CBC, server key)                      │
-│  ─────────────────────────────────────────────────────                      │
-│  Postgres column-level: EncryptedCharField, EncryptedTextField (django-pgp) │
-│  Applied to: first_name, last_name, dob, EHR OAuth tokens                  │
-│  Server manages encryption key (AWS KMS / HashiCorp Vault)                  │
+│  Layer 2: At-Rest Column Encryption (AES-256-GCM, server key)               │
+│  ───────────────────────────────────────────────────────────                │
+│  Postgres column-level: EncryptedCharField, EncryptedTextField              │
+│  Applied to: first_name, last_name, dob, postal_code, EHR OAuth tokens      │
+│  Server manages encryption key via AWS KMS / HashiCorp Vault                │
+│  Key rotation: yearly + on-demand via KMS envelope encryption               │
 │                                                                             │
-│  Layer 3: Zero-Knowledge Sharing Layer (AES-256-GCM, client key)            │
-│  ────────────────────────────────────────────────────────────────           │
-│  When patient generates a share link:                                       │
-│  1. Client generates random AES-256-GCM key                                 │
-│  2. Client assembles scoped FHIR bundle                                     │
-│  3. Client encrypts bundle with key (Web Crypto API)                        │
-│  4. Encrypted bundle sent to server → stored in S3                          │
-│  5. Decryption key stored in URL fragment (#key=...) — never sent to server │
-│  6. Provider's browser fetches encrypted bundle + decrypts locally          │
+│  Layer 3: Storage-Level Encryption                                          │
+│  ─────────────────────────────────                                          │
+│  PostgreSQL: TDE on RDS (AES-256, AWS KMS managed)                          │
+│  S3: SSE-KMS for FHIR bundles + document uploads                            │
+│  Redis: in-transit TLS only (no PHI cached)                                 │
 │                                                                             │
-│  Layer 4: Document Encryption (client-side, before upload)                  │
-│  ─────────────────────────────────────────────────────────                  │
-│  Client encrypts documents with session key before upload                   │
-│  Server stores ciphertext only; AI extraction requires ephemeral key grant  │
+│  Layer 4: Sharing Bundle Encryption (server-side, AES-256-GCM)              │
+│  ─────────────────────────────────────────────────────────────              │
+│  When a patient creates a share link:                                       │
+│  1. Server assembles scoped FHIR R4 bundle from PatientInfo                 │
+│  2. Server encrypts bundle with a per-grant random AES-256-GCM key          │
+│  3. Encrypted bundle stored in S3                                           │
+│  4. Decryption key stored in DB, gated by AccessGrant token                 │
+│  5. Provider fetches bundle via /r/{token} → server decrypts and returns    │
+│     plaintext FHIR bundle to provider browser (TLS only)                    │
+│  6. Patient revoke → grant marked revoked, key zeroed, S3 object deleted    │
+│                                                                             │
+│  Layer 5: Anonymization (research API, applied at query time)               │
+│  ─────────────────────────────────────────────────────────────              │
+│  Direct identifiers stripped: first_name, last_name, dob, postal_code,      │
+│    email, geo_lat/long                                                       │
+│  Quasi-identifiers generalised: dob → age_band (5-year buckets);             │
+│    postal_code → region; rare diseases → category bucket                    │
+│  Internal research_id is a per-record salted hash; never the user PK        │
+│  k-anonymity check: results with cohort size < 5 return 403 (suppressed)    │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -783,25 +820,31 @@ Django /api/v1/documents/upload/
 Patient creates share:
   1. Select scopes (Identity / Conditions / Labs / Disease Profile / ...)
   2. Select duration (1h / 24h / 7d / 30d / one-time)
-  3. Server creates AccessGrant (token, scopes, expires_at)
-  4. Client assembles FHIR R4 bundle from granted scopes
-  5. Client encrypts bundle (AES-256-GCM, Web Crypto API)
-  6. Encrypted bundle stored in S3
-  7. Server creates SMARTHealthLink record (S3 URL, expiry, flags)
-  8. Share URL: healthkey.io/r/{token}#key={base64url_key}
-     └── Key is in fragment → never sent to server (zero-knowledge)
+  3. Optional: set passcode (additional gate for recipient)
+  4. Server creates AccessGrant (token, scopes, expires_at, passcode_hash)
+  5. Server assembles FHIR R4 bundle from granted scopes (server-side reads PHI)
+  6. Server encrypts bundle with random AES-256-GCM key, stores ciphertext in S3
+  7. Server stores encryption key in SMARTHealthLink record (linked to AccessGrant)
+  8. Share URL: healthkey.io/r/{token}
   9. QR code generated from URL
 
 Provider accesses:
   1. Browser loads /r/{token}
-  2. Server validates token (not revoked, not expired) → returns encrypted bundle from S3
-  3. Browser extracts key from URL fragment
-  4. Browser decrypts bundle locally (Web Crypto API)
-  5. ProviderView.tsx renders read-only scoped data
-  6. Server logs access in audit_auditlog
+  2. Server validates AccessGrant (not revoked, not expired)
+  3. (Optional) prompt for passcode → check against passcode_hash
+  4. Server fetches encrypted bundle from S3, decrypts with stored key
+  5. Server returns plaintext FHIR R4 bundle to provider browser (TLS only)
+  6. ProviderView.tsx renders read-only scoped data
+  7. Server logs access in audit_auditlog (token, scopes, IP, timestamp)
+
+Patient revokes:
+  1. AccessGrant.revoked_at = now()
+  2. SMARTHealthLink.encryption_key = null (zeroed)
+  3. S3 object deleted
+  4. /r/{token} returns 410 Gone immediately
 ```
 
-> **Prior learning applied:** `zero-knowledge-platform-api` (confidence: 9/10) — the sharing layer must use client-side key generation with key in URL fragment. Server-side re-encryption would break zero-knowledge guarantees.
+> **Note on prior learning** `zero-knowledge-platform-api` — that learning applied when ZK was a hard requirement. Per relaxed §8.2, sharing now uses server-side encryption. The patient retains control via revocation and audit log; HIPAA compliance comes from infrastructure-level safeguards, not key custody.
 
 ### 6.4 Wearable Integration
 
@@ -811,6 +854,98 @@ Provider accesses:
 - Omron / Withings: vendor APIs
 
 Data mapped to `omop.observation` + `omop.measurement` tables.
+
+### 6.5 Researcher & Clinician API
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                  RESEARCH / CLINICAL API DATA FLOW                          │
+│                                                                             │
+│  Researcher (credentialed org)                                              │
+│       │                                                                     │
+│       │  Authorization: Bearer rk_live_xxx       (API key)                  │
+│       ▼                                                                     │
+│  /api/research/v1/cohort/?disease=mm&stage=II&ecog<=1&age_band=60-65        │
+│       │                                                                     │
+│       ▼                                                                     │
+│  research_api app (DRF ViewSet)                                             │
+│       ├── 1. APIKeyAuthentication: validate key, fetch ResearcherAccount    │
+│       ├── 2. RateLimitThrottle: 1000/hr, burst 100/min                      │
+│       ├── 3. QueryBuilder: parse filters, build OMOP query                  │
+│       ├── 4. ConsentFilter: only include patients with active               │
+│       │      ResearchConsent matching study_id or consent_scope             │
+│       ├── 5. AnonymizationProfile: strip identifiers, generalise quasi-IDs  │
+│       ├── 6. k-anonymity check: if cohort < 5 → 403                         │
+│       ├── 7. Serialize as OMOP-aligned JSON                                 │
+│       ├── 8. Audit log: api_key_id, query, result_count (NOT records)      │
+│       └── 9. Return paginated results                                       │
+│                                                                             │
+│                                                                             │
+│  Clinician (with patient-issued grant token)                                │
+│       │                                                                     │
+│       │  Authorization: Bearer ck_live_xxx                                  │
+│       │  X-Grant-Token: {patient_grant_token}                               │
+│       ▼                                                                     │
+│  /api/clinical/v1/patient/{grant_token}/                                    │
+│       │                                                                     │
+│       ▼                                                                     │
+│  research_api.clinical_views                                                │
+│       ├── 1. APIKeyAuthentication: validate clinician key                   │
+│       ├── 2. AccessGrantValidator: validate token (active, not expired)     │
+│       ├── 3. ScopeFilter: assemble FHIR bundle for granted scopes only      │
+│       ├── 4. NO anonymization (clinician sees real PHI under valid grant)   │
+│       ├── 5. Serialize as FHIR R4 Bundle                                    │
+│       ├── 6. Audit log: api_key_id, grant_token, scopes, IP                 │
+│       └── 7. Return FHIR R4 bundle                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Two distinct API surfaces:**
+
+| Surface | Audience | Auth | Data | Format |
+|---|---|---|---|---|
+| `/api/research/v1/*` | Credentialed researchers | API key (org-scoped) | Anonymized cohorts, consented patients only | OMOP-aligned JSON |
+| `/api/clinical/v1/*` | Clinicians | API key + patient grant token | Identified PHI, single patient, scoped | FHIR R4 |
+
+**Anonymization rules (`AnonymizationProfile`):**
+
+```python
+ANONYMIZATION_RULES = {
+    "drop": [
+        "first_name", "last_name", "email",
+        "dob",                  # replaced with age_band
+        "postal_code",          # replaced with region
+        "geo_lat", "geo_long",  # replaced with country only
+        "user_id",              # replaced with research_id (salted hash)
+    ],
+    "generalise": {
+        "dob": lambda d: f"{(today_year - d.year) // 5 * 5}-{(today_year - d.year) // 5 * 5 + 4}",
+        "postal_code": lambda p: postal_to_region(p),
+        "disease": lambda d: rare_disease_to_category(d) if is_rare(d) else d,
+    },
+    "preserve": [
+        "ecog_performance_status", "stage", "prior_therapy_lines",
+        "details.*",  # all clinical fields preserved
+        "lab_values.*",
+    ],
+}
+```
+
+**k-anonymity guarantee:** Any cohort query whose result count is below `k=5` returns HTTP 403 with no data, preventing re-identification via narrow queries.
+
+**Rate limiting (DRF throttle):**
+
+```python
+class ResearchAPIThrottle(UserRateThrottle):
+    rate = "1000/hour"
+
+class ResearchAPIBurstThrottle(UserRateThrottle):
+    rate = "100/minute"
+```
+
+**Consent gating:** Every record returned by `/api/research/v1/*` must have an active `ResearchConsent` row covering either the requesting study ID or the requested data scope. Consent revocation removes the patient from results immediately on next query (no caching of consent state).
+
+**Audit logging:** Every research API call logs `api_key_id`, `endpoint`, `query_params`, `result_count`, `timestamp` to `audit_auditlog`. Raw record content is never logged. Researcher orgs can request their own audit history via `/api/research/v1/audit/`.
 
 ---
 
@@ -874,6 +1009,31 @@ Caregiver Access
   GET    /api/v1/caregivers/grants/
   POST   /api/v1/caregivers/grants/
   DELETE /api/v1/caregivers/grants/{id}/
+
+Research Consent (patient-facing)
+  GET    /api/v1/research-consent/
+  POST   /api/v1/research-consent/
+  DELETE /api/v1/research-consent/{id}/      (withdraw consent)
+
+──────────────────────────────────────────────────────────────────────────────
+Researcher API (api_key auth, org-scoped, anonymized data only)
+  GET    /api/research/v1/cohort/                  ?disease=&stage=&age_band=&...
+  GET    /api/research/v1/cohort/{research_id}/
+  GET    /api/research/v1/cohort/{research_id}/labs/
+  GET    /api/research/v1/cohort/{research_id}/timeline/
+  GET    /api/research/v1/audit/                   (caller's own audit history)
+
+Clinician API (api_key auth + patient grant token, identified PHI, FHIR R4)
+  GET    /api/clinical/v1/patient/{grant_token}/             (full FHIR R4 bundle)
+  GET    /api/clinical/v1/patient/{grant_token}/conditions/  (Condition resources)
+  GET    /api/clinical/v1/patient/{grant_token}/labs/        (Observation resources)
+  GET    /api/clinical/v1/patient/{grant_token}/medications/ (MedicationStatement)
+  POST   /api/clinical/v1/patient/{grant_token}/scope-request/  (request additional scopes)
+
+API Key Management (admin-issued, researcher/clinician self-serve rotation)
+  GET    /api/research/v1/keys/
+  POST   /api/research/v1/keys/                    (generates new key, shown once)
+  DELETE /api/research/v1/keys/{id}/               (revoke)
 ```
 
 ### 7.2 Response Conventions
@@ -897,10 +1057,19 @@ Caregiver Access
 
 ### 7.3 Authentication Scheme
 
-- JWT Bearer tokens (access: 15min, stored in memory; refresh: 7d, httpOnly cookie)
-- All patient endpoints: `IsAuthenticated` + `IsOwner` permission
-- Share link endpoints (`/r/{token}/*`): `TokenIsValid` permission only (no account required)
-- Admin endpoints: `IsAdminUser`
+| Surface | Auth | Permission |
+|---|---|---|
+| Patient endpoints `/api/v1/*` | JWT Bearer (access: 15min in memory; refresh: 7d httpOnly cookie) | `IsAuthenticated` + `IsOwner` |
+| Share link `/r/{token}` | Token in URL (+ optional passcode) | `TokenIsValid` |
+| Researcher API `/api/research/v1/*` | API key (`Authorization: Bearer rk_live_...`) | `HasResearchAPIKey` + `RateLimitThrottle` + `ConsentFilter` |
+| Clinician API `/api/clinical/v1/*` | API key (`ck_live_...`) + `X-Grant-Token` header | `HasClinicalAPIKey` + `ValidGrantToken` + `ScopeFilter` |
+| Admin endpoints | JWT + admin role | `IsAdminUser` |
+
+**API Key format:**
+- Researcher: `rk_live_<32-byte-base62>` / `rk_test_<...>` for sandbox
+- Clinician: `ck_live_<32-byte-base62>` / `ck_test_<...>` for sandbox
+- Stored as bcrypt hash; full key shown only at creation
+- Rotation: self-serve endpoint, old key valid for 24h grace period after rotation
 
 ---
 
@@ -996,24 +1165,40 @@ Priority: get the form working, data stored, basic auth.
 
 | # | Task | Req Coverage |
 |---|---|---|
-| 3.1 | Access grants + SMART Health Links (zero-knowledge) | §5 |
+| 3.1 | Access grants + SMART Health Links (server-side encryption) | §5 |
 | 3.2 | QR code generation + ProviderView | §5.2, §5.3 |
 | 3.3 | Audit log (immutable, HIPAA-compliant) | §5.4 |
 | 3.4 | Trial matching integration (cancerbot API) | §6.1 |
 | 3.5 | Trial detail view + notification on new match | §6.1.3, §6.1.4 |
 | 3.6 | IAL2 identity verification (CLEAR / ID.me) | §1.1.7 |
 
-### Phase 4 — Polish + Remaining Features (ongoing)
+### Phase 4 — Researcher & Clinician API (3–4 weeks)
 
 | # | Task | Req Coverage |
 |---|---|---|
-| 4.1 | Caregiver delegation | §1.3 |
-| 4.2 | Wearable integration (Fitbit / Dexcom / Withings) | §3.3 |
-| 4.3 | CMS Kill the Clipboard integration | §8.8 |
-| 4.4 | Standard-of-care recommendations | §6.2 |
-| 4.5 | Research consent management | §5.5 |
-| 4.6 | FHIR + OMOP export | §7.5, §7.6 |
-| 4.7 | Remaining disease profiles (FL, CLL, Lung, Prostate...) | §2.5.3–2.5.x |
+| 4.1 | `research_api` Django app scaffolding | §5.6 |
+| 4.2 | `ResearcherAccount`, `APIKey`, `ResearchConsent` models + admin | §5.5.5, §5.5.6 |
+| 4.3 | Patient-facing research consent UI (opt-in/withdraw) | §5.5.1–5.5.3 |
+| 4.4 | `AnonymizationProfile` engine + de-identification rules | §5.5.6 |
+| 4.5 | k-anonymity guard (k=5 minimum cohort size) | §5.6.1 |
+| 4.6 | `/api/research/v1/cohort/*` endpoints (OMOP-aligned JSON) | §5.6.1–5.6.4 |
+| 4.7 | Rate limiting (1000/hr, 100/min burst) | §5.6.6 |
+| 4.8 | `/api/clinical/v1/patient/*` endpoints (FHIR R4) | §5.6.7 |
+| 4.9 | API key issuance + rotation flow | §5.5.5 |
+| 4.10 | Audit log entries for every research/clinical API call | §5.5.8 |
+
+**Launch gate:** Synthetic cohort test (verify anonymization), k-anonymity violation test, rate limit test, consent revocation latency test (must reflect within one query).
+
+### Phase 5 — Polish + Remaining Features (ongoing)
+
+| # | Task | Req Coverage |
+|---|---|---|
+| 5.1 | Caregiver delegation | §1.3 |
+| 5.2 | Wearable integration (Fitbit / Dexcom / Withings) | §3.3 |
+| 5.3 | CMS Kill the Clipboard integration | §8.8 |
+| 5.4 | Standard-of-care recommendations | §6.2 |
+| 5.5 | FHIR + OMOP export | §7.5, §7.6 |
+| 5.6 | Remaining disease profiles (FL, CLL, Lung, Prostate...) | §2.5.3–2.5.x |
 
 ---
 
@@ -1027,11 +1212,37 @@ Priority: get the form working, data stored, basic auth.
 
 **Trade-off:** Full-text search and complex OMOP joins are harder. Mitigation: OMOP ETL materializes the important fields into typed OMOP tables for analytics.
 
-### 10.2 Zero-Knowledge Sharing Only (Not Full ZK)
+### 10.2 Server-Managed Encryption — Zero-Knowledge Dropped
 
-**Decision:** Zero-knowledge encryption applies to the sharing layer only. Operational data (PatientInfo) is encrypted at rest with a server-managed key.
+**Decision:** Drop the zero-knowledge requirement entirely. The server holds all encryption keys and operates on plaintext PHI in memory. Compliance is achieved via HIPAA-grade infrastructure (TDE, KMS, BAA-covered vendors, audit logs), not client-side key custody.
 
-**Why:** True zero-knowledge (client holds all keys) makes server-side trial matching, conflict detection, and OMOP ETL impossible — the server can't operate on ciphertext. The sharing layer (SMART Health Links) genuinely needs ZK because the share URL's key fragment never touches the server. For operational data, AES-256 at rest + TLS in transit + HIPAA-compliant infrastructure meets the security requirements.
+**Why:** The product needs the server to read PHI for:
+1. **Trial matching** — query patient profile against 6,400+ open trials
+2. **Conflict detection (PHResolution)** — compare values across providers
+3. **OMOP ETL** — transform raw FHIR into normalised analytics tables
+4. **Researcher API** — anonymize and serve consented cohorts to credentialed orgs
+5. **Clinician API** — serve scoped FHIR R4 bundles to credentialed clinicians
+
+A true zero-knowledge architecture (client holds the only key) makes all five impossible — the server cannot anonymize what it cannot decrypt. The earlier ZK design forced these features into the client, which doesn't work for a researcher-facing API where there is no client.
+
+**What replaces ZK as the security guarantee:**
+- AES-256-GCM column encryption for direct identifiers (KMS-managed key)
+- TDE on the database
+- SSE-KMS on S3
+- TLS 1.3 + HSTS for all transport
+- HIPAA-compliant infrastructure with BAAs covering AWS, AI extraction vendor, FHIR proxy
+- Immutable audit log (HIPAA §164.312, 6-year retention)
+- Patient-controlled access grants with instant revocation
+- k-anonymity (k=5) on every researcher API response
+- Per-record consent gating (no record returned without active `ResearchConsent`)
+
+**Trade-off:** Patients must trust HealthKey infrastructure (and its BAA chain) to handle PHI correctly. Mitigation: SOC 2 Type II audit + annual penetration test + transparent audit log accessible from the patient profile.
+
+### 10.6 Researcher API as a Separate Surface
+
+**Decision:** Researcher and clinician APIs live in a dedicated `research_api` Django app, not bolted onto the patient API.
+
+**Why:** Different auth (API key vs JWT), different rate limits, different anonymization, different serializers (OMOP-JSON vs FHIR R4), different audit semantics. Mixing these into the patient API surface would force every endpoint to branch on caller type — that's the kind of conditional logic that grows bugs. A separate app keeps the threat model and the code paths cleanly isolated. The patient frontend never imports anything from `research_api`, and `research_api` only depends on `patient_profile` and `records` for read access.
 
 ### 10.3 OMOP as Analytics Layer, Not Primary Store
 
@@ -1095,7 +1306,9 @@ All calculated fields stored in `details` JSONB and recomputed server-side on ev
 |--------|---------|-----|------|--------|----------|
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR (main branch, 2026-04-03) | 6 scope proposals, all accepted |
 | Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | 6 prior learnings applied |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 2 | CLEAR (PLAN) | 6 prior learnings applied; ZK relaxed; researcher API added |
 | Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | — |
 
-**VERDICT:** ENG REVIEW CLEAR — architecture document created. Run `/plan-design-review` to audit UX gaps before implementation begins.
+**REVISION (2026-04-09):** Zero-knowledge requirement dropped per §8.2 update. Sharing now uses server-side encryption. New `research_api` Django app added with anonymized cohort API + clinician FHIR API. See §5.1, §6.3, §6.5, §7.1, §7.3, §10.2, §10.6.
+
+**VERDICT:** ENG REVIEW CLEAR — architecture document updated. Run `/plan-design-review` to audit UX gaps before implementation begins.

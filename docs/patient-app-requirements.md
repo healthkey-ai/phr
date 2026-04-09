@@ -419,6 +419,24 @@ All numeric lab fields must store value + units. Units stored alongside values �
 | 5.5.1 | Patient can opt in to share de-identified data with specific research cohorts/studies | To Design | Must Have | PAT-055 |
 | 5.5.2 | Each consent is specific, time-stamped, auditable, and revocable | To Design | Must Have | PAT-055 |
 | 5.5.3 | Consent withdrawal immediately removes patient from all active research cohorts | To Design | Must Have | PAT-055 |
+| 5.5.4 | Consented records exposed to credentialed researchers and clinicians via a backend REST API; patient UI is not required for API consumers | To Design | Must Have | RES-001 |
+| 5.5.5 | API access requires an approved API key issued to a credentialed researcher or clinician organisation | To Design | Must Have | RES-002 |
+| 5.5.6 | All data returned via the researcher/clinician API is anonymized: direct identifiers (name, DOB, postal code, email) are removed; quasi-identifiers (age band, region) are generalised | To Design | Must Have | RES-003 |
+| 5.5.7 | Researcher API supports filtering by: disease, stage, prior therapy lines, ECOG score, demographic bands, lab value ranges | To Design | Must Have | RES-004 |
+| 5.5.8 | Every researcher API call logged in the immutable audit log with API key ID, query parameters, and result count (not raw patient data) | To Design | Must Have | RES-005 |
+
+### 5.6 Researcher & Clinician API
+
+| # | Requirement | Status | Priority | PRD Ref |
+|---|---|---|---|---|
+| 5.6.1 | `/api/research/v1/cohort/` — return anonymized PatientInfo records matching query parameters, for consented patients only | To Design | Must Have | RES-010 |
+| 5.6.2 | `/api/research/v1/cohort/{id}/` — return single anonymized record by internal research ID (never exposes healthkey patient ID) | To Design | Must Have | RES-010 |
+| 5.6.3 | `/api/research/v1/cohort/{id}/labs/` — return longitudinal lab time-series for a single anonymized record | To Design | Must Have | RES-011 |
+| 5.6.4 | `/api/research/v1/cohort/{id}/timeline/` — return anonymized treatment and event timeline | To Design | Should Have | RES-012 |
+| 5.6.5 | Pagination on all list endpoints (max 100 records per page); no bulk export without explicit consent scope | To Design | Must Have | RES-013 |
+| 5.6.6 | Rate limiting: 1,000 requests/hour per API key; burst limit 100 requests/minute | To Design | Must Have | RES-014 |
+| 5.6.7 | Clinician view: a credentialed clinician can call `/api/clinical/v1/patient/{grant_token}/` to retrieve a patient's scoped record in FHIR R4 format — requires a valid patient-issued access grant | To Design | Must Have | RES-020 |
+| 5.6.8 | Researcher API responses in OMOP-aligned JSON; clinician API responses in FHIR R4 JSON | To Design | Must Have | RES-015 |
 
 ---
 
@@ -466,7 +484,7 @@ All numeric lab fields must store value + units. Units stored alongside values �
 | # | Requirement | Status | Priority | PRD Ref |
 |---|---|---|---|---|
 | 8.1 | Native mobile application on iOS and Android with feature parity to web for core patient functions | To Design | Must Have | PAT-006 |
-| 8.2 | Zero-knowledge AES-256 encryption for all health data | To Build | Must Have | — |
+| 8.2 | AES-256-GCM encryption for all health data at rest; server-managed keys via KMS. Zero-knowledge architecture is NOT required — server can read and operate on health data to support trial matching, CDS, conflict detection, and researcher API. | To Build | Must Have | — |
 | 8.3 | HIPAA-compliant data handling and audit logging | To Design | Must Have | — |
 | 8.4 | FHIR R4 as the primary ingestion and export format | To Build | Must Have | PAT-010, PAT-053 |
 | 8.5 | All clinical data stored in OMOP CDM v5.4 with OHDSI standard vocabularies (SNOMED, LOINC, RxNorm, ICD-O-3) | To Design | Must Have | INF-001, INF-005 |
