@@ -303,9 +303,9 @@ interface PatientInfoInput {
 
 ---
 
-## 14. Notes for PHR Capsule Integration
+## 14. Notes for PHR App Integration
 
-**No FHIR in source.** Cancerbot uses a custom schema. The capsule will need a mapping layer
+**No FHIR in source.** Cancerbot uses a custom schema. The PHR app will need a mapping layer
 to populate these fields from FHIR resources:
 
 | Cancerbot category | FHIR resource(s) |
@@ -322,10 +322,8 @@ to populate these fields from FHIR resources:
 recomputed client-side from raw inputs rather than stored as derived values, to avoid
 stale data.
 
-**Disease-conditional structure.** Many fields are disease-gated. The capsule should store
-all fields in the encrypted `details` blob and gate display client-side after decryption,
-matching the tab-visibility pattern in the cancerbot UI.
+**Disease-conditional structure.** Many fields are disease-gated.
 
 **Mutation arrays and therapy lines** are dynamic arrays. Each entry maps to a separate
-encrypted record in the capsule (one FHIR `Observation` or `MedicationAdministration`
+encrypted record in the DB (one FHIR `Observation` or `MedicationAdministration`
 per row) to allow individual timeline entries rather than a single opaque blob.
