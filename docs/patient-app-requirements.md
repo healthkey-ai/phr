@@ -544,22 +544,139 @@ The cancerbot schema uses a custom structure. The PHR ingestion layer must map F
 
 ---
 
-## 10. Design System (Derived from Prototype)
+## 10. Design System
 
-### Colors
-| Token | Value | Usage |
-|---|---|---|
-| Primary teal | `#1A8A7A` / `#26B09C` | Primary actions, active states, EHR badges |
-| Secondary amber | `#C97D2E` / `#E8963A` | Alerts, warnings, drug allergy cards |
-| Accent rose | `#C0435A` | Cancer/oncology fields, disease profile |
-| Ink | `#0F1923` | Body text |
-| Mist | `#F2F5F7` | Backgrounds, ghost buttons |
-| Muted | `#8FA3B1` | Placeholder text, secondary labels |
+Source: `cancerbot/ui.v2` (`client/global.css`, `tailwind.config.ts`)  
+Stack: Tailwind CSS 3 + shadcn/ui + Radix UI. All colors are HSL CSS variables with full light/dark theme support.
 
 ### Typography
-- Headings: Inter
-- Body: DM Sans
-- 8px spacing grid
+
+| Role | Value |
+|---|---|
+| **Primary font** | `Manrope` — weights 400, 500, 600, 700, 800 |
+| **Fallback stack** | `-apple-system`, `Roboto`, `Helvetica`, `sans-serif` |
+| **Import** | Google Fonts |
+| Button text | `text-sm font-semibold leading-5` |
+| Body text | `text-sm font-medium` |
+
+### Color Tokens — Light Theme (`:root`)
+
+All values are HSL. Use as `hsl(var(--token))` in CSS or `cancerbot.*` Tailwind classes.
+
+#### Backgrounds
+| Token | HSL | Description |
+|---|---|---|
+| `--app-bg-primary` | `0 0% 100%` | Main page background (white) |
+| `--app-bg-secondary` | `0 0% 98%` | Sidebar / panel background |
+| `--app-bg-active` | `0 0% 98%` | Active / hover state background |
+| `--background` | `0 0% 100%` | shadcn base background |
+| `--card` | `0 0% 100%` | Card background |
+
+#### Text
+| Token | HSL | Description |
+|---|---|---|
+| `--text-primary-900` | `216 17% 14%` | Primary body text (dark blue-gray) |
+| `--text-secondary-700` | `220 9% 32%` | Secondary / supporting text |
+| `--text-quaternary-500` | `218 8% 46%` | Tertiary / placeholder text |
+| `--text-disabled` | `0 0% 83%` | Disabled state text |
+| `--text-brand-secondary-700` | `212 87% 33%` | Brand-coloured text (links, labels) |
+| `--text-white` | `0 0% 100%` | Text on dark backgrounds |
+| `--foreground` | `222.2 84% 4.9%` | shadcn default foreground |
+
+#### Brand
+| Token | HSL | Description |
+|---|---|---|
+| `--brand-25` | `199 100% 97%` | Lightest brand tint (cyan) |
+| `--brand-50` | `199 100% 92%` | Light brand tint |
+| `--brand-200` | `199 100% 64%` | Mid brand (cyan) |
+| `--brand-700` | `212 87% 33%` | Primary brand (deep blue) |
+| `--brand-primary-alt` | `212 95% 40%` | Brand alt / interactive |
+| `--brand-green-500` | `146 70% 45%` | Green accent (success-adjacent) |
+| `--link-primary` | `212 95% 40%` | Link colour |
+| `--link-primary-hover` | `212 87% 33%` | Link hover colour |
+
+#### Gray Scale
+| Token | HSL | Description |
+|---|---|---|
+| `--gray-50` | `0 0% 98%` | Near-white |
+| `--gray-100` | `0 0% 96%` | Very light gray |
+| `--gray-200` / `--border-secondary` | `0 0% 91.4%` | Subtle dividers and borders |
+| `--gray-700` | `220 9% 32%` | Dark gray text |
+| `--border` / `--input` | `214.3 31.8% 91.4%` | Form inputs and borders |
+
+#### Status
+| Token | HSL (50 / 200 / 700) | Description |
+|---|---|---|
+| `--success-*` | `152 88% 95%` / `152 68% 81%` / `152 91% 29%` | Success: bg / border / text |
+| `--warning-*` | `48 100% 96%` / `43 98% 77%` / `25 95% 37%` | Warning: bg / border / text |
+| `--error-*` / `--destructive` | `4 86% 97%` / `5 86% 89%` / `5 79% 40%` | Error: bg / border / text |
+
+#### shadcn Semantic Tokens
+| Token | HSL (light) | Description |
+|---|---|---|
+| `--primary` | `222.2 47.4% 11.2%` | Primary action (dark blue) |
+| `--primary-foreground` | `210 40% 98%` | Text on primary |
+| `--secondary` | `210 40% 96.1%` | Secondary surface |
+| `--muted` | `210 40% 96.1%` | Muted background |
+| `--muted-foreground` | `215.4 16.3% 46.9%` | Muted text |
+| `--accent` | `210 40% 96.1%` | Accent surface |
+| `--ring` | `222.2 84% 4.9%` | Focus ring |
+| `--radius` | `0.5rem` | Base border radius |
+
+### Color Tokens — Dark Theme (`.dark`)
+
+#### Backgrounds
+| Token | HSL | Description |
+|---|---|---|
+| `--app-bg-primary` | `220 13% 13%` | Main background |
+| `--app-bg-secondary` | `220 13% 10%` | Panel background |
+| `--app-bg-active` | `220 13% 16%` | Active state |
+| `--background` | `222.2 84% 4.9%` | shadcn base |
+
+#### Text
+| Token | HSL | Description |
+|---|---|---|
+| `--text-primary-900` | `216 17% 92%` | Primary text (near-white) |
+| `--text-secondary-700` | `220 9% 72%` | Secondary text |
+| `--text-quaternary-500` | `218 8% 55%` | Tertiary text |
+| `--text-disabled` | `0 0% 35%` | Disabled |
+| `--text-brand-secondary-700` | `212 87% 67%` | Brand text (light blue) |
+
+#### Brand (dark)
+| Token | HSL | Description |
+|---|---|---|
+| `--brand-25` | `199 40% 12%` | Darkest brand tint |
+| `--brand-50` | `199 50% 18%` | Dark brand tint |
+| `--brand-200` | `199 70% 35%` | Mid brand |
+| `--brand-700` | `212 87% 60%` | Primary brand (light blue) |
+| `--brand-primary-alt` | `212 95% 65%` | Brand alt |
+| `--brand-green-500` | `146 70% 45%` | Green (unchanged) |
+| `--link-primary` | `212 95% 65%` | Link |
+| `--link-primary-hover` | `212 87% 60%` | Link hover |
+
+#### Status (dark)
+| Token | HSL (50 / 200 / 700) | Description |
+|---|---|---|
+| `--success-*` | `152 40% 12%` / `152 50% 25%` / `152 70% 45%` | |
+| `--warning-*` | `48 50% 12%` / `43 60% 30%` / `25 85% 55%` | |
+| `--error-*` | `4 50% 12%` / `5 60% 28%` / `5 70% 55%` | |
+
+### Shadows
+
+```css
+.shadow-sm-soft  { box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05); }
+.shadow-card     { box-shadow: 0 0 0 1px rgba(10, 13, 18, 0.18) inset,
+                               0 -2px 0 0 rgba(10, 13, 18, 0.05) inset,
+                               0 1px 2px 0 rgba(10, 13, 18, 0.05); }
+```
+
+### Border Radius
+
+| Token | Value |
+|---|---|
+| `rounded-sm` | `calc(var(--radius) - 4px)` = `0.25rem` |
+| `rounded-md` | `calc(var(--radius) - 2px)` = `0.375rem` |
+| `rounded-lg` | `var(--radius)` = `0.5rem` |
 
 ### UI Form Controls
 
@@ -569,18 +686,20 @@ The cancerbot schema uses a custom structure. The PHR ingestion layer must map F
 | `SelectControl` | Single-select dropdown (e.g. `gender`, `stage`, `progression`) |
 | `MultiSelectControl` | Multi-select scrollable list (e.g. `ethnicity`, `cytogenicMarkers`) |
 | `DateControl` | Date picker (e.g. therapy line dates, DOB) |
-| `TextNumberControl` | Text or numeric input with optional units (e.g. lab values, height/weight) |
+| `TextNumberControl` | Numeric input with optional units (e.g. lab values, height/weight) |
 | `UnitsSelect` | Unit dropdown (kg/lbs, cm/inches, g/dL, etc.) |
-| Chip selectors | Multi-select with toggle state; rose variant for cancer fields |
+| Chip selectors | Multi-select with toggle state; brand-coloured variant for oncology fields |
 | Tag inputs | Enter/comma delimiter for free-form lists (allergies, medications, treatments) |
 | Scale rows | Horizontal scale for staging, ECOG, M-protein type |
 | Option rows | Single-select button groups for categorical choices |
 
 ### Key Component Patterns
+- **Framework:** shadcn/ui components on Radix UI primitives; styled with Tailwind utility classes
+- **Animations:** Framer Motion for transitions; `tailwindcss-animate` for entry/exit
 - **Circular SVG progress meter:** Used on Summary screen and Vault Home for PPR completion
 - **Bottom-sheet modals:** Dimmed overlay, slide-up animation
-- **Cards:** 16px radius, light shadow `0 2px 14px rgba(15,25,35,.08)`
 - **Badges:** Small pill-shaped, colour-coded (LIVE, FHIR R4, HIPAA, VERIFIED, SYNC)
+- **Icons:** Lucide React + React Icons
 
 ---
 
