@@ -1,6 +1,6 @@
 # HealthKey — Patient App Requirements
 
-**Source:** Derived from prototype analysis (`Allen_claude_prototype`) aligned with `docs/PRD.md`  
+**Sources:** `Allen_claude_prototype` (UX reference), `docs/PRD.md` (product requirements), `docs/patient-info.md` (field-level data model from `cancerbot/ui.v2`)  
 **Scope:** Patient-facing application only (PRD Section 5 + CMS Section 8)  
 **Date:** April 2026
 
@@ -56,45 +56,57 @@ Each requirement is tagged with:
 
 ## 2. Data Collection — Patient Information Schema
 
-The following data categories map directly to the Common Patient Information Schema (CB-2) required for clinical trial matching.
+The following data categories map to the Common Patient Information Schema (CB-2) required for clinical trial matching. Field names in `code` match the `cancerbot/ui.v2` API schema (`patient-info.md`) and the HealthKey backend.
 
-### 2.1 Core Demographics (Identity Step)
+### 2.1 Core Demographics
 
-| # | Requirement | Status | Priority | PRD Ref |
-|---|---|---|---|---|
-| 2.1.1 | Capture: first name, last name, date of birth, sex at birth (Male/Female/Intersex) | To Build | Must Have | PAT-020 |
-| 2.1.2 | Capture: height, weight (BMI auto-calculated) | To Build | Must Have | PAT-021 |
-| 2.1.3 | Capture: primary language (English, Spanish, Mandarin, French, Arabic, Other) | To Build | Should Have | PAT-028 |
-| 2.1.4 | Capture: ethnicity, country, region, postal code | To Design | Must Have | PAT-020 |
-| 2.1.5 | Capture: geographic coordinates (lat/long) for distance-to-trial-site calculations | To Design | Must Have | PAT-020 |
-| 2.1.6 | Capture: insurance status, employment status | To Design | Should Have | PAT-028 |
-| 2.1.7 | Document upload for identity verification: passport, insurance card, government ID | To Build | Must Have | PAT-012 |
-| 2.1.8 | AI-assisted extraction of structured data from uploaded identity documents | Gap | Must Have | PAT-012 |
+| # | Field / Requirement | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.1.1 | `firstName`, `lastName` | string | To Build | Must Have | PAT-020 |
+| 2.1.2 | `dob` (date of birth) — displayed as age `patientAge` downstream | date | To Build | Must Have | PAT-020 |
+| 2.1.3 | `gender` — select (Male / Female / Non-binary / Prefer not to say) | select | To Build | Must Have | PAT-020 |
+| 2.1.4 | `ethnicity` — multiselect; affects lab interpretation (e.g. creatinine reference ranges) | multiselect | To Design | Must Have | PAT-020 |
+| 2.1.5 | `height` + units (cm / inches), `weight` + units (kg / lbs); BMI auto-calculated | number + units | To Build | Must Have | PAT-021 |
+| 2.1.6 | `country` (from standardised country list), `postalCode` | select / string | To Design | Must Have | PAT-020 |
+| 2.1.7 | Geographic coordinates (lat/long) derived from postal code — used for distance-to-trial-site | derived | To Design | Must Have | PAT-020 |
+| 2.1.8 | `languagesSkills` — multiselect (languages spoken; stored in PersonLanguageSkill extension) | multiselect | To Build | Should Have | PAT-028 |
+| 2.1.9 | Insurance status, employment status | select | To Design | Should Have | PAT-028 |
+| 2.1.10 | Document upload for identity: passport, insurance card, government ID | file | To Build | Must Have | PAT-012 |
+| 2.1.11 | AI-assisted extraction of structured data from uploaded identity documents | — | Gap | Must Have | PAT-012 |
 
 ### 2.2 Medical History & Conditions
 
-| # | Requirement | Status | Priority | PRD Ref |
-|---|---|---|---|---|
-| 2.2.1 | Chronic condition selection from curated list (diabetes, hypertension, asthma, COPD, heart disease, hypothyroidism, depression/anxiety, arthritis, IBS/Crohn's, MS, lupus, kidney disease) | To Build | Must Have | PAT-023 |
-| 2.2.2 | Cancer diagnosis selection from curated list (multiple myeloma, breast, lung, prostate, lymphoma, leukaemia, colorectal, melanoma) | To Build | Must Have | PAT-022 |
-| 2.2.3 | Drug allergies — free-text tag input | To Build | Must Have | PAT-023 |
-| 2.2.4 | Current medications — free-text tag input | To Build | Must Have | PAT-023 |
-| 2.2.5 | Surgical history — free-text tag input | To Build | Must Have | PAT-023 |
-| 2.2.6 | Capture: prior malignancies, cardiac conditions, autoimmune/neurologic conditions, neuropathy grade, HIV/hepatitis B/C status, prior ILD and pneumonitis | To Design | Must Have | PAT-023 |
-| 2.2.7 | Document upload: discharge summaries, lab results, clinical documents | To Build | Must Have | PAT-012 |
-| 2.2.8 | Conditions visually distinguished: rose/red accent for cancer fields | To Build | Should Have | — |
+| # | Field / Requirement | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.2.1 | Chronic condition selection from curated list (diabetes, hypertension, asthma, COPD, heart disease, hypothyroidism, depression/anxiety, arthritis, IBS/Crohn's, MS, lupus, kidney disease) | multiselect chips | To Build | Must Have | PAT-023 |
+| 2.2.2 | `disease` — primary cancer diagnosis (multiple myeloma, breast, follicular lymphoma, CLL, lung, prostate, colorectal, melanoma, other) | select | To Build | Must Have | PAT-022 |
+| 2.2.3 | `preExistingConditionCategories` — prior malignancies, cardiac, autoimmune, neurologic conditions | multiselect | To Design | Must Have | PAT-023 |
+| 2.2.4 | `noOtherActiveMalignancies` — boolean; YES = patient does NOT have other active cancers | boolean | To Design | Must Have | PAT-023 |
+| 2.2.5 | `noActiveInfectionStatus` — boolean; YES = no active infections | boolean | To Design | Must Have | PAT-023 |
+| 2.2.6 | `peripheralNeuropathyGrade` — nerve damage severity (0–4) | number | To Design | Must Have | PAT-023 |
+| 2.2.7 | Drug allergies — free-text tag input | tags | To Build | Must Have | PAT-023 |
+| 2.2.8 | Current medications — free-text tag input | tags | To Build | Must Have | PAT-023 |
+| 2.2.9 | Surgical history — free-text tag input | tags | To Build | Must Have | PAT-023 |
+| 2.2.10 | Document upload: discharge summaries, lab results, clinical documents | file | To Build | Must Have | PAT-012 |
+| 2.2.11 | Cancer fields visually distinguished with rose/red accent | — | To Build | Should Have | — |
 
 ### 2.3 Lifestyle & Behavioural Factors
 
-| # | Requirement | Status | Priority | PRD Ref |
-|---|---|---|---|---|
-| 2.3.1 | Tobacco use: Never / Former / Occasional / Daily | To Build | Must Have | PAT-027 |
-| 2.3.2 | Alcohol: None / Rarely / Socially / Weekly / Daily | To Build | Must Have | PAT-027 |
-| 2.3.3 | Exercise level: Sedentary / Light / Moderate / Active | To Build | Must Have | PAT-027 |
-| 2.3.4 | Diet type: Omnivore / Vegetarian / Vegan / Keto / Gluten-free | To Build | Must Have | PAT-027 |
-| 2.3.5 | Occupation — free-text input | To Build | Must Have | PAT-027 |
-| 2.3.6 | Capture: pregnancy/lactation status, contraception use, occupational exposures | To Design | Must Have | PAT-027 |
-| 2.3.7 | Capture: consent and cognitive status | To Design | Must Have | PAT-027 |
+| # | Field / Requirement | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.3.1 | `noTobaccoUseStatus` — boolean (YES = non-user); also collect frequency detail: Never / Former / Occasional / Daily | boolean + select | To Build | Must Have | PAT-027 |
+| 2.3.2 | Alcohol frequency: None / Rarely / Socially / Weekly / Daily | select | To Build | Must Have | PAT-027 |
+| 2.3.3 | Exercise level: Sedentary / Light / Moderate / Active | select | To Build | Must Have | PAT-027 |
+| 2.3.4 | Diet type: Omnivore / Vegetarian / Vegan / Keto / Gluten-free | select | To Build | Must Have | PAT-027 |
+| 2.3.5 | Occupation — free-text | string | To Build | Must Have | PAT-027 |
+| 2.3.6 | `consentCapability` — boolean; able to provide informed consent | boolean | To Design | Must Have | PAT-027 |
+| 2.3.7 | `noPregnancyOrLactationStatus` — boolean (female only); YES = not pregnant/lactating | boolean | To Design | Must Have | PAT-027 |
+| 2.3.8 | `pregnancyTestResult` — select (female only) | select | To Design | Must Have | PAT-027 |
+| 2.3.9 | `contraceptiveUse` — select (female only) | select | To Design | Must Have | PAT-027 |
+| 2.3.10 | `noSubstanceUseStatus` — boolean; YES = no substance use | boolean | To Design | Must Have | PAT-027 |
+| 2.3.11 | `noMentalHealthDisorderStatus` — boolean; YES = no mental health disorders | boolean | To Design | Must Have | PAT-027 |
+| 2.3.12 | `caregiverAvailabilityStatus` — boolean; caregiver available | boolean | To Design | Should Have | PAT-028 |
+| 2.3.13 | `noGeographicExposureRisk` — boolean; YES = no geographic exposure risk | boolean | To Design | Must Have | PAT-027 |
 
 ### 2.4 Family History
 
@@ -106,34 +118,169 @@ The following data categories map directly to the Common Patient Information Sch
 
 ### 2.5 Disease Profile — Oncology (Conditional Step)
 
-Displayed only when a cancer diagnosis is selected. Contains the detailed clinical data required for trial eligibility matching.
+Displayed only when a cancer diagnosis is selected. Gated by `disease` field. All fields feed directly into trial eligibility screening.
 
-| # | Requirement | Status | Priority | PRD Ref |
-|---|---|---|---|---|
-| 2.5.1 | Multiple Myeloma: ISS Stage (I/II/III/Unknown) | To Build | Must Have | PAT-022, PAT-025 |
-| 2.5.2 | Multiple Myeloma: M-protein type (IgG/IgA/IgM/Light chain/Unknown) and level (g/dL) | To Build | Must Have | PAT-026 |
-| 2.5.3 | Multiple Myeloma: Bone Marrow Plasma Cell % (BMPC) | To Build | Must Have | PAT-026 |
-| 2.5.4 | Multiple Myeloma: Treatment status (Newly diagnosed / Relapsed / Refractory / Remission) | To Build | Must Have | PAT-025 |
-| 2.5.5 | Multiple Myeloma: Prior lines of therapy — tag input (e.g. VRd, Daratumumab, ASCT) | To Build | Must Have | PAT-025 |
-| 2.5.6 | Multiple Myeloma: ECOG performance status (0–4) | To Build | Must Have | PAT-022 |
-| 2.5.7 | Other cancers: Stage (I–IV / Unknown) and treatment status | To Build | Must Have | PAT-022 |
-| 2.5.8 | Capture: BRCA1/2, EGFR, KRAS, PD-L1 (TPS/CPS), HER2 (IHC/FISH), ER/PR, MSI/TMB | To Design | Must Have | PAT-026 |
-| 2.5.9 | Capture: Karnofsky performance status | To Design | Must Have | PAT-022 |
-| 2.5.10 | Capture: refractory status (endocrine, CDK4/6, ADC), washout durations, CTCAE toxicity grades | To Design | Must Have | PAT-025 |
-| 2.5.11 | Disease profile fields clearly annotated as powering trial eligibility matching | To Build | Should Have | PAT-060 |
-| 2.5.12 | Upload: pathology reports, bone marrow biopsies, imaging results | To Build | Must Have | PAT-012 |
+#### 2.5.0 All Cancers — Shared Clinical Status
+
+| # | Field / Requirement | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.5.0.1 | `stage` — disease stage; values are disease-specific (see subsections) | select | To Build | Must Have | PAT-022 |
+| 2.5.0.2 | `ecogPerformanceStatus` — ECOG score (0–5) | number | To Build | Must Have | PAT-022 |
+| 2.5.0.3 | `karnofskyPerformanceScore` — Karnofsky score (0–100) | number | To Design | Must Have | PAT-022 |
+| 2.5.0.4 | `systolicBloodPressure`, `diastolicBloodPressure` | number | To Design | Must Have | PAT-021 |
+| 2.5.0.5 | Upload: pathology reports, bone marrow biopsies, imaging results | file | To Build | Must Have | PAT-012 |
+| 2.5.0.6 | Disease profile annotated as powering trial eligibility matching | — | To Build | Should Have | PAT-060 |
+
+#### 2.5.1 Multiple Myeloma–Specific
+
+| # | Field / Requirement | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.5.1.1 | `stage` — ISS Stage I / II / III / Unknown | select | To Build | Must Have | PAT-022 |
+| 2.5.1.2 | `monoclonalProteinSerum` — M-spike serum (g/dL) | number | To Design | Must Have | PAT-026 |
+| 2.5.1.3 | `monoclonalProteinUrine` — M-spike urine (mg/24h) | number | To Design | Must Have | PAT-026 |
+| 2.5.1.4 | M-protein type: IgG / IgA / IgM / Light chain / Unknown | select | To Build | Must Have | PAT-026 |
+| 2.5.1.5 | `kappaFLC` — kappa free light chain; `lambdaFLC` — lambda free light chain | number | To Design | Must Have | PAT-026 |
+| 2.5.1.6 | `clonalPlasmaCells` — bone marrow plasma cell % (BMPC) | number | To Build | Must Have | PAT-026 |
+| 2.5.1.7 | `progression` — disease status / treatment status (Newly diagnosed / Relapsed / Refractory / Remission) | select | To Build | Must Have | PAT-025 |
+| 2.5.1.8 | Prior lines of therapy — tag input (e.g. VRd, Daratumumab, ASCT) | tags | To Build | Must Have | PAT-025 |
+| 2.5.1.9 | `cytogenicMarkers` — chromosomal abnormalities (multiselect) | multiselect | To Design | Must Have | PAT-026 |
+| 2.5.1.10 | `molecularMarkers` — molecular/genetic markers (multiselect) | multiselect | To Design | Must Have | PAT-026 |
+| 2.5.1.11 | `plasmaCellLeukemia` — boolean | boolean | To Design | Must Have | PAT-026 |
+| 2.5.1.12 | `meetsCRAB` — calculated: Calcium/Renal/Anemia/Bone criteria met | calculated | To Design | Must Have | PAT-022 |
+| 2.5.1.13 | `meetsSLIM` — calculated: SLIM-CRAB criteria met | calculated | To Design | Must Have | PAT-022 |
+| 2.5.1.14 | `measurableDiseaseImwg` — calculated: IMWG measurable disease criteria | calculated | To Design | Must Have | PAT-022 |
+| 2.5.1.15 | `lactateDehydrogenaseLevel` — LDH | number | To Design | Must Have | PAT-024 |
+| 2.5.1.16 | `serumBeta2MicroglobulinLevel` | number | To Design | Must Have | PAT-024 |
+
+#### 2.5.2 Breast Cancer–Specific
+
+| # | Field / Requirement | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.5.2.1 | `estrogenReceptorStatus` — ER negative / positive / low / high | select | To Design | Must Have | PAT-026 |
+| 2.5.2.2 | `progesteroneReceptorStatus` — PR negative / positive / low / high | select | To Design | Must Have | PAT-026 |
+| 2.5.2.3 | `her2Status` — HER2 negative / positive / low (IHC and FISH) | select | To Design | Must Have | PAT-026 |
+| 2.5.2.4 | `tnbcStatus` — triple-negative breast cancer; calculated from ER/PR/HER2 | calculated | To Design | Must Have | PAT-026 |
+| 2.5.2.5 | `hrdStatus` — homologous recombination deficiency | select | To Design | Must Have | PAT-026 |
+| 2.5.2.6 | `menopausalStatus` — pre-menopausal / post-menopausal | select | To Design | Must Have | PAT-026 |
+| 2.5.2.7 | `histologicType` — specific histological type | select | To Design | Must Have | PAT-022 |
+| 2.5.2.8 | `biopsyGrade` — tumor differentiation grade (1–3) | number | To Design | Must Have | PAT-022 |
+| 2.5.2.9 | TNM staging: `tumorStage` (T), `nodesStage` (N), `distantMetastasisStage` (M) | select | To Design | Must Have | PAT-022 |
+| 2.5.2.10 | `stagingModalities` — cTNM (clinical) vs pTNM (pathological) | select | To Design | Must Have | PAT-022 |
+| 2.5.2.11 | `metastaticStatus` — boolean | boolean | To Design | Must Have | PAT-022 |
+| 2.5.2.12 | `boneOnlyMetastasisStatus` — spread limited to bones only | boolean | To Design | Must Have | PAT-022 |
+| 2.5.2.13 | `measurableDiseaseByRecistStatus` — RECIST criteria met | boolean | To Design | Must Have | PAT-022 |
+| 2.5.2.14 | `ki67ProliferationIndex` — cell proliferation rate (%) | number | To Design | Must Have | PAT-026 |
+| 2.5.2.15 | `pdL1TumorCels` — PD-L1 expression on tumour cells (%); `pdL1IcPercentage` — PD-L1 on immune cells (%); `pdL1CombinedPositiveScore` (CPS); `pdL1Assay` — assay type used | number / select | To Design | Must Have | PAT-026 |
+| 2.5.2.16 | Genetic mutations array — dynamic, auto-grows: `gene` (BRCA1, BRCA2, TP53, PIK3CA, ESR1, etc.) / `variant` / `origin` (somatic/germline) / `interpretation` (clinical significance) | array | To Design | Must Have | PAT-026 |
+
+#### 2.5.3 Follicular Lymphoma–Specific
+
+| # | Field / Requirement | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.5.3.1 | `flipiScoreOptions` — FLIPI risk factors: age, stage, haemoglobin, nodal areas, LDH | multiselect | To Design | Must Have | PAT-022 |
+| 2.5.3.2 | `gelfCriteriaStatus` — GELF criteria met | multiselect | To Design | Must Have | PAT-022 |
+| 2.5.3.3 | `tumorGrade` — FL grade (1 / 2 / 3A / 3B) | select | To Design | Must Have | PAT-022 |
+
+#### 2.5.4 Chronic Lymphocytic Leukaemia (CLL)–Specific
+
+| # | Field / Requirement | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.5.4.1 | `cytogenicMarkers` — chromosomal markers (multiselect) | multiselect | To Design | Must Have | PAT-026 |
+| 2.5.4.2 | `molecularMarkers` — molecular markers (multiselect) | multiselect | To Design | Must Have | PAT-026 |
+| 2.5.4.3 | `tp53Disruption` — TP53 disruption status | select | To Design | Must Have | PAT-026 |
+| 2.5.4.4 | `binetStage` — Binet staging | select | To Design | Must Have | PAT-022 |
+| 2.5.4.5 | `diseaseActivity` — disease activity level | select | To Design | Must Have | PAT-022 |
+| 2.5.4.6 | `measurableDiseaseIwcll` — IWCLL criteria | select | To Design | Must Have | PAT-022 |
+| 2.5.4.7 | `tumorBurden` — disease burden level | select | To Design | Must Have | PAT-022 |
+| 2.5.4.8 | `lymphocyteDoublingTime` + units — time for lymphocyte count to double | number | To Design | Must Have | PAT-022 |
+| 2.5.4.9 | `proteinExpressions` — protein expression markers (multiselect) | multiselect | To Design | Must Have | PAT-026 |
+| 2.5.4.10 | `richterTransformation` — boolean | boolean | To Design | Must Have | PAT-022 |
+| 2.5.4.11 | `lymphadenopathy`, `splenomegaly`, `hepatomegaly` — lymph node / spleen / liver enlargement | select | To Design | Must Have | PAT-022 |
+| 2.5.4.12 | `clonalBoneMarrowBLymphocytes` — clonal B-lymphocytes in bone marrow (%) | number | To Design | Must Have | PAT-026 |
+| 2.5.4.13 | `clonalBLymphocyteCount` + units — absolute clonal B-lymphocyte count | number | To Design | Must Have | PAT-026 |
+| 2.5.4.14 | `autoimmuneCytopeniasRefractoryToSteroids` — boolean | boolean | To Design | Must Have | PAT-023 |
+| 2.5.4.15 | `btkInhibitorRefractory` — BTK inhibitor resistance | boolean | To Design | Must Have | PAT-025 |
+| 2.5.4.16 | `bcl2InhibitorRefractory` — BCL-2 inhibitor resistance | boolean | To Design | Must Have | PAT-025 |
 
 ### 2.6 Laboratory Values
 
-| # | Requirement | Status | Priority | PRD Ref |
-|---|---|---|---|---|
-| 2.6.1 | Display lab results with reference ranges and out-of-range highlighting | To Build | Must Have | PAT-041 |
-| 2.6.2 | Capture with units: ANC, platelets, WBC, RBC, Hgb | To Design | Must Have | PAT-024 |
-| 2.6.3 | Capture with units: creatinine clearance, serum creatinine, eGFR | To Design | Must Have | PAT-024 |
-| 2.6.4 | Capture with units: AST, ALT, ALP, bilirubin (total + direct), albumin, serum calcium | To Design | Must Have | PAT-024 |
-| 2.6.5 | Capture with units: HbA1c, LDL, blood pressure, heart rate, ejection fraction, QTc interval | To Design | Must Have | PAT-021, PAT-024 |
-| 2.6.6 | Lab values displayed as time-series trend charts | To Design | Must Have | PAT-041 |
-| 2.6.7 | Units must be stored alongside values (unit conversion failures break matching logic) | To Design | Must Have | PAT-024 |
+All numeric lab fields must store value + units. Units stored alongside values — unit conversion failures break matching logic.
+
+#### 2.6.1 CBC (Complete Blood Count) & Haematology
+
+| # | Field | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.6.1.1 | `whiteBloodCellCount` | number + units | To Design | Must Have | PAT-024 |
+| 2.6.1.2 | `hemoglobinLevel` | number + units | To Design | Must Have | PAT-024 |
+| 2.6.1.3 | `plateletCount` | number + units | To Design | Must Have | PAT-024 |
+| 2.6.1.4 | `absoluteNeutrophileCount` (ANC) | number + units | To Design | Must Have | PAT-024 |
+| 2.6.1.5 | `absoluteLymphocyteCount` (ALC) | number + units | To Design | Must Have | PAT-024 |
+
+#### 2.6.2 Renal Function
+
+| # | Field | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.6.2.1 | `serumCreatinineLevel` | number + units | To Design | Must Have | PAT-024 |
+| 2.6.2.2 | `creatinineClearanceRate` | number + units | To Design | Must Have | PAT-024 |
+| 2.6.2.3 | `estimatedGlomerularFiltrationRate` (eGFR) — calculated from creatinine + demographics | calculated | To Design | Must Have | PAT-024 |
+| 2.6.2.4 | `renalAdequacyStatus` — adequacy classification | select | To Design | Must Have | PAT-024 |
+| 2.6.2.5 | `serumCalciumLevel` | number + units | To Design | Must Have | PAT-024 |
+
+#### 2.6.3 Liver Function
+
+| # | Field | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.6.3.1 | `liverEnzymeLevelsAst` (AST) | number + units | To Design | Must Have | PAT-024 |
+| 2.6.3.2 | `liverEnzymeLevelsAlt` (ALT) | number + units | To Design | Must Have | PAT-024 |
+| 2.6.3.3 | `liverEnzymeLevelsAlp` (ALP) | number + units | To Design | Must Have | PAT-024 |
+| 2.6.3.4 | `serumBilirubinLevelTotal`, `serumBilirubinLevelDirect` | number + units | To Design | Must Have | PAT-024 |
+| 2.6.3.5 | `albumin` | number + units | To Design | Must Have | PAT-024 |
+
+#### 2.6.4 Cardiac & Pulmonary
+
+| # | Field | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.6.4.1 | `ejectionFraction` — cardiac function (%) | number | To Design | Must Have | PAT-021 |
+| 2.6.4.2 | `qtcfValue` — QTcF interval; required for targeted therapies | number | To Design | Must Have | PAT-021 |
+| 2.6.4.3 | `pulmonaryFunctionTestResult` | boolean / text | To Design | Must Have | PAT-021 |
+
+#### 2.6.5 Bone & Imaging
+
+| # | Field | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.6.5.1 | `boneImagingResult` | boolean / text | To Design | Must Have | PAT-022 |
+| 2.6.5.2 | `boneLesions` — boolean | boolean | To Design | Must Have | PAT-022 |
+| 2.6.5.3 | `boneMarrowInvolvement` — boolean | boolean | To Design | Must Have | PAT-022 |
+
+#### 2.6.6 Infection Screen
+
+| # | Field | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.6.6.1 | `noHivStatus` — YES = HIV negative | boolean | To Design | Must Have | PAT-023 |
+| 2.6.6.2 | `noHepatitisBStatus` — YES = Hepatitis B negative | boolean | To Design | Must Have | PAT-023 |
+| 2.6.6.3 | `noHepatitisCStatus` — YES = Hepatitis C negative | boolean | To Design | Must Have | PAT-023 |
+
+#### 2.6.7 General / Other
+
+| # | Field | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.6.7.1 | HbA1c, LDL | number + units | To Design | Must Have | PAT-024 |
+| 2.6.7.2 | Lab values displayed as time-series trend charts with reference range overlays | — | To Design | Must Have | PAT-041 |
+| 2.6.7.3 | Out-of-range values highlighted in plain view | — | To Build | Must Have | PAT-041 |
+
+### 2.7 Treatment History
+
+| # | Field / Requirement | Type | Status | Priority | PRD Ref |
+|---|---|---|---|---|---|
+| 2.7.1 | `priorTherapy` — None / One line / Two lines / More than two lines | select | To Design | Must Have | PAT-025 |
+| 2.7.2 | `treatmentRefractoryStatus` — Refractory / Relapsed / Responsive | select | To Design | Must Have | PAT-025 |
+| 2.7.3 | `relapseCount` — number of relapses | number | To Design | Must Have | PAT-025 |
+| 2.7.4 | `stemCellTransplantHistory` — SCT history | multiselect / text | To Design | Must Have | PAT-025 |
+| 2.7.5 | `concomitantMedications` — concurrent medications | multiselect | To Design | Must Have | PAT-025 |
+| 2.7.6 | `plannedTherapies` — scheduled/planned treatments | multiselect | To Design | Should Have | PAT-025 |
+| 2.7.7 | Therapy lines (dynamic, structured): `firstLineTherapy` / `firstLineDate` / `firstLineOutcome`; second line (enabled only when prior therapy ≥ 2 lines); later lines (shown for 2+ lines) | array | To Design | Must Have | PAT-025 |
+| 2.7.8 | Supportive therapies — dynamic array: `therapy` + `date`; auto-grows when last row completed | array | To Design | Must Have | PAT-025 |
+| 2.7.9 | Washout durations and CTCAE toxicity grades per therapy line | — | To Design | Must Have | PAT-025 |
 
 ---
 
@@ -319,7 +466,7 @@ Displayed only when a cancer diagnosis is selected. Contains the detailed clinic
 | # | Requirement | Status | Priority | PRD Ref |
 |---|---|---|---|---|
 | 8.1 | Native mobile application on iOS and Android with feature parity to web for core patient functions | To Design | Must Have | PAT-006 |
-| 8.2 | Zero-knowledge AES-256 encryption for all health data | To Build (UI badges) | Must Have | — |
+| 8.2 | Zero-knowledge AES-256 encryption for all health data | To Build | Must Have | — |
 | 8.3 | HIPAA-compliant data handling and audit logging | To Design | Must Have | — |
 | 8.4 | FHIR R4 as the primary ingestion and export format | To Build | Must Have | PAT-010, PAT-053 |
 | 8.5 | All clinical data stored in OMOP CDM v5.4 with OHDSI standard vocabularies (SNOMED, LOINC, RxNorm, ICD-O-3) | To Design | Must Have | INF-001, INF-005 |
@@ -331,9 +478,73 @@ Displayed only when a cancer diagnosis is selected. Contains the detailed clinic
 
 ---
 
-## 9. Design System (Derived from Prototype)
+## 9. Data Model & API
 
-The following design tokens and patterns are established in the prototype and should be carried forward.
+### 9.1 Core TypeScript Interfaces
+
+```typescript
+// Server response
+interface PatientInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  details: JSONValue; // dynamic object containing all clinical data
+}
+
+// Client-side form input
+interface PatientInfoInput {
+  firstName?: string;
+  lastName?: string;
+  patientAge?: number;
+  gender?: string;
+  [key: string]: any; // disease-specific and clinical fields
+}
+```
+
+### 9.2 API Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/patient-info/user/` | Retrieve patient info |
+| PATCH | `/api/v1/patient-info/user/` | Update patient info |
+| GET | `/api/v1/patient-info/profile-completeness/` | Profile completion percentage |
+| GET | `/api/v1/form-settings/` | Available options / dropdown values |
+
+### 9.3 Calculated Fields
+
+The following fields must be recomputed client-side from raw inputs rather than stored as derived values, to avoid stale data:
+
+| Field | Inputs Required |
+|---|---|
+| `estimatedGlomerularFiltrationRate` (eGFR) | `serumCreatinineLevel`, `patientAge`, `gender`, `ethnicity` |
+| `tnbcStatus` | `estrogenReceptorStatus`, `progesteroneReceptorStatus`, `her2Status` |
+| `meetsCRAB` | Calcium (`serumCalciumLevel`), Renal (`creatinineClearanceRate`), Anaemia (`hemoglobinLevel`), Bone (`boneLesions`) |
+| `meetsSLIM` | SLIM-CRAB components |
+| `measurableDiseaseImwg` | M-protein, FLC, BMPC |
+| FLIPI score | Age, stage, haemoglobin, nodal areas, LDH |
+
+### 9.4 FHIR Mapping
+
+The cancerbot schema uses a custom structure. The PHR ingestion layer must map FHIR resources to these internal fields:
+
+| Patient-Info Category | FHIR Resource(s) |
+|---|---|
+| Demographics | `Patient` |
+| Disease / diagnosis | `Condition` |
+| Genetic mutations | `Observation` (with `valueCodeableConcept`) |
+| Lab values | `Observation` (LOINC codes) |
+| Treatment lines | `MedicationAdministration`, `Procedure` |
+| Supportive therapies | `MedicationAdministration` |
+| Performance status | `Observation` (LOINC 89243-0 ECOG, 89247-1 Karnofsky) |
+| Imaging / bone results | `ImagingStudy`, `DiagnosticReport` |
+
+**Dynamic arrays** (mutation rows, therapy lines, supportive therapies) map to separate encrypted records in the DB (one FHIR `Observation` or `MedicationAdministration` per row) to enable individual timeline entries rather than opaque blobs.
+
+**Disease-conditional structure**: many fields are disease-gated. The ingestion layer must activate the correct field set based on the `disease` value.
+
+---
+
+## 10. Design System (Derived from Prototype)
 
 ### Colors
 | Token | Value | Usage |
@@ -350,11 +561,22 @@ The following design tokens and patterns are established in the prototype and sh
 - Body: DM Sans
 - 8px spacing grid
 
+### UI Form Controls
+
+| Control | Usage |
+|---|---|
+| `BooleanControl` | Yes/No toggle or checkbox (e.g. `noHivStatus`, `consentCapability`) |
+| `SelectControl` | Single-select dropdown (e.g. `gender`, `stage`, `progression`) |
+| `MultiSelectControl` | Multi-select scrollable list (e.g. `ethnicity`, `cytogenicMarkers`) |
+| `DateControl` | Date picker (e.g. therapy line dates, DOB) |
+| `TextNumberControl` | Text or numeric input with optional units (e.g. lab values, height/weight) |
+| `UnitsSelect` | Unit dropdown (kg/lbs, cm/inches, g/dL, etc.) |
+| Chip selectors | Multi-select with toggle state; rose variant for cancer fields |
+| Tag inputs | Enter/comma delimiter for free-form lists (allergies, medications, treatments) |
+| Scale rows | Horizontal scale for staging, ECOG, M-protein type |
+| Option rows | Single-select button groups for categorical choices |
+
 ### Key Component Patterns
-- **Chip selectors:** Multi-select with toggle state; rose variant for cancer fields
-- **Tag inputs:** Enter/comma delimiter for free-form lists (allergies, medications, treatments)
-- **Scale rows:** Horizontal scale for staging, ECOG, M-protein type
-- **Option rows:** Single-select button groups for categorical choices
 - **Circular SVG progress meter:** Used on Summary screen and Vault Home for PPR completion
 - **Bottom-sheet modals:** Dimmed overlay, slide-up animation
 - **Cards:** 16px radius, light shadow `0 2px 14px rgba(15,25,35,.08)`
@@ -362,19 +584,20 @@ The following design tokens and patterns are established in the prototype and sh
 
 ---
 
-## 10. Gaps & Open Questions
-
-The following items are implied by the PRD or prototype but lack sufficient specification:
+## 11. Gaps & Open Questions
 
 | # | Gap | Notes |
 |---|---|---|
 | G-1 | FHIR OAuth integration flow | Prototype shows EHR connection UI but no OAuth handshake spec. Need to define the exact provider-authorization flow for each EHR system. |
 | G-2 | AI document parsing accuracy standards | PRD requires AI extraction but sets no accuracy threshold or error-handling UX for failed extractions. |
-| G-3 | Conflict resolution UX | To Design (PAT-030–033) with no prototype. Needs dedicated UX design — this is a core differentiator. |
-| G-4 | Genomics data capture UI | PAT-026 covers BRCA, HER2, PD-L1, etc. but the prototype has no genomics input fields. Needs design. |
-| G-5 | Lab results entry | Prototype shows static demo lab values only; no UI for manual lab entry or structured import. |
-| G-6 | Trial matching UI | Prototype has "Trial matcher" quick-action entry point but no results screen or trial detail view. Needs full design. |
-| G-7 | SMART Health Link vs. current share link | Current prototype generates a static token-based link. The CMS-compliant implementation requires SHL (live encrypted FHIR pointer). Architecture decision needed. |
-| G-8 | Research consent management UI | PAT-055 requires consent management but no prototype screen exists. Likely belongs in Profile or a dedicated Consent section. |
+| G-3 | Conflict resolution UX | No prototype exists. Needs dedicated UX design — this is a core differentiator (PAT-030–033). |
+| G-4 | Genomics data capture UI | Breast cancer mutation array (2.5.2.16) and biomarker fields (2.5.2.1–2.5.2.15) need a specialised repeating-row input design. |
+| G-5 | Lab results manual entry UX | No UI designed for manual lab entry. Should this be a guided form per test type, or a free-form entry with LOINC lookup? |
+| G-6 | Trial matching results UI | Prototype has "Trial matcher" entry point but no results screen or trial detail view (6.1.2–6.1.3). Needs full design. |
+| G-7 | SMART Health Link vs. current share link | Current prototype generates a static token-based link. CMS-compliant implementation requires SHL (live encrypted FHIR pointer). Architecture decision needed. |
+| G-8 | Research consent management UI | PAT-055 requires consent management. No prototype screen exists. Likely belongs in Profile or a dedicated Consent section. |
 | G-9 | Caregiver delegation UX | PAT-003/004 have no prototype representation. Needs design for how caregivers onboard and navigate to a dependant's record. |
-| G-10 | Symptom & side effect logging | PAT-045 is a Should Have with no prototype representation. Consider whether this belongs in the Records tab or as a separate entry flow. |
+| G-10 | Symptom & side effect logging | PAT-045 Should Have — no prototype representation. Belongs in Records tab or as a separate entry flow. |
+| G-11 | Calculated field refresh strategy | eGFR, TNBC, CRAB/SLIM must be recomputed from raw inputs (see 9.3). Need to define when recalculation is triggered (on save, on input change, on view). |
+| G-12 | Disease-conditional field activation | The `disease` selector gates entire subsections (2.5.1–2.5.4). Need to specify behaviour when a patient has multiple cancers (e.g. breast + MM). |
+| G-13 | Female-only field gating | Fields 2.3.7–2.3.9 are female-only. Need to define gating logic based on `gender` and edge cases (Intersex, Prefer not to say). |
