@@ -1,7 +1,8 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 
-import { api } from "@/lib/api";
+import { api, API_BASE_URL } from "@/lib/api";
 import { authStore } from "@/lib/auth";
 import type { User } from "@/types";
 
@@ -16,8 +17,30 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/**
+ * On page reload, in-memory access tokens are wiped but the refresh token
+ * survives in localStorage. Proactively exchange it for a new access token
+ * so the very first authenticated request doesn't 401 → refresh → retry.
+ */
+async function ensureAccessToken(): Promise<boolean> {
+  if (authStore.getAccessToken()) return true;
+
+  const refresh = authStore.getRefreshToken();
+  if (!refresh) return false;
+
+  try {
+    const r = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, { refresh });
+    authStore.setTokens({ access: r.data.access, refresh });
+    return true;
+  } catch {
+    authStore.clear();
+    return false;
+  }
+}
+
 async function fetchMe(): Promise<User | null> {
-  if (!authStore.isAuthenticated()) return null;
+  const ok = await ensureAccessToken();
+  if (!ok) return null;
   try {
     const r = await api.get<User>("/auth/me/");
     return r.data;

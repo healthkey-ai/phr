@@ -11,6 +11,31 @@
       rel="stylesheet"
     />
     <title>HealthKey</title>
+    <script>
+      // Dark-mode bootstrap. Runs synchronously before React renders to
+      // prevent a flash of light theme on first paint. Reads the OS pref
+      // (prefers-color-scheme) and applies/removes the `dark` class on
+      // <html>, which Tailwind's darkMode: ["class"] looks for.
+      // A future user-override toggle would write to localStorage.theme
+      // ("light" | "dark" | "system") and this script would honor it.
+      (function () {
+        var stored = null;
+        try { stored = localStorage.getItem("hk_theme"); } catch (e) {}
+        var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var isDark = stored === "dark" || (stored !== "light" && prefersDark);
+        document.documentElement.classList.toggle("dark", isDark);
+
+        // Live-update if the user changes their OS theme while the app is open
+        // (only when no explicit override is set).
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function (e) {
+          var s = null;
+          try { s = localStorage.getItem("hk_theme"); } catch (err) {}
+          if (s !== "light" && s !== "dark") {
+            document.documentElement.classList.toggle("dark", e.matches);
+          }
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

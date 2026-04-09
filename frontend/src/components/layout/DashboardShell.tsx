@@ -6,7 +6,7 @@
  *  - Tablet (769–1023px): top nav bar
  *  - Desktop (≥ 1024px): left sidebar
  */
-import { Bell, FileText, Home, Link2, User } from "lucide-react";
+import { FileText, Home, Link2, User } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 
 const TABS = [
@@ -47,15 +47,8 @@ export function DashboardShell() {
       </aside>
 
       {/* Mobile/tablet top bar */}
-      <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4 lg:hidden">
-        <p className="text-h4 font-bold text-brand-700">HealthKey</p>
-        <button
-          type="button"
-          className="p-2 text-muted-foreground hover:text-foreground"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" />
-        </button>
+      <header className="flex h-14 items-center border-b border-border bg-background px-4 lg:hidden">
+        <p className="text-h4 font-bold text-healthkey-brand-700">HealthKey</p>
       </header>
 
       {/* Main content */}
