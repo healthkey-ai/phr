@@ -1,0 +1,237 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * HealthKey color tokens — values sourced from cancerbot/ui.v2/client/global.css.
+ * Single source of truth for both shadcn semantic tokens and the healthkey.* namespace.
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* HealthKey Design System — Single Source of Truth */
+
+    /* Background Colors */
+    --app-bg-secondary: 0 0% 98%;
+    --app-bg-primary: 0 0% 100%;
+    --app-bg-active: 0 0% 98%;
+
+    /* Text Colors */
+    --text-primary-900: 216 17% 14%;
+    --text-secondary-700: 220 9% 32%;
+    --text-quaternary-500: 218 8% 46%;
+    --text-disabled: 0 0% 83%;
+    --text-brand-secondary-700: 212 87% 33%;
+    --text-white: 0 0% 100%;
+
+    /* Border Colors */
+    --border-secondary: 0 0% 91.4%;
+
+    /* Gray Scale */
+    --gray-50: 0 0% 98%;
+    --gray-100: 0 0% 96%;
+    --gray-200: 0 0% 91.4%;
+    --gray-700: 220 9% 32%;
+
+    /* Brand Colors */
+    --brand-25: 199 100% 97%;
+    --brand-50: 199 100% 92%;
+    --brand-200: 199 100% 64%;
+    --brand-700: 212 87% 33%;
+    --brand-primary-alt: 212 95% 40%;
+    --brand-green-500: 146 70% 45%;
+
+    /* Success Colors */
+    --success-50: 152 88% 95%;
+    --success-200: 152 68% 81%;
+    --success-700: 152 91% 29%;
+
+    /* Warning Colors */
+    --warning-50: 48 100% 96%;
+    --warning-200: 43 98% 77%;
+    --warning-700: 25 95% 37%;
+
+    /* Error Colors */
+    --error-50: 4 86% 97%;
+    --error-200: 5 86% 89%;
+    --error-700: 5 79% 40%;
+
+    /* Semantic Link Colors */
+    --link-primary: 212 95% 40%;
+    --link-primary-hover: 212 87% 33%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* HealthKey Design System — Dark */
+
+    /* Background Colors */
+    --app-bg-secondary: 220 13% 10%;
+    --app-bg-primary: 220 13% 13%;
+    --app-bg-active: 220 13% 16%;
+
+    /* Text Colors */
+    --text-primary-900: 216 17% 92%;
+    --text-secondary-700: 220 9% 72%;
+    --text-quaternary-500: 218 8% 55%;
+    --text-disabled: 0 0% 35%;
+    --text-brand-secondary-700: 212 87% 67%;
+    --text-white: 0 0% 100%;
+
+    /* Border Colors */
+    --border-secondary: 220 13% 22%;
+
+    /* Gray Scale */
+    --gray-50: 220 13% 10%;
+    --gray-100: 220 13% 14%;
+    --gray-200: 220 13% 22%;
+    --gray-700: 220 9% 72%;
+
+    /* Brand Colors */
+    --brand-25: 199 40% 12%;
+    --brand-50: 199 50% 18%;
+    --brand-200: 199 70% 35%;
+    --brand-700: 212 87% 60%;
+    --brand-primary-alt: 212 95% 65%;
+    --brand-green-500: 146 70% 45%;
+
+    /* Success Colors */
+    --success-50: 152 40% 12%;
+    --success-200: 152 50% 25%;
+    --success-700: 152 70% 45%;
+
+    /* Warning Colors */
+    --warning-50: 48 50% 12%;
+    --warning-200: 43 60% 30%;
+    --warning-700: 25 85% 55%;
+
+    /* Error Colors */
+    --error-50: 4 50% 12%;
+    --error-200: 5 60% 28%;
+    --error-700: 5 70% 55%;
+
+    /* Semantic Link Colors */
+    --link-primary: 212 95% 65%;
+    --link-primary-hover: 212 87% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "Manrope", -apple-system, Roboto, Helvetica, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  pre,
+  code {
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* Focus ring (a11y baseline per design doc §9.1) */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-brand-700 ring-offset-2;
+  }
+}
+
+@layer utilities {
+  .skip-link {
+    @apply absolute left-2 top-2 z-50 -translate-y-16 rounded-md bg-brand-700 px-4 py-2 text-white focus:translate-y-0;
+  }
+
+  .shadow-sm-soft {
+    box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+  }
+
+  .shadow-card {
+    box-shadow:
+      0 0 0 1px rgba(10, 13, 18, 0.18) inset,
+      0 -2px 0 0 rgba(10, 13, 18, 0.05) inset,
+      0 1px 2px 0 rgba(10, 13, 18, 0.05);
+  }
+}
