@@ -1,0 +1,1158 @@
+[
+  {
+    "model": "labs.labcategory",
+    "pk": 1,
+    "fields": {
+      "key": "cbc",
+      "name": "Complete Blood Count",
+      "display_order": 10
+    }
+  },
+  {
+    "model": "labs.labcategory",
+    "pk": 2,
+    "fields": {
+      "key": "renal",
+      "name": "Renal function",
+      "display_order": 20
+    }
+  },
+  {
+    "model": "labs.labcategory",
+    "pk": 3,
+    "fields": {
+      "key": "liver",
+      "name": "Liver function",
+      "display_order": 30
+    }
+  },
+  {
+    "model": "labs.labcategory",
+    "pk": 4,
+    "fields": {
+      "key": "myeloma",
+      "name": "Multiple myeloma markers",
+      "display_order": 40
+    }
+  },
+  {
+    "model": "labs.labcategory",
+    "pk": 5,
+    "fields": {
+      "key": "breast",
+      "name": "Breast cancer markers",
+      "display_order": 50
+    }
+  },
+  {
+    "model": "labs.labcategory",
+    "pk": 6,
+    "fields": {
+      "key": "cardiac",
+      "name": "Cardiac & metabolic",
+      "display_order": 60
+    }
+  },
+  {
+    "model": "labs.labcategory",
+    "pk": 7,
+    "fields": {
+      "key": "infection",
+      "name": "Infection screen",
+      "display_order": 70
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 1,
+    "fields": {
+      "category": 1,
+      "abbreviation": "wbc",
+      "name": "White blood cell count",
+      "loinc_code": "6690-2",
+      "default_unit": "10^3/uL",
+      "alternative_units": [
+        "K/uL",
+        "10^9/L"
+      ],
+      "aliases": [
+        "WBC",
+        "leukocytes",
+        "leucocytes",
+        "white blood cells",
+        "white cell count"
+      ],
+      "reference_ranges": {
+        "default": [
+          4.0,
+          11.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 10,
+      "sample_values": {
+        "10^3/uL": "7.0",
+        "K/uL": "7.0",
+        "10^9/L": "7.0"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 2,
+    "fields": {
+      "category": 1,
+      "abbreviation": "hgb",
+      "name": "Hemoglobin",
+      "loinc_code": "718-7",
+      "default_unit": "g/dL",
+      "alternative_units": [
+        "g/L"
+      ],
+      "aliases": [
+        "HGB",
+        "Hb",
+        "haemoglobin",
+        "hemoglobin"
+      ],
+      "reference_ranges": {
+        "default": [
+          12.0,
+          17.5
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 20,
+      "sample_values": {
+        "g/dL": "14.0",
+        "g/L": "140"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 3,
+    "fields": {
+      "category": 1,
+      "abbreviation": "plt",
+      "name": "Platelet count",
+      "loinc_code": "777-3",
+      "default_unit": "10^3/uL",
+      "alternative_units": [
+        "K/uL",
+        "10^9/L"
+      ],
+      "aliases": [
+        "PLT",
+        "platelets",
+        "thrombocytes",
+        "platelet count"
+      ],
+      "reference_ranges": {
+        "default": [
+          150.0,
+          400.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 30,
+      "sample_values": {
+        "10^3/uL": "250",
+        "K/uL": "250",
+        "10^9/L": "250"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 4,
+    "fields": {
+      "category": 1,
+      "abbreviation": "anc",
+      "name": "Absolute neutrophil count",
+      "loinc_code": "751-8",
+      "default_unit": "10^3/uL",
+      "alternative_units": [
+        "K/uL",
+        "10^9/L"
+      ],
+      "aliases": [
+        "ANC",
+        "absolute neutrophils",
+        "neutrophils absolute",
+        "segs"
+      ],
+      "reference_ranges": {
+        "default": [
+          1.5,
+          8.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 40,
+      "sample_values": {
+        "10^3/uL": "4.5",
+        "K/uL": "4.5",
+        "10^9/L": "4.5"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 5,
+    "fields": {
+      "category": 1,
+      "abbreviation": "alc",
+      "name": "Absolute lymphocyte count",
+      "loinc_code": "731-0",
+      "default_unit": "10^3/uL",
+      "alternative_units": [
+        "K/uL",
+        "10^9/L"
+      ],
+      "aliases": [
+        "ALC",
+        "lymphocytes absolute",
+        "absolute lymphocytes"
+      ],
+      "reference_ranges": {
+        "default": [
+          1.0,
+          4.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 50,
+      "sample_values": {
+        "10^3/uL": "2.5",
+        "K/uL": "2.5",
+        "10^9/L": "2.5"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 6,
+    "fields": {
+      "category": 1,
+      "abbreviation": "hct",
+      "name": "Hematocrit",
+      "loinc_code": "4544-3",
+      "default_unit": "%",
+      "aliases": [
+        "HCT",
+        "Hct",
+        "packed cell volume",
+        "PCV"
+      ],
+      "reference_ranges": {
+        "default": [
+          36.0,
+          50.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 60,
+      "sample_values": {
+        "%": "42"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 7,
+    "fields": {
+      "category": 1,
+      "abbreviation": "mcv",
+      "name": "Mean corpuscular volume",
+      "loinc_code": "787-2",
+      "default_unit": "fL",
+      "aliases": [
+        "MCV"
+      ],
+      "reference_ranges": {
+        "default": [
+          80.0,
+          100.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 70,
+      "sample_values": {
+        "fL": "90"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 8,
+    "fields": {
+      "category": 2,
+      "abbreviation": "creatinine",
+      "name": "Serum creatinine",
+      "loinc_code": "2160-0",
+      "default_unit": "mg/dL",
+      "alternative_units": [
+        "umol/L"
+      ],
+      "aliases": [
+        "Cr",
+        "creat",
+        "SCr",
+        "creatinine",
+        "serum creatinine"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.6,
+          1.3
+        ]
+      },
+      "value_type": "numeric",
+      "molecular_weight": 113.12,
+      "display_order": 10,
+      "sample_values": {
+        "mg/dL": "1.0",
+        "umol/L": "88"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 9,
+    "fields": {
+      "category": 2,
+      "abbreviation": "egfr",
+      "name": "Estimated GFR (CKD-EPI)",
+      "loinc_code": "62238-1",
+      "default_unit": "mL/min/1.73m2",
+      "aliases": [
+        "eGFR",
+        "estimated GFR",
+        "GFR",
+        "estimated glomerular filtration rate"
+      ],
+      "reference_ranges": {
+        "default": [
+          60.0,
+          120.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 20,
+      "sample_values": {
+        "mL/min/1.73m2": "90"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 10,
+    "fields": {
+      "category": 2,
+      "abbreviation": "crcl",
+      "name": "Creatinine clearance",
+      "loinc_code": "2164-2",
+      "default_unit": "mL/min",
+      "aliases": [
+        "CrCl",
+        "CCr",
+        "creatinine clearance"
+      ],
+      "reference_ranges": {
+        "default": [
+          90.0,
+          140.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 30,
+      "sample_values": {
+        "mL/min": "115"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 11,
+    "fields": {
+      "category": 2,
+      "abbreviation": "calcium",
+      "name": "Serum calcium",
+      "loinc_code": "17861-6",
+      "default_unit": "mg/dL",
+      "alternative_units": [
+        "mmol/L"
+      ],
+      "aliases": [
+        "Ca",
+        "calcium",
+        "calcium total",
+        "total calcium"
+      ],
+      "reference_ranges": {
+        "default": [
+          8.5,
+          10.5
+        ]
+      },
+      "value_type": "numeric",
+      "molecular_weight": 40.08,
+      "display_order": 40,
+      "sample_values": {
+        "mg/dL": "9.5",
+        "mmol/L": "2.37"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 12,
+    "fields": {
+      "category": 2,
+      "abbreviation": "bun",
+      "name": "Blood urea nitrogen",
+      "loinc_code": "3094-0",
+      "default_unit": "mg/dL",
+      "aliases": [
+        "BUN",
+        "urea",
+        "blood urea nitrogen"
+      ],
+      "reference_ranges": {
+        "default": [
+          7.0,
+          20.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 50,
+      "sample_values": {
+        "mg/dL": "14"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 13,
+    "fields": {
+      "category": 3,
+      "abbreviation": "ast",
+      "name": "Aspartate aminotransferase",
+      "loinc_code": "1920-8",
+      "default_unit": "U/L",
+      "alternative_units": [
+        "IU/L"
+      ],
+      "aliases": [
+        "AST",
+        "SGOT",
+        "aspartate aminotransferase"
+      ],
+      "reference_ranges": {
+        "default": [
+          10.0,
+          40.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 10,
+      "sample_values": {
+        "U/L": "25",
+        "IU/L": "25"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 14,
+    "fields": {
+      "category": 3,
+      "abbreviation": "alt",
+      "name": "Alanine aminotransferase",
+      "loinc_code": "1742-6",
+      "default_unit": "U/L",
+      "alternative_units": [
+        "IU/L"
+      ],
+      "aliases": [
+        "ALT",
+        "SGPT",
+        "alanine aminotransferase"
+      ],
+      "reference_ranges": {
+        "default": [
+          7.0,
+          56.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 20,
+      "sample_values": {
+        "U/L": "30",
+        "IU/L": "30"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 15,
+    "fields": {
+      "category": 3,
+      "abbreviation": "alp",
+      "name": "Alkaline phosphatase",
+      "loinc_code": "6768-6",
+      "default_unit": "U/L",
+      "alternative_units": [
+        "IU/L"
+      ],
+      "aliases": [
+        "ALP",
+        "alk phos",
+        "alkaline phosphatase"
+      ],
+      "reference_ranges": {
+        "default": [
+          44.0,
+          147.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 30,
+      "sample_values": {
+        "U/L": "80",
+        "IU/L": "80"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 16,
+    "fields": {
+      "category": 3,
+      "abbreviation": "bili_total",
+      "name": "Total bilirubin",
+      "loinc_code": "1975-2",
+      "default_unit": "mg/dL",
+      "alternative_units": [
+        "umol/L"
+      ],
+      "aliases": [
+        "TBili",
+        "total bilirubin",
+        "bilirubin total",
+        "bilirubin"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.2,
+          1.2
+        ]
+      },
+      "value_type": "numeric",
+      "molecular_weight": 584.66,
+      "display_order": 40,
+      "sample_values": {
+        "mg/dL": "0.7",
+        "umol/L": "12"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 17,
+    "fields": {
+      "category": 3,
+      "abbreviation": "bili_direct",
+      "name": "Direct bilirubin",
+      "loinc_code": "1968-7",
+      "default_unit": "mg/dL",
+      "alternative_units": [
+        "umol/L"
+      ],
+      "aliases": [
+        "DBili",
+        "direct bilirubin",
+        "conjugated bilirubin"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.0,
+          0.3
+        ]
+      },
+      "value_type": "numeric",
+      "molecular_weight": 584.66,
+      "display_order": 50,
+      "sample_values": {
+        "mg/dL": "0.2",
+        "umol/L": "3.4"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 18,
+    "fields": {
+      "category": 3,
+      "abbreviation": "albumin",
+      "name": "Serum albumin",
+      "loinc_code": "1751-7",
+      "default_unit": "g/dL",
+      "alternative_units": [
+        "g/L"
+      ],
+      "aliases": [
+        "Alb",
+        "albumin",
+        "serum albumin"
+      ],
+      "reference_ranges": {
+        "default": [
+          3.5,
+          5.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 60,
+      "sample_values": {
+        "g/dL": "4.2",
+        "g/L": "42"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 19,
+    "fields": {
+      "category": 3,
+      "abbreviation": "ldh",
+      "name": "Lactate dehydrogenase",
+      "loinc_code": "2532-0",
+      "default_unit": "U/L",
+      "alternative_units": [
+        "IU/L"
+      ],
+      "aliases": [
+        "LDH",
+        "lactate dehydrogenase",
+        "lactic dehydrogenase"
+      ],
+      "reference_ranges": {
+        "default": [
+          140.0,
+          280.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 70,
+      "sample_values": {
+        "U/L": "200",
+        "IU/L": "200"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 20,
+    "fields": {
+      "category": 4,
+      "abbreviation": "mspike_serum",
+      "name": "Monoclonal protein, serum",
+      "loinc_code": "33358-3",
+      "default_unit": "g/dL",
+      "alternative_units": [
+        "g/L"
+      ],
+      "aliases": [
+        "M-spike",
+        "M protein",
+        "monoclonal protein",
+        "monoclonal immunoglobulin",
+        "M spike serum"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.0,
+          0.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 10,
+      "sample_values": {
+        "g/dL": "0.0",
+        "g/L": "0"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 21,
+    "fields": {
+      "category": 4,
+      "abbreviation": "mspike_urine",
+      "name": "Monoclonal protein, urine (24h)",
+      "loinc_code": "34366-5",
+      "default_unit": "mg/24h",
+      "aliases": [
+        "Bence Jones protein",
+        "urine M-spike",
+        "urine monoclonal protein",
+        "UPEP M spike"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.0,
+          0.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 20,
+      "sample_values": {
+        "mg/24h": "0"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 22,
+    "fields": {
+      "category": 4,
+      "abbreviation": "flc_kappa",
+      "name": "Kappa free light chain",
+      "loinc_code": "36916-5",
+      "default_unit": "mg/L",
+      "aliases": [
+        "kappa FLC",
+        "\u03baFLC",
+        "kappa free light chain",
+        "free kappa"
+      ],
+      "reference_ranges": {
+        "default": [
+          3.3,
+          19.4
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 30,
+      "sample_values": {
+        "mg/L": "10"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 23,
+    "fields": {
+      "category": 4,
+      "abbreviation": "flc_lambda",
+      "name": "Lambda free light chain",
+      "loinc_code": "33944-0",
+      "default_unit": "mg/L",
+      "aliases": [
+        "lambda FLC",
+        "\u03bbFLC",
+        "lambda free light chain",
+        "free lambda"
+      ],
+      "reference_ranges": {
+        "default": [
+          5.7,
+          26.3
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 40,
+      "sample_values": {
+        "mg/L": "15"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 24,
+    "fields": {
+      "category": 4,
+      "abbreviation": "flc_ratio",
+      "name": "Kappa/Lambda FLC ratio",
+      "loinc_code": "48378-4",
+      "default_unit": "ratio",
+      "aliases": [
+        "K/L ratio",
+        "FLC ratio",
+        "kappa lambda ratio",
+        "free light chain ratio"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.26,
+          1.65
+        ]
+      },
+      "value_type": "ratio",
+      "display_order": 50,
+      "sample_values": {
+        "ratio": "1.0"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 25,
+    "fields": {
+      "category": 4,
+      "abbreviation": "bmpc",
+      "name": "Bone marrow plasma cells",
+      "loinc_code": "26450-7",
+      "default_unit": "%",
+      "aliases": [
+        "BMPC",
+        "bone marrow plasma cells",
+        "plasma cell percentage"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.0,
+          5.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 60,
+      "sample_values": {
+        "%": "2"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 26,
+    "fields": {
+      "category": 4,
+      "abbreviation": "b2m",
+      "name": "Serum beta-2 microglobulin",
+      "loinc_code": "1952-1",
+      "default_unit": "mg/L",
+      "alternative_units": [
+        "ug/mL",
+        "ng/mL"
+      ],
+      "aliases": [
+        "B2M",
+        "beta-2 M",
+        "beta 2 microglobulin",
+        "\u03b22M"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.8,
+          2.4
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 70,
+      "sample_values": {
+        "mg/L": "1.5",
+        "ug/mL": "1.5",
+        "ng/mL": "1500"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 27,
+    "fields": {
+      "category": 5,
+      "abbreviation": "ca_15_3",
+      "name": "CA 15-3",
+      "loinc_code": "6875-9",
+      "default_unit": "U/mL",
+      "aliases": [
+        "CA 15-3",
+        "CA15-3",
+        "cancer antigen 15-3"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.0,
+          30.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 10,
+      "sample_values": {
+        "U/mL": "20"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 28,
+    "fields": {
+      "category": 5,
+      "abbreviation": "ca_27_29",
+      "name": "CA 27-29",
+      "loinc_code": "17842-6",
+      "default_unit": "U/mL",
+      "aliases": [
+        "CA 27-29",
+        "CA27-29",
+        "cancer antigen 27-29"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.0,
+          38.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 20,
+      "sample_values": {
+        "U/mL": "25"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 29,
+    "fields": {
+      "category": 5,
+      "abbreviation": "ki67",
+      "name": "Ki-67 proliferation index",
+      "loinc_code": "85337-4",
+      "default_unit": "%",
+      "aliases": [
+        "Ki-67",
+        "Ki67",
+        "MIB-1",
+        "proliferation index"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.0,
+          20.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 30,
+      "sample_values": {
+        "%": "15"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 30,
+    "fields": {
+      "category": 6,
+      "abbreviation": "lvef",
+      "name": "Left ventricular ejection fraction",
+      "loinc_code": "10230-1",
+      "default_unit": "%",
+      "aliases": [
+        "EF",
+        "LVEF",
+        "ejection fraction",
+        "left ventricular ejection fraction"
+      ],
+      "reference_ranges": {
+        "default": [
+          55.0,
+          70.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 10,
+      "sample_values": {
+        "%": "60"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 31,
+    "fields": {
+      "category": 6,
+      "abbreviation": "hba1c",
+      "name": "Hemoglobin A1c",
+      "loinc_code": "4548-4",
+      "default_unit": "%",
+      "aliases": [
+        "HbA1c",
+        "A1C",
+        "glycohemoglobin",
+        "glycated hemoglobin"
+      ],
+      "reference_ranges": {
+        "default": [
+          4.0,
+          5.6
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 20,
+      "sample_values": {
+        "%": "5.4"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 32,
+    "fields": {
+      "category": 6,
+      "abbreviation": "ldl",
+      "name": "LDL cholesterol",
+      "loinc_code": "13457-7",
+      "default_unit": "mg/dL",
+      "alternative_units": [
+        "mmol/L"
+      ],
+      "aliases": [
+        "LDL",
+        "LDL-C",
+        "LDL cholesterol",
+        "low density lipoprotein"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.0,
+          100.0
+        ]
+      },
+      "value_type": "numeric",
+      "molecular_weight": 386.65,
+      "display_order": 30,
+      "sample_values": {
+        "mg/dL": "90",
+        "mmol/L": "2.33"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 33,
+    "fields": {
+      "category": 6,
+      "abbreviation": "hdl",
+      "name": "HDL cholesterol",
+      "loinc_code": "2085-9",
+      "default_unit": "mg/dL",
+      "alternative_units": [
+        "mmol/L"
+      ],
+      "aliases": [
+        "HDL",
+        "HDL-C",
+        "HDL cholesterol",
+        "high density lipoprotein"
+      ],
+      "reference_ranges": {
+        "default": [
+          40.0,
+          100.0
+        ]
+      },
+      "value_type": "numeric",
+      "molecular_weight": 386.65,
+      "display_order": 40,
+      "sample_values": {
+        "mg/dL": "55",
+        "mmol/L": "1.42"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 34,
+    "fields": {
+      "category": 6,
+      "abbreviation": "tsh",
+      "name": "Thyroid-stimulating hormone",
+      "loinc_code": "3016-3",
+      "default_unit": "mIU/L",
+      "alternative_units": [
+        "uIU/mL"
+      ],
+      "aliases": [
+        "TSH",
+        "thyrotropin",
+        "thyroid stimulating hormone"
+      ],
+      "reference_ranges": {
+        "default": [
+          0.4,
+          4.0
+        ]
+      },
+      "value_type": "numeric",
+      "display_order": 50,
+      "sample_values": {
+        "mIU/L": "2.0",
+        "uIU/mL": "2.0"
+      }
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 35,
+    "fields": {
+      "category": 7,
+      "abbreviation": "hiv_ab",
+      "name": "HIV 1/2 antibody",
+      "loinc_code": "75622-1",
+      "default_unit": "",
+      "aliases": [
+        "HIV",
+        "HIV screen",
+        "HIV antibody",
+        "HIV 1/2"
+      ],
+      "reference_ranges": {},
+      "value_type": "qualitative",
+      "display_order": 10,
+      "sample_values": {}
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 36,
+    "fields": {
+      "category": 7,
+      "abbreviation": "hbsag",
+      "name": "Hepatitis B surface antigen",
+      "loinc_code": "5195-3",
+      "default_unit": "",
+      "aliases": [
+        "HBsAg",
+        "hepatitis B surface antigen",
+        "Hep B surface antigen"
+      ],
+      "reference_ranges": {},
+      "value_type": "qualitative",
+      "display_order": 20,
+      "sample_values": {}
+    }
+  },
+  {
+    "model": "labs.labtesttype",
+    "pk": 37,
+    "fields": {
+      "category": 7,
+      "abbreviation": "hcv_ab",
+      "name": "Hepatitis C antibody",
+      "loinc_code": "16128-1",
+      "default_unit": "",
+      "aliases": [
+        "HCV Ab",
+        "HCV antibody",
+        "hepatitis C antibody",
+        "anti-HCV"
+      ],
+      "reference_ranges": {},
+      "value_type": "qualitative",
+      "display_order": 30,
+      "sample_values": {}
+    }
+  }
+]

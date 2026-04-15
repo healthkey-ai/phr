@@ -4,8 +4,15 @@
  *
  * Phase 1: shows the structured record. Lab trends + timeline + conflicts come in Phase 2.
  */
+import { useState } from "react";
+import { Plus } from "lucide-react";
+
 import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
+import { LabManualEntryDialog } from "@/components/labs/LabManualEntryDialog";
+import { LabValueCard } from "@/components/labs/LabValueCard";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useCatalog, useLabResults } from "@/features/labs/api";
 import { usePatientInfo } from "@/features/patient-profile/api";
 
 export function Records() {
@@ -118,6 +125,9 @@ export function Records() {
         </Card>
       </section>
 
+      {/* Lab values */}
+      <LabsSection />
+
       {/* Connected sources placeholder */}
       <section>
         <h2 className="mb-3 text-h3 text-foreground">Connected sources</h2>
@@ -131,6 +141,60 @@ export function Records() {
         </Card>
       </section>
     </div>
+  );
+}
+
+/**
+ * Labs section — lists unique test cards for whatever the patient has entered.
+ * Empty state points at the manual entry dialog.
+ */
+function LabsSection() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const { data: results = [], isLoading } = useLabResults();
+  const { data: catalog } = useCatalog();
+
+  // Unique test abbreviations across all results, preserving recency order
+  const testAbbrevs = Array.from(new Set(results.map((r) => r.test.abbreviation)));
+
+  return (
+    <section className="mb-6">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-h3 text-foreground">Lab values</h2>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setDialogOpen(true)}
+          disabled={!catalog}
+        >
+          <Plus className="mr-1 h-4 w-4" /> Add lab result
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <Card>
+          <CardContent className="p-6">
+            <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+          </CardContent>
+        </Card>
+      ) : testAbbrevs.length === 0 ? (
+        <Card>
+          <CardContent className="p-6">
+            <EmptyState
+              title="No lab values yet"
+              body="Add your first result to see it trend over time. Upload + automatic reading of lab reports is coming in Phase 2."
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {testAbbrevs.map((abbrev) => (
+            <LabValueCard key={abbrev} testAbbrev={abbrev} />
+          ))}
+        </div>
+      )}
+
+      <LabManualEntryDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+    </section>
   );
 }
 

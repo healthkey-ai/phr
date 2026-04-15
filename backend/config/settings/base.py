@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     # Local apps
     "apps.accounts",
     "apps.patient_profile",
+    "apps.labs",
 ]
 
 MIDDLEWARE = [
