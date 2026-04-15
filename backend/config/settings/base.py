@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.patient_profile",
     "apps.labs",
+    "apps.health",
 ]
 
 MIDDLEWARE = [
@@ -119,3 +120,17 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_CREDENTIALS = True
+
+# ── Celery / Redis ────────────────────────────────────────────────────────────
+# Phase 2a: broker isn't actively used yet, but the config is wired up so the
+# worker service can boot in deployed environments before Phase 2b adds tasks.
+# Both URLs default to empty string so local dev without Redis still works.
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="")
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_SOFT_TIME_LIMIT = 270  # 4.5 min — matches design doc §6 for LLM jobs
+CELERY_TASK_TIME_LIMIT = 300        # 5 min hard limit
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
