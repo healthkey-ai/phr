@@ -5,7 +5,8 @@
  * Per docs/patient-app-design.md §4.2. Phase 2a wires it to real data from the
  * /labs/results/ endpoint via a test abbreviation.
  */
-import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,13 +30,21 @@ export function LabValueCard({ testAbbrev, title }: Props) {
   const trend = getTrend(latest, previous);
 
   return (
-    <Card>
-      <CardContent className="p-5">
+    <Link
+      to={`/dashboard/records/labs/${testAbbrev}`}
+      className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-healthkey-brand-700 focus-visible:ring-offset-2"
+      aria-label={`Open ${title ?? latest.test.name} trend`}
+    >
+      <Card className="transition-colors hover:bg-muted/30">
+        <CardContent className="p-5">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-base font-semibold text-foreground">
             {title ?? latest.test.name}
           </h3>
-          <TrendIcon trend={trend} />
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <TrendIcon trend={trend} />
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </div>
         </div>
 
         <div className="flex items-baseline gap-2">
@@ -64,8 +73,9 @@ export function LabValueCard({ testAbbrev, title }: Props) {
             timeAgo={formatTimeAgo(latest.measured_at ?? latest.created_at)}
           />
         </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 

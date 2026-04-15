@@ -1,5 +1,13 @@
 # Changelog
 
+## Lab trend detail route + bundle cleanup (2026-04-15)
+
+- **New route** `/dashboard/records/labs/:abbreviation` → `LabTrendDetail` page with back link, test header, full-width `LabTrendChart` (line + reference band + status-coloured dots), and a chronological history list with per-row delete button. Opens the manual entry dialog pre-selected to the current test when the patient taps "Add"
+- **`LabValueCard` is now a `<Link>`** wrapping the whole card. Tapping any value card on Records navigates to its trend detail. Subtle `hover:bg-muted/30` and a trailing chevron hint at the affordance without turning it into a loud primary action
+- **Code-split the detail route** with `React.lazy` + `Suspense` because it pulls in recharts. Main bundle dropped from **805 KB → 66 KB** (gz 18 KB). Recharts now loads only when the user opens a trend
+- **Delete flow**: history list row's trash button calls `useDeleteLabResult()`, which invalidates the `labs.results` query so the chart, sparkline on Records, and the history list all re-render after removal. Browser `confirm()` gates the action in Phase 2a; a proper shadcn `AlertDialog` is a minor follow-up
+- **`.gitignore`** now ignores `frontend/tsconfig.tsbuildinfo` (TypeScript incremental build cache — regenerated on every `tsc -b`). Untracked via `git rm --cached`
+
 ## Regional units + per-unit ranges & placeholders (2026-04-15)
 
 Incremental UX improvements on top of Phase 2a so patients outside the US can enter values in the units their lab reports actually print.

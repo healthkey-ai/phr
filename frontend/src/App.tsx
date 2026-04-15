@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { useAuth } from "./contexts/AuthContext";
@@ -7,6 +8,12 @@ import { Home } from "./pages/dashboard/Home";
 import { Profile } from "./pages/dashboard/Profile";
 import { Records } from "./pages/dashboard/Records";
 import { Share } from "./pages/dashboard/Share";
+
+// Lazy-load the lab trend detail route because it pulls in recharts
+// (~280 KB). Loads only when the patient taps a LabValueCard.
+const LabTrendDetail = lazy(() =>
+  import("./pages/dashboard/LabTrendDetail").then((m) => ({ default: m.LabTrendDetail })),
+);
 import { Conditions } from "./pages/onboarding/Conditions";
 import { Demographics } from "./pages/onboarding/Demographics";
 import { Family } from "./pages/onboarding/Family";
@@ -127,6 +134,14 @@ export default function App() {
         >
           <Route index element={<Home />} />
           <Route path="records" element={<Records />} />
+          <Route
+            path="records/labs/:abbreviation"
+            element={
+              <Suspense fallback={<FullScreenSpinner />}>
+                <LabTrendDetail />
+              </Suspense>
+            }
+          />
           <Route path="share" element={<Share />} />
           <Route path="profile" element={<Profile />} />
         </Route>
