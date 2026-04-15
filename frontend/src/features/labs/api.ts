@@ -71,6 +71,25 @@ export function useCreateLabResult() {
   });
 }
 
+/**
+ * Edit an existing lab result. The `id` is immutable; test_type is also
+ * immutable (even if you pass test_type_id in the body, the backend ignores
+ * it). Everything else — value, unit, measured_at, reference range — gets
+ * re-normalised to the test's default_unit on the server.
+ */
+export function useUpdateLabResult() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...input }: LabResultCreateInput & { id: number }) => {
+      const r = await api.patch<LabResult>(`/labs/results/${id}/`, input);
+      return r.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["labs", "results"] });
+    },
+  });
+}
+
 export function useDeleteLabResult() {
   const queryClient = useQueryClient();
   return useMutation({

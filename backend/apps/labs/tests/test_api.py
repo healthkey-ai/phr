@@ -343,6 +343,138 @@ class TestListFilterDelete:
         assert LabResult.objects.filter(pk=r.id).exists()  # Untouched
 
 
+# ── Update ────────────────────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestUpdateResult:
+    def test_patch_value(self, client, user, catalog):
+        r = LabResult.objects.create(
+            user=user, test_type=catalog["hgb"],
+            value=12.5, unit="g/dL", source_text="12.5", source_unit="g/dL",
+            reference_min=12.0, reference_max=17.5,
+            measured_at=date(2026, 3, 15),
+        )
+        response = client.patch(
+            reverse("lab-result-detail", args=[r.id]),
+            {"value": 13.2, "unit": "g/dL", "measured_at": "2026-03-15"},
+            format="json",
+        )
+        assert response.status_code == 200, response.json()
+        body = response.json()
+        assert body["value"] == pytest.approx(13.2)
+        assert body["status"] == "in_range"
+        assert body["source_text"] == "13.2"
+        # DB reflects the new value
+        r.refresh_from_db()
+        assert r.value == pytest.approx(13.2)
+
+    def test_patch_unit_triggers_renormalization(self, client, user, catalog):
+        """Editing the unit converts the new value back to default_unit."""
+        r = LabResult.objects.create(
+            user=user, test_type=catalog["hgb"],
+            value=12.5, unit="g/dL", source_text="12.5", source_unit="g/dL",
+            measured_at=date(2026, 3, 15),
+        )
+        # Submit 125 g/L — should be stored as 12.5 g/dL
+        response = client.patch(
+            reverse("lab-result-detail", args=[r.id]),
+            {"value": 125, "unit": "g/L", "measured_at": "2026-03-15"},
+            format="json",
+        )
+        assert response.status_code == 200, response.json()
+        body = response.json()
+        assert body["value"] == pytest.approx(12.5, rel=1e-6)
+        assert body["unit"] == "g/dL"
+        assert body["source_text"] == "125.0"
+        assert body["source_unit"] == "g/L"
+
+    def test_patch_measured_at_only(self, client, user, catalog):
+        r = LabResult.objects.create(
+            user=user, test_type=catalog["hgb"],
+            value=12.5, unit="g/dL", source_text="12.5", source_unit="g/dL",
+            measured_at=date(2026, 3, 15),
+        )
+        response = client.patch(
+            reverse("lab-result-detail", args=[r.id]),
+            {"value": 12.5, "unit": "g/dL", "measured_at": "2026-02-01"},
+            format="json",
+        )
+        assert response.status_code == 200
+        assert response.json()["measured_at"] == "2026-02-01"
+
+    def test_patch_report_range_wins_over_catalog(self, client, user, catalog):
+        r = LabResult.objects.create(
+            user=user, test_type=catalog["hgb"],
+            value=12.5, unit="g/dL", source_text="12.5", source_unit="g/dL",
+            reference_min=12.0, reference_max=17.5,
+            reference_source="catalog",
+            measured_at=date(2026, 3, 15),
+        )
+        response = client.patch(
+            reverse("lab-result-detail", args=[r.id]),
+            {
+                "value": 12.5, "unit": "g/dL", "measured_at": "2026-03-15",
+                "reference_min": 11.0, "reference_max": 16.5,
+            },
+            format="json",
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["reference_min"] == 11.0
+        assert body["reference_max"] == 16.5
+        assert body["reference_source"] == "report"
+
+    def test_patch_other_users_result_404(self, client, other_user, catalog):
+        r = LabResult.objects.create(
+            user=other_user, test_type=catalog["hgb"],
+            value=12.5, unit="g/dL", source_text="12.5", source_unit="g/dL",
+            measured_at=date(2026, 3, 15),
+        )
+        response = client.patch(
+            reverse("lab-result-detail", args=[r.id]),
+            {"value": 99.0, "unit": "g/dL"},
+            format="json",
+        )
+        assert response.status_code == 404
+        r.refresh_from_db()
+        assert r.value == 12.5  # untouched
+
+    def test_patch_rejects_incompatible_unit(self, client, user, catalog):
+        r = LabResult.objects.create(
+            user=user, test_type=catalog["hgb"],
+            value=12.5, unit="g/dL", source_text="12.5", source_unit="g/dL",
+            measured_at=date(2026, 3, 15),
+        )
+        response = client.patch(
+            reverse("lab-result-detail", args=[r.id]),
+            {"value": 1.0, "unit": "parsecs"},
+            format="json",
+        )
+        assert response.status_code == 400
+        r.refresh_from_db()
+        assert r.value == 12.5  # untouched
+
+    def test_patch_test_type_id_is_ignored(self, client, user, catalog):
+        """test_type_id in the payload is silently dropped — the test row
+        cannot be re-assigned to a different test."""
+        r = LabResult.objects.create(
+            user=user, test_type=catalog["hgb"],
+            value=12.5, unit="g/dL", source_text="12.5", source_unit="g/dL",
+            measured_at=date(2026, 3, 15),
+        )
+        response = client.patch(
+            reverse("lab-result-detail", args=[r.id]),
+            {
+                "test_type_id": catalog["creatinine"].id,  # attempt to hijack
+                "value": 13.0, "unit": "g/dL",
+            },
+            format="json",
+        )
+        assert response.status_code == 200
+        r.refresh_from_db()
+        assert r.test_type_id == catalog["hgb"].id  # still hemoglobin
+
+
 # ── Cascade delete — user deletion propagates (§9.5) ──────────────────────────
 
 @pytest.mark.django_db

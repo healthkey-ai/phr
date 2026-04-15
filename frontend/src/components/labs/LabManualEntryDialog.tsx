@@ -27,8 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCatalog, useCreateLabResult } from "@/features/labs/api";
-import type { LabCategory, LabTestType } from "@/types/labs";
+import {
+  useCatalog,
+  useCreateLabResult,
+  useUpdateLabResult,
+} from "@/features/labs/api";
+import type { LabCategory, LabResult, LabTestType } from "@/types/labs";
 
 /** Fallback placeholder when the backend catalog doesn't supply one. */
 const GENERIC_PLACEHOLDER = "e.g. 12.5";
@@ -36,8 +40,16 @@ const GENERIC_PLACEHOLDER = "e.g. 12.5";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Pre-select a test by abbreviation (e.g. opening from a specific card) */
+  /** Pre-select a test by abbreviation (e.g. opening from a specific card). */
   defaultTestAbbrev?: string;
+  /**
+   * When set, the dialog switches to edit mode:
+   *   - Title becomes "Edit lab result"
+   *   - Test selector is locked (test_type is immutable server-side too)
+   *   - Fields are pre-filled from the stored result's source_text / source_unit
+   *   - Submit calls PATCH /labs/results/{id}/ instead of POST
+   */
+  editingResult?: LabResult | null;
 }
 
 interface FormValues {
@@ -48,10 +60,18 @@ interface FormValues {
   measured_at: string;
 }
 
-export function LabManualEntryDialog({ open, onOpenChange, defaultTestAbbrev }: Props) {
+export function LabManualEntryDialog({
+  open,
+  onOpenChange,
+  defaultTestAbbrev,
+  editingResult,
+}: Props) {
   const { data: catalog } = useCatalog();
   const create = useCreateLabResult();
+  const update = useUpdateLabResult();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const isEditing = Boolean(editingResult);
 
   const {
     register,
@@ -70,6 +90,55 @@ export function LabManualEntryDialog({ open, onOpenChange, defaultTestAbbrev }: 
     },
   });
 
+  /**
+   * Atomic form initialisation on dialog open.
+   *
+   * Handles three cases in a single `reset()`:
+   *   1. Edit mode     → hydrate from editingResult's source_text/source_unit
+   *                      (the verbatim original input, not the normalised
+   *                      value — e.g. "125 g/L" for hemoglobin, not "12.5 g/dL")
+   *   2. Create mode with defaultTestAbbrev → pre-select that test in the
+   *      catalog and its default_unit in one shot (e.g. clicking "Add" on
+   *      /dashboard/records/labs/hgb lands the dialog on Hemoglobin · g/dL)
+   *   3. Create mode with nothing           → empty form, user picks a test
+   *
+   * Consolidating into a single effect avoids a two-render race where a
+   * separate "preselect" effect would fire AFTER the reset, briefly showing
+   * an empty selector and occasionally dropping the preselection.
+   */
+  useEffect(() => {
+    if (!open) return;
+    if (editingResult) {
+      reset({
+        test_type_id: String(editingResult.test.id),
+        value: editingResult.source_text ?? "",
+        value_qualitative:
+          editingResult.test.value_type === "qualitative"
+            ? editingResult.source_text ?? ""
+            : "",
+        unit: editingResult.source_unit || editingResult.unit || "",
+        measured_at:
+          editingResult.measured_at ??
+          editingResult.created_at.slice(0, 10),
+      });
+    } else {
+      // Create mode — look up the default test (if any) in the catalog so
+      // the selector + unit are set in the same reset as everything else.
+      const defaultTest =
+        defaultTestAbbrev && catalog
+          ? catalog.tests.find((t) => t.abbreviation === defaultTestAbbrev)
+          : undefined;
+      reset({
+        test_type_id: defaultTest ? String(defaultTest.id) : "",
+        value: "",
+        value_qualitative: "",
+        unit: defaultTest?.default_unit ?? "",
+        measured_at: new Date().toISOString().slice(0, 10),
+      });
+    }
+    setServerError(null);
+  }, [open, editingResult, reset, defaultTestAbbrev, catalog]);
+
   // Group tests by category for a sensible Select
   const categoriesWithTests = useMemo(() => {
     if (!catalog) return [];
@@ -87,22 +156,28 @@ export function LabManualEntryDialog({ open, onOpenChange, defaultTestAbbrev }: 
     return catalog.tests.find((t) => String(t.id) === selectedTestId);
   }, [catalog, selectedTestId]);
 
-  // Pre-select a test when defaultTestAbbrev is passed
+  // When the user manually changes the test in CREATE mode, default the unit
+  // to the new test's default_unit. The initial preselect (via the hydration
+  // effect above) also sets the unit, so this effect mainly matters when the
+  // user picks a different test from the dropdown mid-flow.
+  //
+  // Guarded on isEditing because in edit mode the test selector is disabled
+  // and the unit came from the stored source_unit, which we don't want to
+  // stomp on.
   useEffect(() => {
-    if (defaultTestAbbrev && catalog && !selectedTestId) {
-      const t = catalog.tests.find((t) => t.abbreviation === defaultTestAbbrev);
-      if (t) setValue("test_type_id", String(t.id));
-    }
-  }, [defaultTestAbbrev, catalog, selectedTestId, setValue]);
-
-  // When test changes, default the unit to that test's default_unit
-  useEffect(() => {
+    if (isEditing) return;
     if (selectedTest) {
       setValue("unit", selectedTest.default_unit, { shouldValidate: false });
     }
-  }, [selectedTest?.id, setValue]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedTest?.id, setValue, isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isQualitative = selectedTest?.value_type === "qualitative";
+
+  // Lock the test selector when:
+  //   - editing an existing row (backend rejects test_type changes anyway), OR
+  //   - opened from a test-specific page via defaultTestAbbrev (the caller's
+  //     intent is "add a measurement for THIS test", not "pick one")
+  const testSelectorLocked = isEditing || Boolean(defaultTestAbbrev);
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
@@ -110,14 +185,19 @@ export function LabManualEntryDialog({ open, onOpenChange, defaultTestAbbrev }: 
       setServerError("Pick a test first.");
       return;
     }
+    const payload = {
+      test_type_id: Number(values.test_type_id),
+      value: isQualitative || !values.value ? null : Number(values.value),
+      value_qualitative: isQualitative ? values.value_qualitative.trim() : "",
+      unit: values.unit || selectedTest.default_unit,
+      measured_at: values.measured_at || null,
+    };
     try {
-      await create.mutateAsync({
-        test_type_id: Number(values.test_type_id),
-        value: isQualitative || !values.value ? null : Number(values.value),
-        value_qualitative: isQualitative ? values.value_qualitative.trim() : "",
-        unit: values.unit || selectedTest.default_unit,
-        measured_at: values.measured_at || null,
-      });
+      if (editingResult) {
+        await update.mutateAsync({ id: editingResult.id, ...payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
       reset();
       onOpenChange(false);
     } catch (err: unknown) {
@@ -132,7 +212,7 @@ export function LabManualEntryDialog({ open, onOpenChange, defaultTestAbbrev }: 
       } else if (data?.test_type_id) {
         setServerError("Unknown test type. Refresh and try again.");
       } else {
-        setServerError("Couldn't save. Try again.");
+        setServerError(isEditing ? "Couldn't update. Try again." : "Couldn't save. Try again.");
       }
     }
   };
@@ -141,19 +221,24 @@ export function LabManualEntryDialog({ open, onOpenChange, defaultTestAbbrev }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add a lab result</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit lab result" : "Add a lab result"}</DialogTitle>
           <DialogDescription>
-            Type in one value from a report. Upload + automatic reading is coming in Phase 2.
+            {isEditing
+              ? "Adjust the value, unit, or date. The test itself can't be changed — create a new result if you need a different test."
+              : "Type in one value from a report. Upload + automatic reading is coming in Phase 2."}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          {/* Test selector — grouped */}
+          {/* Test selector — grouped.
+              Locked both in edit mode and when opened from a test-specific
+              detail page via defaultTestAbbrev. */}
           <div className="space-y-2">
             <Label htmlFor="test_type_id">Test</Label>
             <Select
               value={selectedTestId || undefined}
               onValueChange={(v) => setValue("test_type_id", v, { shouldValidate: true })}
+              disabled={testSelectorLocked}
             >
               <SelectTrigger id="test_type_id">
                 <SelectValue placeholder="Choose a test…" />
@@ -177,7 +262,12 @@ export function LabManualEntryDialog({ open, onOpenChange, defaultTestAbbrev }: 
           {isQualitative ? (
             <div className="space-y-2">
               <Label htmlFor="value_qualitative">Result</Label>
+              {/* Controlled Select: reads value_qualitative from form state so
+                  edit mode shows the stored result (non-reactive / reactive /
+                  indeterminate) pre-selected. Passes `undefined` when empty
+                  so Radix renders the placeholder. */}
               <Select
+                value={watch("value_qualitative") || undefined}
                 onValueChange={(v) => setValue("value_qualitative", v, { shouldValidate: true })}
               >
                 <SelectTrigger id="value_qualitative">
@@ -221,7 +311,13 @@ export function LabManualEntryDialog({ open, onOpenChange, defaultTestAbbrev }: 
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting || !selectedTest}>
-              {isSubmitting ? "Saving…" : "Save result"}
+              {isSubmitting
+                ? isEditing
+                  ? "Updating…"
+                  : "Saving…"
+                : isEditing
+                  ? "Update result"
+                  : "Save result"}
             </Button>
           </DialogFooter>
         </form>

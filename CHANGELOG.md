@@ -1,5 +1,46 @@
 # Changelog
 
+## Lab editor + trend chart polish + detail UX (2026-04-15)
+
+A round of polish on top of the lab trend detail route: per-row editing, a better chart, a proper sparkline, a colored trend badge, and a few UX knots straightened out.
+
+### Backend
+
+- **PATCH `/api/v1/labs/results/{id}/`** — new endpoint to edit an existing result. `LabResultUpdateSerializer` mirrors create's validation + unit normalisation but `test_type_id` is immutable on update (attempt to change it is silently dropped; backend keeps the original test). Shared helpers `_validate_value_fields` and `_apply_normalised_fields` are extracted from the create path so create and update go through the same unit-conversion + reference-range logic — no drift.
+- **Provenance preserved on update**: `source`, `match_method`, and `confidence` are left alone. A manually-edited document-extracted row keeps its origin trail.
+- **7 new API tests** covering PATCH value, PATCH unit triggers re-normalization, PATCH date only, PATCH overrides catalog range with report range, PATCH other user's result → 404, PATCH incompatible unit → 400, PATCH `test_type_id` in body silently ignored. **73 tests passing.**
+
+### Trend chart (`LabTrendChart`)
+
+- `LineChart` → `AreaChart` with a vertical gradient fill (brand-blue @ 25% → 2% opacity). The area is clipped by the curve, not a rectangle — actual "area under the curve."
+- Reference range: rectangular `ReferenceArea` replaced with two horizontal dashed `ReferenceLine`s. Colour switched from green to neutral `muted-foreground` so they stop blending into the gradient fill; full opacity, 1.5px thick, `strokeDasharray="4 3"`. Numeric bounds moved to a legend caption **above** the chart with a matching dashed swatch, so they stay readable without competing with the plot.
+- Data points rendered as `r=5` filled circles with a `hsl(var(--background))` ring so they pop against both the curve and the fill. Hover `activeDot` grows to `r=7`.
+- Tooltip: cursor dashed guide line, full-date label (`"March 15, 2026"` via `labelFormatter` reading the raw ISO `date` from the payload), value + unit. Tooltip style tightened (6/10px padding, semibold label).
+- Plot area left-aligned: `margin.left = -24` pulls the YAxis labels into the container's padding so the curve starts flush with the card edge. `XAxis padding={{ left: 8, right: 8 }}` keeps the first/last dots from clipping.
+
+### `LabValueCard` on the Records tab
+
+- **Sparkline rebuilt.** Stretches to fill the card width (`preserveAspectRatio="none"`). Data points are now **HTML `<div>`s** absolutely positioned over the polyline SVG — CSS `border-radius` circles stay perfectly round regardless of the container's aspect ratio, unlike SVG `<circle>`s which deform into ellipses under non-uniform scaling. Each dot has `onPointerEnter`/`Leave` gated to `pointerType === "mouse"` (mobile taps fall through to the parent `<Link>`). Tooltip pops above the hovered dot showing value + unit + short date.
+- **Sparkline height bumped to `h-12`** (48px) so the trend shape is more pronounced.
+- **Layout restructured.** Value + unit stacked on top of "Normal: X–Y" caption, both on the left. Sparkline taller and right-aligned, vertically centered so it spans both text lines. `items-center` on the row keeps alignment consistent.
+- **"No range" placeholder.** When a test has no reference range (`M-spike`, qualitative infection screens after `value_type` filter), the "Normal: …" slot shows an italic `No range` label instead of collapsing. All cards now end up the same height regardless of whether the test has a range, so the grid on Records stays flush.
+- **Deduped "No range" label.** `StatusChip` used to show "No range" for `status === "unknown"`, which duplicated the placeholder on the range line. Now `StatusChip` returns null for unknown — the range slot is the single source of truth.
+- **`TrendBadge`** replaces the bare muted arrow. Coloured pill showing the signed delta (`+0.7`, `−1.2`, `±0`) and a direction arrow. Colour tone is computed from **distance-to-reference-range** (closer → improving/green, farther → worsening/amber, equal → stable/gray) — not naive up/down, because "up is good" isn't universal (cholesterol vs hemoglobin). Native `title` tooltip explains the tone; `aria-label` gives screen readers the full delta.
+- **Header truncation fix.** Long test names like "Absolute neutrophil count" no longer push the trend badge off the card on narrow widths. `h3` uses `min-w-0 truncate`; badge + chevron stay `shrink-0`.
+
+### `LabTrendDetail` page
+
+- **Edit button on every history row.** Pencil icon next to the trash opens `LabManualEntryDialog` in edit mode pre-filled with the row's values.
+- **Chart hidden for qualitative tests.** On `/dashboard/records/labs/hbsag` (and the other three qualitative infection screens) the chart card is skipped entirely — trends don't apply to reactive/non-reactive results. The history list still shows every measurement. No misleading "No data yet" card.
+
+### `LabManualEntryDialog` editor upgrade
+
+- **Edit mode.** New optional `editingResult?: LabResult` prop. When set, the dialog title becomes "Edit lab result", the test selector is locked, and the form is pre-filled from `source_text` / `source_unit` (the verbatim original input, not the normalised value — so editing a row entered as `125 g/L` shows `125 g/L` again, not `12.5 g/dL`). Submit button toggles between "Save result" / "Update result".
+- **`useUpdateLabResult()`** hook invalidates the shared `["labs", "results"]` query key so the chart, sparkline on Records, and history list all re-render after save.
+- **Atomic form initialization.** Merged the hydration effect and the "preselect defaultTestAbbrev" effect into a single `reset()` call. Previously a race between the two could briefly show an empty selector or drop the pre-selection; now the dialog opens with the test, unit, and date all populated in one atomic state update.
+- **Test selector locked when opened from a detail page.** `disabled` on the Select is now `isEditing || Boolean(defaultTestAbbrev)` — clicking Add on `/dashboard/records/labs/hgb` opens the dialog with Hemoglobin pre-selected AND locked, so users can't accidentally file the new row under a different test. The Records tab's main "Add lab result" button still opens the dropdown unlocked for free-form test selection.
+- **Controlled qualitative Select.** The "Result" dropdown for qualitative tests (HIV, HBsAg, HCV) was uncontrolled — editing an existing row showed the placeholder instead of the stored value, even though saving worked. Added `value={watch("value_qualitative") || undefined}` so Radix reads from the form state. Editing now shows the current stored result pre-selected throughout the dialog lifecycle.
+
 ## Lab trend detail route + bundle cleanup (2026-04-15)
 
 - **New route** `/dashboard/records/labs/:abbreviation` → `LabTrendDetail` page with back link, test header, full-width `LabTrendChart` (line + reference band + status-coloured dots), and a chronological history list with per-row delete button. Opens the manual entry dialog pre-selected to the current test when the patient taps "Add"

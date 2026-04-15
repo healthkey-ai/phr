@@ -11,7 +11,7 @@
  * Phase 2a: read-only except for delete. Upload + extraction land in 2b-d.
  */
 import { useMemo, useState } from "react";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
@@ -30,10 +30,25 @@ export function LabTrendDetail() {
   const { abbreviation = "" } = useParams<{ abbreviation: string }>();
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
+  // When set, the dialog opens in edit mode pre-filled with this row.
+  const [editingResult, setEditingResult] = useState<LabResult | null>(null);
 
   const { data: catalog } = useCatalog();
   const { data: results = [], isLoading } = useLabResults({ test: abbreviation });
   const deleteResult = useDeleteLabResult();
+
+  const openForEdit = (r: LabResult) => {
+    setEditingResult(r);
+    setDialogOpen(true);
+  };
+  const openForCreate = () => {
+    setEditingResult(null);
+    setDialogOpen(true);
+  };
+  const handleDialogOpenChange = (next: boolean) => {
+    setDialogOpen(next);
+    if (!next) setEditingResult(null);
+  };
 
   const test = useMemo(
     () => catalog?.tests.find((t) => t.abbreviation === abbreviation),
@@ -93,7 +108,7 @@ export function LabTrendDetail() {
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => setDialogOpen(true)}
+            onClick={openForCreate}
             disabled={!catalog}
           >
             <Plus className="mr-1 h-4 w-4" /> Add
@@ -101,18 +116,22 @@ export function LabTrendDetail() {
         </div>
       </header>
 
-      {/* Chart */}
-      <section className="mb-8">
-        <Card>
-          <CardContent className="p-4 sm:p-6">
-            {isLoading ? (
-              <div className="h-64 w-full animate-pulse rounded-md bg-muted" />
-            ) : (
-              <LabTrendChart testAbbrev={abbreviation} />
-            )}
-          </CardContent>
-        </Card>
-      </section>
+      {/* Chart — skipped entirely for qualitative tests (HIV, HBsAg, HCV Ab…)
+          since "reactive / non-reactive" doesn't plot on a time-series axis.
+          The history list below still shows all the measurements. */}
+      {test?.value_type !== "qualitative" && (
+        <section className="mb-8">
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              {isLoading ? (
+                <div className="h-64 w-full animate-pulse rounded-md bg-muted" />
+              ) : (
+                <LabTrendChart testAbbrev={abbreviation} />
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* History list */}
       <section>
@@ -127,7 +146,7 @@ export function LabTrendDetail() {
               <Button
                 className="mt-4"
                 size="sm"
-                onClick={() => setDialogOpen(true)}
+                onClick={openForCreate}
                 disabled={!catalog}
               >
                 <Plus className="mr-1 h-4 w-4" /> Add first result
@@ -162,19 +181,29 @@ export function LabTrendDetail() {
                       )}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm("Delete this measurement?")) {
-                        deleteResult.mutate(r.id);
-                      }
-                    }}
-                    className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-error-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-healthkey-brand-700 focus-visible:ring-offset-2"
-                    aria-label={`Delete ${test?.name ?? abbreviation} measurement from ${r.measured_at ?? "unknown date"}`}
-                    disabled={deleteResult.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openForEdit(r)}
+                      className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-healthkey-brand-700 focus-visible:ring-offset-2"
+                      aria-label={`Edit ${test?.name ?? abbreviation} measurement from ${r.measured_at ?? "unknown date"}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm("Delete this measurement?")) {
+                          deleteResult.mutate(r.id);
+                        }
+                      }}
+                      className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-error-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-healthkey-brand-700 focus-visible:ring-offset-2"
+                      aria-label={`Delete ${test?.name ?? abbreviation} measurement from ${r.measured_at ?? "unknown date"}`}
+                      disabled={deleteResult.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -184,8 +213,9 @@ export function LabTrendDetail() {
 
       <LabManualEntryDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={handleDialogOpenChange}
         defaultTestAbbrev={abbreviation}
+        editingResult={editingResult}
       />
     </div>
   );

@@ -16,6 +16,7 @@ from .serializers import (
     CatalogSerializer,
     LabResultCreateSerializer,
     LabResultSerializer,
+    LabResultUpdateSerializer,
 )
 
 
@@ -37,6 +38,7 @@ class LabResultViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
@@ -44,6 +46,9 @@ class LabResultViewSet(
 
     - GET (list) supports ?test=<abbreviation>, ?from=YYYY-MM-DD, ?to=YYYY-MM-DD
     - POST creates a manual entry (unit-normalised server-side)
+    - PATCH updates value/unit/date/range on an existing row; test_type is
+      immutable (CreateModelMixin-only-for-test-identity). Unit conversion
+      re-runs so you can edit hgb from g/dL to g/L without creating a new row.
     - DELETE removes the row (cascade pseudonymises audit refs — §9.5)
 
     Scoped to request.user; other users' results 404.
@@ -70,6 +75,8 @@ class LabResultViewSet(
     def get_serializer_class(self):
         if self.action == "create":
             return LabResultCreateSerializer
+        if self.action in ("update", "partial_update"):
+            return LabResultUpdateSerializer
         return LabResultSerializer
 
     def create(self, request, *args, **kwargs):
@@ -80,3 +87,13 @@ class LabResultViewSet(
             LabResultSerializer(result).data,
             status=status.HTTP_201_CREATED,
         )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        result = serializer.save()
+        # Return the read serializer shape so the frontend sees a consistent
+        # response format across create/read/update.
+        return Response(LabResultSerializer(result).data)
