@@ -18,6 +18,12 @@ lib/
 lib64/
 parts/
 sdist/
+
+# The Python `lib/` pattern above is too broad — it also matches
+# frontend/src/lib/ which is the React app's source code. Explicitly
+# un-ignore the frontend lib directory so tsc can find utils/api/auth.
+!frontend/src/lib/
+!frontend/src/lib/**
 var/
 wheels/
 share/python-wheels/
