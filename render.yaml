@@ -12,9 +12,12 @@
 # lets Phase 2b (upload + extraction) land without a blueprint change — the
 # infrastructure is already there, we just start calling `.delay()`.
 #
-# Env var sharing: backend + worker share most settings via the
-# `healthkey-core-env` envVarGroup. Service-specific values (port, command)
-# live inline.
+# Env var layout:
+#   - `healthkey-core-env` group holds the plain shared values (settings
+#     module, DEBUG, JWT lifetimes, feature flags). Cross-service references
+#     (fromDatabase, fromService) are NOT supported inside envVarGroups, so
+#     DATABASE_URL / CELERY_BROKER_URL / CELERY_RESULT_BACKEND live inline on
+#     each service that needs them. Keeping the duplication tight + small.
 
 envVarGroups:
   - name: healthkey-core-env
@@ -32,33 +35,9 @@ envVarGroups:
         value: "localhost,127.0.0.1,.onrender.com"
 
       # CORS origin for the frontend. Set in the Render dashboard after the
-      # static site is first deployed (it'll be something like
-      # https://healthkey-frontend.onrender.com or a custom domain).
+      # static site is first deployed (e.g. https://healthkey-frontend.onrender.com).
       - key: CORS_ALLOWED_ORIGINS
         sync: false
-
-      # ── Database — full URL consumed by django-environ.env.db() ───────────
-      # Render provides fromDatabase.connectionString which is the full
-      # postgres:// URL — exactly what env.db() wants. No need to glue
-      # host/port/name/user/password together in code.
-      - key: DATABASE_URL
-        fromDatabase:
-          name: healthkey-db
-          property: connectionString
-
-      # ── Celery / Redis ────────────────────────────────────────────────────
-      # Both broker and result backend point at the same Redis instance, using
-      # different default database numbers so tasks and results don't collide.
-      - key: CELERY_BROKER_URL
-        fromService:
-          type: keyvalue
-          name: healthkey-redis
-          property: connectionString
-      - key: CELERY_RESULT_BACKEND
-        fromService:
-          type: keyvalue
-          name: healthkey-redis
-          property: connectionString
 
       # ── JWT lifetimes (patient app auth) ──────────────────────────────────
       - key: JWT_ACCESS_LIFETIME_MINUTES
@@ -107,6 +86,22 @@ services:
     envVars:
       - fromGroup: healthkey-core-env
 
+      # ── Cross-service refs (must live inline; not allowed in groups) ──
+      - key: DATABASE_URL
+        fromDatabase:
+          name: healthkey-db
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: healthkey-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: healthkey-redis
+          property: connectionString
+
   # ─────────────────────────────────────────────────────────────────────────
   # 3. Celery worker service (async jobs — Phase 2b+ lab extraction pipeline)
   # ─────────────────────────────────────────────────────────────────────────
@@ -135,6 +130,23 @@ services:
 
     envVars:
       - fromGroup: healthkey-core-env
+
+      # ── Cross-service refs (same as backend; the worker needs the same
+      # database + broker as the web process) ─────────────────────────────
+      - key: DATABASE_URL
+        fromDatabase:
+          name: healthkey-db
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: healthkey-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: healthkey-redis
+          property: connectionString
 
   # ─────────────────────────────────────────────────────────────────────────
   # 4. Vite frontend (static site)
