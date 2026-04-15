@@ -387,6 +387,8 @@ class LabResult(models.Model):
 
 **Unmatched results** — when the LLM returns a value the matcher can't tie to a `LabTestType`, it stays in `LabUpload.parsed_results` as a JSON entry until the patient manually picks a test from the catalog. It does **not** become a `LabResult` until matched.
 
+**Reference range precedence** (resolved per eng review §CQ2): when both the report and the catalog provide reference ranges, **the report wins**. `LabResult.reference_source` records which was used. Rationale: the patient's own lab chose those ranges for their instrument; the catalog default is a fallback for reports that omit ranges entirely.
+
 ### 4.3 Relationships
 
 ```
@@ -653,24 +655,85 @@ Trade-off: the input token count can be large on 20-page PDFs. Mitigations:
 - Hard page cap of 30 per upload; reject anything larger with a clear error
 - If input exceeds model context window, split into batches of 10 pages and merge
 
-### 6.3 LLM provider abstraction
+### 6.3 LLM provider — Claude only for Phase 2c
+
+Per eng review §A3, Phase 2c ships with **Claude only**. No provider fallback. Adding OpenAI as a fallback later is its own landing if Anthropic has a real outage that justifies the adapter work.
 
 ```python
 # parsers/llm_parser.py
 
-class LabLLMParser(Protocol):
+class ParsedLabResult(TypedDict):
+    test_name: str
+    value: str | None
+    unit: str
+    reference_min: float | None
+    reference_max: float | None
+    measured_date: str | None
+    page: int
+    confidence: float
+    batch_index: int   # Which extraction batch this came from (0 for single-shot)
+
+
+class ClaudeLabParser:
+    """Uses anthropic.Anthropic SDK with claude-sonnet-4-6.
+
+    Failure modes handled:
+      - Malformed JSON      → ParseError, retry once, then fail
+      - Timeout (>60s)      → TimeoutError, fail fast
+      - Rate limit          → RateLimitError with exponential backoff (3 retries)
+      - Empty array         → return [] (upload completes with empty results)
+      - Refusal detected    → RefusalError (see §12.2)
+      - Token limit hit     → trigger paged extraction (§6.4)
+    """
     def extract(self, images: list[bytes], catalog_hint: str) -> list[ParsedLabResult]: ...
-
-class ClaudeLabParser: ...       # Uses anthropic.Anthropic SDK, claude-sonnet-4-6
-class OpenAILabParser: ...       # Uses openai, gpt-4o-mini
-
-def get_parser() -> LabLLMParser:
-    if settings.LAB_LLM_PROVIDER == "openai":
-        return OpenAILabParser()
-    return ClaudeLabParser()      # default
 ```
 
-Provider chosen via `LAB_LLM_PROVIDER` env var. Default is Claude per CLAUDE.md guidance to use latest Anthropic models for AI work. Fallback path on the primary's failure retries once with the other provider before marking the upload `failed`.
+The `ParsedLabResult` TypedDict is the contract every downstream consumer (matching, serializers, tests) relies on. If OpenAI support is ever added, its parser must return the same shape; the adapter work is a known cost that's deferred until we actually need it.
+
+### 6.4 Paged extraction for large PDFs (per eng review §A1)
+
+Phase 2c implements proper paged merge, not a hard cap. The catalog hint stays; the merge logic lives in `llm_parser.py`:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                      PAGED EXTRACTION MERGE LOGIC                            │
+│                                                                              │
+│  Input: N rendered page images, total_pages                                  │
+│                                                                              │
+│  if total_pages <= 10:                                                       │
+│      # Single-shot: one Claude call with all pages                           │
+│      return claude.extract(images, catalog_hint, batch_index=0)              │
+│                                                                              │
+│  else:                                                                       │
+│      # Paged: split into batches of 10                                       │
+│      batches = [images[i:i+10] for i in range(0, total_pages, 10)]           │
+│      all_results = []                                                        │
+│      for idx, batch in enumerate(batches):                                   │
+│          batch_results = claude.extract(                                     │
+│              batch,                                                          │
+│              catalog_hint,                                                   │
+│              batch_index=idx,                                                │
+│              system_hint=f"This is batch {idx+1}/{len(batches)} "            │
+│                          f"of a larger report.",                             │
+│          )                                                                   │
+│          all_results.extend(batch_results)                                   │
+│                                                                              │
+│      return deduplicate(all_results)                                         │
+│                                                                              │
+│  dedupe key: (normalized_test_name, value, unit, measured_date)              │
+│  when two results have the same key, keep the one with higher confidence;    │
+│  when confidences are equal, keep the earlier batch_index (preserves order). │
+│                                                                              │
+│  KNOWN LIMITATION: a test whose NAME is on page 10 and VALUE is on page 11   │
+│  (straddling a batch boundary) may be missed. The pdf_rasteriser adds a      │
+│  2-page overlap between batches (pages 9+10 appear in both batches) to       │
+│  mitigate. Overlap results are deduped by the standard key.                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Overlap strategy:** batches overlap by 2 pages. Batch 0 has pages 0..9, batch 1 has pages 8..17, batch 2 has pages 16..25. A test whose name is on page 9 and value is on page 10 is visible to both batch 0 (sees page 9+10) and batch 1 (sees page 8+9+10). Dedup by key resolves the duplicate. Cost is ~20% more image tokens per large PDF, acceptable for correctness.
+
+**Hard upper bound:** 60 pages total. Beyond that, the upload is rejected at ingress with a clear error. Rationale: 60 pages = 7 batches = 7 Claude calls = acceptable latency (< 90s), still clearly useful. Anything larger is "split your report and upload separately."
 
 ---
 
@@ -713,7 +776,25 @@ The matcher takes a raw `test_name` from the LLM and returns a `LabTestType` row
 
 Implementation lives in `apps/labs/matching.py` as pure functions, fully unit-testable without a database.
 
-**Disambiguation rules** are hardcoded in a small dict keyed by normalised raw name. Adding a rule is a 3-line code change + test. We resist the temptation to make this data-driven until we have 10+ rules.
+**Name normalisation** (per eng review §CQ5) uses full Unicode folding:
+
+```python
+import unicodedata
+
+def normalize_name(raw: str) -> str:
+    # NFKD: decompose ligatures and compatibility chars (µ → u, ﬁ → fi)
+    # casefold: stronger than lower() for non-ASCII (ß → ss)
+    s = unicodedata.normalize("NFKD", raw).casefold()
+    # Strip punctuation + collapse whitespace
+    s = "".join(ch if ch.isalnum() else " " for ch in s)
+    return " ".join(s.split())
+```
+
+This ensures `"Hgb µg/dL"` matches `"Hgb ug/dL"`, `"FLC κ"` matches `"FLC kappa"`, and smart-quoted report headers match their ASCII aliases. **Every alias in `LabTestType.aliases` is also run through `normalize_name` at match time** so the comparison is symmetric.
+
+**Disambiguation rules** are hardcoded as `DISAMBIGUATION_RULES` — a module-level dict in `matching.py` keyed by normalised raw name. Adding a rule is a 3-line code change + test. We resist the temptation to make this data-driven until we have 10+ rules. Move to `disambiguation.py` when it crosses 50 lines.
+
+**Match method** is declared as `MatchMethod` (a `TextChoices` enum on `LabResult`). The same enum is imported by `matching.py`, serializers, tests, and the frontend type definitions — single source of truth, no string duplication.
 
 ### 7.1 Manual matching fallback
 
@@ -796,12 +877,49 @@ Each `LabUploadFile` stores `sha256(file_bytes)`. If the same user uploads the s
 - **Uploaded files:** retained indefinitely as source-of-truth for extracted values. Deleted when user deletes the upload or deletes their account. Mirrors the PHR architecture doc's "raw FHIR bundles are the source of truth" principle applied to uploaded documents.
 - **Pre-match `parsed_results` JSON:** kept on `LabUpload` for audit/debugging. Included in the patient's data export.
 
-### 9.4 Access control
+### 9.4 Access control + PHI in LLM calls
 
 - All endpoints `IsAuthenticated` + `IsOwner` (checks `upload.user == request.user`)
 - Celery tasks always look up `LabUpload` by ID and never trust a user field in the task payload
 - Presigned S3 URLs issued for reading uploaded files (short-lived, 5-minute expiry)
-- LLM calls **do not** include the user's HealthKey ID, name, or any PII from `PatientInfo` — only the document images. Per the existing architecture doc's BAA requirement, the LLM vendor must have a signed BAA before this ships to prod
+
+**PHI transmitted to the LLM vendor — honest description:**
+
+Full lab reports (including patient name, DOB, MRN, provider name, provider address, and every clinical value on the page) are transmitted to the LLM vendor as image data. **This is PHI.** There is no attempt to redact or minimise the image content before sending — doing so reliably at scale would require its own OCR pipeline, defeating the purpose.
+
+**No PII from our database is appended** to the request. We do not send the user's HealthKey account ID, email, internal patient_id, or any `PatientInfo` field. The only user-identifying data in the vendor's hands is whatever was printed on the lab report the patient chose to upload.
+
+**Mandatory before prod deploy:**
+1. Signed BAA with the LLM vendor covering vision API calls
+2. Vendor contractual commitment that images are not retained or used for training
+3. TODO-001 resolution confirming which vendor's BAA we have
+
+Feature flag `LAB_UPLOAD_ENABLED` (§15.1) stays `False` in prod until all three land.
+
+### 9.5 Deletion propagation
+
+Per eng review §A2, user deletion cascades through labs:
+
+```
+User.delete()
+    │
+    ├─ CASCADE → LabUpload.delete()   (FK on_delete=CASCADE)
+    │              │
+    │              ├─ CASCADE → LabUploadFile.delete()
+    │              │              └─ post_delete signal → remove file from S3
+    │              │
+    │              └─ CASCADE → LabResult.delete()
+    │                              └─ post_delete signal → pseudonymise
+    │                                 audit entries (actor_id→NULL,
+    │                                 resource_id→NULL), keep the row
+    │                                 for 6-year HIPAA audit retention
+    │
+    └─ "Delete my uploads but keep my account" is a separate flow:
+       DELETE /api/v1/labs/uploads/{id}/ cascades the same way but leaves
+       User intact. Patient-initiated, single-upload scope.
+```
+
+Audit log rows are **never** cascade-deleted. They are pseudonymised in place so the compliance timeline stays intact even after the referenced data is gone.
 
 ### 9.5 PHI in logs
 
@@ -971,11 +1089,14 @@ Every state the UI must render, per design doc §6.
 
 | Cause | Behaviour |
 |---|---|
-| LLM returns malformed JSON | Retry once with primary provider; on second failure fall back to OpenAI |
-| LLM timeout (>60s) | Mark upload failed with `error_message="Reading took too long — try a clearer scan"` |
-| Celery soft timeout (>270s) | Same as above — message explains how to recover |
+| LLM returns malformed JSON | Retry once; on second failure mark upload failed with `error_message="We couldn't read the values from this report. Try a clearer scan or enter them manually."` |
+| **LLM refusal** (per eng review §3.4) | Detect common refusal phrases (`"i cannot"`, `"i am unable"`, `"i can't process"`, `"as an ai"`) via regex before JSON parsing. Distinct `RefusalError`. User message: `"Our AI couldn't process this report. Please enter the values manually or try a different scan."` Do NOT retry — retrying won't change the model's answer |
+| LLM timeout (>60s) | Mark upload failed: `"Reading took too long — try a clearer scan"` |
+| LLM rate limit | Exponential backoff 1s/2s/4s, 3 attempts. On final failure: `"Our AI is busy right now. Try again in a minute."` — keep upload in a retryable state |
+| Celery soft timeout (>270s) | Same message as LLM timeout; triggered when the full pipeline (rasterise + extract + match) runs over budget |
 | LLM returns empty array | Upload marked `completed` with empty `parsed_results`; review UI shows empty state with "We couldn't find any lab values. Enter them manually?" |
 | Image too low-resolution | No special handling. The LLM's own confidence scores will be low; review UI surfaces them |
+| Paged extraction: one batch fails | Mark the batch failed in `parsed_results` metadata; merge the successful batches; show a warning in the review UI: "We couldn't read all the pages. Some values may be missing." |
 
 ### 12.3 Extraction quality issues
 
@@ -993,11 +1114,11 @@ Every state the UI must render, per design doc §6.
 
 ### 12.5 LLM provider outage
 
-Primary (Claude) down → automatic fallback to OpenAI on the task's first retry. If both down, the upload goes to `failed` with:
+Per eng review §A3, Phase 2c ships with Claude only — no automatic fallback. If Anthropic is down, the upload goes to `failed` with:
 
 > "We're having trouble reading reports right now. Your file is saved — try again in a few minutes."
 
-The Celery task is not auto-retried in this case; the patient taps "Retry extraction" which hits `POST /extract/`.
+The Celery task is not auto-retried on infrastructure errors; the patient taps "Retry extraction" which hits `POST /extract/`. This is a deliberate trade-off: building a working OpenAI adapter costs ~2 days (different image format, different JSON schema, different refusal patterns) and only pays off during real Anthropic outages, which are rare. When we have our first real outage, that data justifies the adapter landing.
 
 ---
 
@@ -1032,15 +1153,24 @@ This feature is Phase 2 of the overall patient app plan (see architecture doc §
 
 ### Phase 2c — LLM extraction + matching (1 week)
 
-- [ ] `parsers/pdf_rasteriser.py` (PyMuPDF integration)
-- [ ] `parsers/llm_parser.py` with Claude + OpenAI abstractions
-- [ ] `prompts/lab_extraction.txt` + catalog-hint injection
-- [ ] `matching.py` with tiered strategy + disambiguation rules
-- [ ] Celery task `process_lab_upload`
-- [ ] Fixture-based extraction tests (no live LLM calls in CI)
-- [ ] BAA confirmation with LLM vendor before prod deploy
+- [ ] `parsers/pdf_rasteriser.py` (PyMuPDF, generator-based, 2-page overlap for paged mode)
+- [ ] `parsers/llm_parser.py` — **Claude only** (no OpenAI adapter in Phase 2c)
+- [ ] `ParsedLabResult` TypedDict as the matching contract
+- [ ] Paged extraction merge logic (`§6.4`) for PDFs >10 pages, cap at 60
+- [ ] `prompts/lab_extraction.txt` + catalog-hint injection + cache invalidation on catalog version bump
+- [ ] `matching.py` — tiered strategy + `MatchMethod` enum + `DISAMBIGUATION_RULES` dict + Unicode-folding `normalize_name`
+- [ ] Refusal detection in `llm_parser.py` before JSON parsing
+- [ ] Celery task `process_lab_upload` + refusal/timeout/rate-limit handling
+- [ ] Fixture-based extraction eval suite (no live LLM calls on every CI run)
+- [ ] BAA confirmation with Anthropic before `LAB_UPLOAD_ENABLED` goes true in prod
 
-**Launch gate:** fixture-based extraction tests covering 20 real (anonymised) lab PDFs.
+**Launch gate (all must pass before shipping 2c):**
+1. Unit tests for `unit_converter`, `matching`, `pdf_rasteriser` — 100% branch coverage
+2. Integration tests for `tasks.process_lab_upload` with Celery eager mode — happy + 4 failure modes
+3. Extraction eval suite on 20 anonymised fixture PDFs meets baseline: **recall ≥ 0.90, precision ≥ 0.95, unit-match rate ≥ 0.95** (per eng review test decision)
+4. Eval baseline locked in `backend/apps/labs/tests/fixtures/baseline_metrics.json`; CI fails if any metric drops >3% vs baseline
+5. Eval marked `pytest -m eval` — runs only on changes to `prompts/lab_extraction.txt` or `llm_parser.py`, not on every test invocation
+6. BAA signed with Anthropic, filed with TODO-001
 
 ### Phase 2d — Review UI + commit (3 days)
 
@@ -1057,24 +1187,27 @@ This feature is Phase 2 of the overall patient app plan (see architecture doc §
 
 ## 14. Open Questions
 
-Decisions deferred or needing stakeholder input:
+Decisions resolved during eng review (2026-04-09) are marked ✅. Open items are still pending.
 
-1. **LLM provider BAA**: which vendor (Anthropic vs OpenAI) currently offers a BAA that covers vision API calls? Needs legal confirmation before Phase 2c can ship to prod. Until then, the feature runs behind a feature flag for staff accounts only.
+1. ✅ **LLM provider** — Anthropic Claude only for Phase 2c. OpenAI adapter deferred to its own landing if/when a real Anthropic outage justifies the ~2 days of adapter work. Still requires BAA with Anthropic before `LAB_UPLOAD_ENABLED` flips true in prod. Tracked as TODO-001.
 
-2. **Reference-range source of truth**: the report on paper is one reference range. `LabTestType.reference_ranges["default"]` is another. When they disagree, which wins?
-   - **Proposed:** the report's range wins for the specific `LabResult` (stored on the row), the catalog default is the fallback. Edge case: age- and sex-specific ranges (e.g., hemoglobin) — keep the catalog default as unisex until Phase 3 adds demographic-aware ranges.
+2. ✅ **Reference-range precedence** — report wins when present, catalog default is the fallback. `LabResult.reference_source` records which was used. Demographic-aware ranges (age/sex-specific) deferred to Phase 3.
 
-3. **File retention policy**: do we keep the uploaded PDFs forever or purge after N months? HIPAA is 6 years for the record but the original uploaded doc isn't legally required.
-   - **Proposed:** keep forever by default (cheap S3 storage); patient can delete via the upload history UI.
+3. ✅ **PDF page cap** — soft cap at 10 pages for single-shot extraction, hard cap at 60 pages total. Pages 11–60 trigger paged extraction (§6.4) with 2-page batch overlap. Pages 61+ rejected at ingress.
 
-4. **Trend chart on low data**: two measurements form a line. One measurement is just a dot. What does `LabTrendChart` do with a single measurement?
-   - **Proposed:** render the single value as a dot + reference band, no connecting line. Copy: "Not enough data for a trend yet." Already specified in design doc §6 (partial state).
+4. ✅ **User deletion** — hard delete. `on_delete=CASCADE` wipes `LabUpload` + `LabUploadFile` + `LabResult`. Audit log references pseudonymised, not deleted, to preserve HIPAA 6-year audit retention.
 
-5. **Mobile camera capture quality**: should the upload dialog enforce a minimum resolution on camera-captured images?
-   - **Proposed:** no hard minimum. The LLM confidence flag surfaces low-quality images organically. A pre-upload warning ("This image looks small — try again?") can land in a follow-up.
+5. **File retention after upload deletion**: do we keep orphaned S3 files after the LabUpload row is deleted? Current plan: `post_delete` signal removes the file. Still worth a review with legal on whether to retain for 30 days as a recoverable "trash" bucket.
+   - **Proposed:** hard delete from S3 on upload deletion, no trash. Aligns with GDPR right-to-erasure mental model.
 
-6. **Date disambiguation**: US lab reports use MM/DD/YYYY, EU uses DD/MM/YYYY. When both digits are ≤12, the LLM can't tell without context.
-   - **Proposed:** pass the patient's `country` from `PatientInfo` as an additional prompt hint. Falls back to the upload's `lab_date` field (which the patient can set) when still ambiguous.
+6. **Trend chart on low data**: one measurement renders as a dot, no line. Copy: "Not enough data for a trend yet." Already covered in design doc §6 (partial state).
+   - **No action needed — use the existing empty-state pattern.**
+
+7. **Mobile camera capture quality**: no hard minimum in Phase 2c. LLM confidence flags low-quality scans. A follow-up can add pre-upload warning.
+   - **Deferred to Phase 3 polish.**
+
+8. **Date disambiguation** (MM/DD vs DD/MM): pass patient's `country` from `PatientInfo` as a prompt hint. Falls back to upload's `lab_date` field. Ambiguous dates with no hint land on the review screen for patient correction.
+   - **Actionable in Phase 2c prompt.**
 
 ---
 
@@ -1114,9 +1247,21 @@ No patient-identifying data in any of these. Upload ID is pseudonymous at the me
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 0 | — | pending |
-| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | pending |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 12 issues, all resolved; 1 critical gap (LLM refusal) resolved |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | deferred, UI reuses existing components from `patient-app-design.md` §4 |
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
 | Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
 
-**VERDICT:** DRAFT — recommend `/plan-eng-review` on this document before implementation begins, especially on the LLM provider abstraction, matching edge cases, and the BAA question in §14.
+**ENG REVIEW RESOLUTIONS (2026-04-09):**
+- **A1** paged merge implemented with 2-page overlap (§6.4), hard cap 60 pages
+- **A2** hard delete + audit pseudonymisation (§4.2, §9.5)
+- **A3** Claude only for Phase 2c, OpenAI deferred (§6.3, §12.5)
+- **A4** honest PHI wording (§9.4)
+- **CQ1** `raw_value` → `source_text` (§4.2)
+- **CQ2** reference precedence: report wins, `reference_source` field added (§4.2)
+- **CQ3** `MatchMethod` enum as single source of truth (§4.2, §7)
+- **CQ5** Unicode NFKD + casefold in `normalize_name` (§7)
+- **Critical gap** LLM refusal detection + distinct error (§12.2)
+- **Eval** strict thresholds: recall ≥0.90, precision ≥0.95, unit match ≥0.95; baseline locked (§13 Phase 2c)
+
+**VERDICT:** ENG CLEAR — ready to implement. Start Phase 2a (catalog + manual entry + unit converter). Phase 2c blocked on TODO-001 (Anthropic BAA) — feature flag stays `False` in prod until BAA lands.
