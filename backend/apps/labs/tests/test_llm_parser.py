@@ -110,6 +110,21 @@ _mock_response = _claude_response
 _mock_client = _mock_claude_client
 
 
+# ── Env isolation ────────────────────────────────────────────────────────────
+# Tests in this module must NOT inherit LAB_LLM_PROVIDER / *_API_KEY from the
+# developer's .env — otherwise a dev running with LAB_LLM_PROVIDER=openai
+# would silently hit the real API with a real key on mock image bytes. The
+# autouse fixture below pins the provider to claude and nulls both keys; any
+# test that wants a different combo sets `settings.LAB_LLM_PROVIDER = ...`
+# explicitly inside that test.
+
+@pytest.fixture(autouse=True)
+def _isolated_llm_env(settings):
+    settings.LAB_LLM_PROVIDER = "claude"
+    settings.ANTHROPIC_API_KEY = ""
+    settings.OPENAI_API_KEY = ""
+
+
 # ── detect_refusal ───────────────────────────────────────────────────────────
 
 class TestDetectRefusal:

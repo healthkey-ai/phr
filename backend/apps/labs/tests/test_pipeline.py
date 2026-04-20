@@ -78,6 +78,16 @@ def client(user):
     return c
 
 
+@pytest.fixture(autouse=True)
+def _isolated_llm_env(settings):
+    """Pin provider to claude + null both keys, same as test_llm_parser.py.
+    Prevents tests from silently hitting a real API when the developer's .env
+    has LAB_LLM_PROVIDER=openai set."""
+    settings.LAB_LLM_PROVIDER = "claude"
+    settings.ANTHROPIC_API_KEY = ""
+    settings.OPENAI_API_KEY = ""
+
+
 def _mock_client(responses):
     client = MagicMock()
     iterator = iter(responses)

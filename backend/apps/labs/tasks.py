@@ -161,6 +161,7 @@ def _run_extraction_pipeline(upload: LabUpload) -> list[dict]:
             raw_name=row["test_name"],
             raw_loinc=row.get("loinc_code"),
             raw_unit=row.get("unit"),
+            raw_value=row.get("value"),
         )
         enriched.append({
             # LLM-extracted fields (verbatim for audit)

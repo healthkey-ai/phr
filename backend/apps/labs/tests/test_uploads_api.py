@@ -247,7 +247,10 @@ class TestValidation:
         )
         assert response.status_code == 400
 
-    def test_rejects_duplicate_within_request(self, client):
+    def test_deduplicates_identical_content_within_request(self, client):
+        """Two files with different names but identical bytes (common when a
+        patient has 'report.pdf' and 'report (1).pdf' both in Downloads)
+        get silently deduplicated — we save one row, not an error."""
         body = PDF_MAGIC + b"repeated"
         f1 = _make_file("one.pdf", content=body)
         f2 = _make_file("two.pdf", content=body)  # identical bytes, different name
@@ -256,8 +259,23 @@ class TestValidation:
             data={"files": [f1, f2]},
             format="multipart",
         )
-        assert response.status_code == 400
-        assert "twice" in str(response.content).lower() or "duplicate" in str(response.content).lower()
+        assert response.status_code == 202, response.content
+        body = response.json()
+        # Only one LabUploadFile row created — the duplicate was silently skipped
+        assert len(body["files"]) == 1
+        assert body["files"][0]["original_filename"] == "one.pdf"
+
+    def test_keeps_distinct_files_within_request(self, client):
+        """Sanity: two distinct payloads both land."""
+        f1 = _make_file("one.pdf", content=PDF_MAGIC + b"first")
+        f2 = _make_file("two.pdf", content=PDF_MAGIC + b"second")
+        response = client.post(
+            reverse("lab-upload-list"),
+            data={"files": [f1, f2]},
+            format="multipart",
+        )
+        assert response.status_code == 202
+        assert len(response.json()["files"]) == 2
 
     def test_empty_files_list_rejected(self, client):
         response = client.post(

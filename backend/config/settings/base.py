@@ -91,6 +91,36 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+# ── Logging ─────────────────────────────────────────────────────────────────
+# Without an explicit config, Django's default root-logger threshold is
+# WARNING for non-Django loggers — which means our app-level
+# `logger.info(...)` lines (e.g. `process_lab_upload starting`) vanish in
+# dev. Route `apps.*` at INFO to the console so Celery-eager tasks produce
+# visible output. Override LOG_LEVEL in env for deeper debugging.
+LOG_LEVEL = env("LOG_LEVEL", default="INFO")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "app": {
+            "format": "[{asctime}] {levelname} {name} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "app",
+        },
+    },
+    "loggers": {
+        # Our app modules. Captures apps.labs.tasks, apps.labs.parsers.*, etc.
+        "apps": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
+        # Celery's own internal logging (task dispatch, eager-mode traces).
+        "celery": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
+
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 

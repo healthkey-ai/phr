@@ -144,10 +144,37 @@ LOINC_COMMON: dict[str, LoincEntry] = _load_loinc_fixture()
 
 # ── Identity resolution ──────────────────────────────────────────────────────
 
+def _infer_value_type(raw_value: str | None, raw_unit: str | None) -> str:
+    """Infer value_type from the LLM's first sighting of this test.
+
+    We default to numeric for anything parseable as a float; otherwise
+    qualitative. An empty value with an empty unit falls back to numeric
+    (most reports have no value only for rows we skipped, and numeric is
+    a safer default for trending).
+
+    Examples:
+      ("12.5", "g/dL")      → numeric
+      ("Not Detected", "")  → qualitative
+      ("Positive", "")      → qualitative
+      ("",  "")             → numeric (fallback)
+    """
+    if raw_value is None:
+        return "numeric"
+    s = str(raw_value).strip()
+    if not s:
+        return "numeric"
+    try:
+        float(s)
+        return "numeric"
+    except (ValueError, TypeError):
+        return "qualitative"
+
+
 def resolve_test_identity(
     raw_name: str,
     raw_loinc: str | None,
     raw_unit: str | None,
+    raw_value: str | None = None,
 ):
     """Return (LabTestType, match_method) for an extracted lab row.
 
@@ -165,6 +192,9 @@ def resolve_test_identity(
       raw_name: the LLM's test name as printed on the report, verbatim
       raw_loinc: the LLM's LOINC claim (may be None, empty, or garbage)
       raw_unit: the LLM's unit string (used only when auto-creating)
+      raw_value: the LLM's value (used to infer value_type on auto-create —
+                 a non-numeric string like "Not Detected" produces a
+                 qualitative row; a parseable number produces numeric)
     """
     # Lazy import to break the models ↔ matching circular dep (models.save
     # calls normalize_name, so models imports matching — but resolve_test_identity
@@ -221,7 +251,7 @@ def resolve_test_identity(
                 name=raw_name or "Unknown test",
                 abbreviation=slug,
                 default_unit=(raw_unit or "").strip(),
-                value_type="numeric",
+                value_type=_infer_value_type(raw_value, raw_unit),
             )
     except IntegrityError:
         # Concurrent create by another worker — re-fetch by normalized name.

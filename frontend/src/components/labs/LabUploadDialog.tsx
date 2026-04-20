@@ -208,21 +208,31 @@ export function LabUploadDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      {/* Flex column with capped height:
+          - min-w-0 lets the grid cell shrink below content width so long
+            filenames wrap instead of blowing out max-w-lg
+          - max-h-[85vh] + flex-col lets the middle body scroll without
+            pushing the dialog off the screen
+          - flex (vs shadcn's default grid) gives us predictable sizing:
+            header + footer are shrink-0, the body in between takes flex-1 */}
+      <DialogContent className="flex max-h-[85vh] min-w-0 flex-col gap-4 sm:max-w-lg">
+        <DialogHeader className="min-w-0 shrink-0">
           <DialogTitle>{titleFor(phase)}</DialogTitle>
           <DialogDescription>{descriptionFor(phase)}</DialogDescription>
         </DialogHeader>
 
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
         {phase === "picker" && (
           <div className="space-y-4">
-            {/* File list + picker */}
+            {/* File list + drop zone. Drop zone stays visible the whole
+                time the patient is in the picker — disappearing it after
+                the first file lands is confusing (where did the drop
+                target go?) and forces them to hunt for a small "Add
+                another file" link. Only hidden once they hit MAX_FILES. */}
             <div>
               <Label className="mb-2 block">Files</Label>
-              {files.length === 0 ? (
-                <EmptyPicker onPick={() => fileInputRef.current?.click()} />
-              ) : (
-                <div className="space-y-2">
+              {files.length > 0 && (
+                <div className="mb-2 space-y-2">
                   {files.map((f, i) => (
                     <FileChip
                       key={`${f.name}-${i}`}
@@ -231,18 +241,14 @@ export function LabUploadDialog({ open, onOpenChange }: Props) {
                       onRemove={() => removeFile(i)}
                     />
                   ))}
-                  {files.length < MAX_FILES && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Paperclip className="mr-1 h-4 w-4" />
-                      Add another file
-                    </Button>
-                  )}
                 </div>
+              )}
+              {files.length < MAX_FILES && (
+                <DropZone
+                  compact={files.length > 0}
+                  onPick={() => fileInputRef.current?.click()}
+                  onFilesDropped={(list) => handleFilesPicked(list)}
+                />
               )}
               <input
                 ref={fileInputRef}
@@ -341,10 +347,11 @@ export function LabUploadDialog({ open, onOpenChange }: Props) {
             </p>
           </div>
         )}
+        </div>
 
         {/* The reviewing phase manages its own footer via LabUploadReview. */}
         {phase !== "reviewing" && (
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             {phase === "picker" && (
               <>
                 <Button type="button" variant="ghost" onClick={() => handleClose(false)}>
@@ -444,16 +451,78 @@ function DoneSummary({
   );
 }
 
-function EmptyPicker({ onPick }: { onPick: () => void }) {
+function DropZone({
+  onPick,
+  onFilesDropped,
+  compact,
+}: {
+  onPick: () => void;
+  onFilesDropped: (files: FileList) => void;
+  compact: boolean;
+}) {
+  const [dragging, setDragging] = useState(false);
+
+  // HTML5 drag-and-drop: dragenter/dragover must preventDefault to signal
+  // we accept drops on this element; without it the browser blocks the
+  // drop event entirely. dragleave can fire spuriously when hovering over
+  // child elements, so we track a counter instead of a single boolean.
+  const dragDepth = useRef(0);
+
+  function handleDragEnter(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    dragDepth.current += 1;
+    setDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    dragDepth.current -= 1;
+    if (dragDepth.current <= 0) {
+      dragDepth.current = 0;
+      setDragging(false);
+    }
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    dragDepth.current = 0;
+    setDragging(false);
+    if (e.dataTransfer.files?.length) {
+      onFilesDropped(e.dataTransfer.files);
+    }
+  }
+
+  const base =
+    "flex w-full flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed transition";
+  const padding = compact ? "px-4 py-4" : "px-4 py-8";
+  const tone = dragging
+    ? "border-brand-700 bg-brand-50 text-brand-700"
+    : "border-muted-foreground/30 bg-muted/30 text-muted-foreground hover:border-brand-700/40 hover:bg-muted/50 hover:text-foreground";
+
   return (
     <button
       type="button"
       onClick={onPick}
-      className="flex w-full flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-8 text-muted-foreground transition hover:border-brand-700/40 hover:bg-muted/50 hover:text-foreground"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`${base} ${padding} ${tone}`}
     >
-      <Paperclip className="h-6 w-6" />
-      <span className="text-body">Tap to pick files</span>
-      <span className="text-caption">or drag them here</span>
+      <Paperclip className={compact ? "h-4 w-4" : "h-6 w-6"} />
+      <span className="text-body">
+        {compact ? "Add another file" : dragging ? "Drop to upload" : "Tap to pick files"}
+      </span>
+      {!compact && (
+        <span className="text-caption">
+          {dragging ? " " : "or drag them here"}
+        </span>
+      )}
     </button>
   );
 }
@@ -467,13 +536,30 @@ function FileChip({
   size: number;
   onRemove: () => void;
 }) {
+  // Filename WRAPS rather than truncating — long lab-report names from
+  // Downloads ("Amniotic-fluid-AFP-AChE-normal-rep-717-v1-1012.pdf") are
+  // informative, so the patient benefits from seeing the whole thing. The
+  // row grows vertically; the dialog's outer max-h + scroll container
+  // keep it from blowing past the viewport.
+  //
+  // `break-all` breaks at any character — important because many lab PDF
+  // filenames are long hyphenated strings that `break-words` wouldn't
+  // split early enough to avoid pushing past the chip edge.
+  // `items-start` + the small `mt-0.5` on the paperclip / size keep them
+  // aligned with the first line of the name when it wraps.
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 px-3 py-2">
-      <div className="flex min-w-0 items-center gap-2">
-        <Paperclip className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-        <span className="truncate text-body text-foreground">{name}</span>
-        <span className="flex-shrink-0 text-caption text-muted-foreground">{humanBytes(size)}</span>
-      </div>
+    <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 px-3 py-2">
+      <Paperclip className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+      <span
+        className="min-w-0 flex-1 break-all text-body text-foreground"
+        title={name}
+      >
+        {name}
+      </span>
+
+      <span className="mt-0.5 flex-shrink-0 text-caption text-muted-foreground">
+        {humanBytes(size)}
+      </span>
       <button
         type="button"
         onClick={onRemove}

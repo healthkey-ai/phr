@@ -427,8 +427,9 @@ class LabUploadCreateSerializer(serializers.Serializer):
         total = 0
         seen_hashes: set[str] = set()
         annotated: list[dict] = []
+        skipped_duplicate_names: list[str] = []
 
-        for idx, f in enumerate(files):
+        for f in files:
             if f.size > max_file:
                 raise serializers.ValidationError(
                     f"'{f.name}' is {_human_bytes(f.size)} (max {_human_bytes(max_file)} per file)."
@@ -464,21 +465,35 @@ class LabUploadCreateSerializer(serializers.Serializer):
             sha256 = h.hexdigest()
             f.seek(0)
 
+            # Same content appearing twice in one request is near-universally
+            # "user has 'report.pdf' and 'report (1).pdf' both sitting in
+            # Downloads". Silently skip the duplicate — our job is to file
+            # the patient's intent, not debug their filesystem. The view
+            # surfaces the skipped count via context so the UI can show a
+            # "1 duplicate skipped" note next to the success toast.
             if sha256 in seen_hashes:
-                raise serializers.ValidationError(
-                    f"'{f.name}' appears twice in this upload. Remove one copy."
-                )
+                skipped_duplicate_names.append(f.name)
+                continue
             seen_hashes.add(sha256)
 
             annotated.append({
                 "file": f,
                 "original_filename": f.name,
                 "mime_type": detected,
+                # Re-index after dedup so file_order is dense (0..N-1).
+                "file_order": len(annotated),
                 "size_bytes": f.size,
-                "file_order": idx,
                 "sha256": sha256,
             })
 
+        if not annotated:
+            # Only possible if every incoming file failed validation above,
+            # but belt-and-suspenders: never return an empty file list to
+            # the creator since create() doesn't handle that.
+            raise serializers.ValidationError("No valid files in request.")
+
+        # Stash for the view to read back when building the response
+        self.context["_skipped_duplicate_names"] = skipped_duplicate_names
         return annotated
 
     def create(self, validated_data):

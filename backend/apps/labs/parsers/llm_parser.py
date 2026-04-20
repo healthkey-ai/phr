@@ -323,7 +323,10 @@ def _call_openai(batch: PageBatch, system_prompt: str) -> str:
     try:
         response = client.chat.completions.create(
             model=model,
-            max_tokens=OPENAI_MAX_OUTPUT_TOKENS,
+            # OpenAI deprecated `max_tokens` in favor of `max_completion_tokens`
+            # for newer models (GPT-5 family, o1, etc.). The new name works on
+            # older models too, so it's the forward-compatible choice.
+            max_completion_tokens=OPENAI_MAX_OUTPUT_TOKENS,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": content_blocks},

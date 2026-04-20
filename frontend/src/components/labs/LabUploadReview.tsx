@@ -112,11 +112,23 @@ export function LabUploadReview({ upload, onCancel, onSaved }: Props) {
       .filter((r) => r.accepted)
       .map((r) => {
         const parsedRow = parsed.find((p) => p.source_index === r.source_index)!;
+        // Route strings that don't parse as a number (e.g. "Not Detected",
+        // "Positive", "1+") to value_qualitative. The test_type auto-created
+        // by the pipeline already has value_type="qualitative" in that case
+        // (see matching._infer_value_type), so the backend accepts this.
+        const trimmed = r.value.trim();
+        const numeric = Number(trimmed);
+        const isNumeric = trimmed !== "" && !Number.isNaN(numeric);
+        // Explicit qualitative override wins over the inferred route.
+        const qualitativeOverride = r.value_qualitative.trim();
+
         return {
           source_index: r.source_index,
           test_type_id: parsedRow.matched_test_id,
-          value: r.value === "" ? null : Number(r.value),
-          value_qualitative: r.value_qualitative || undefined,
+          value: isNumeric && !qualitativeOverride ? numeric : null,
+          value_qualitative:
+            qualitativeOverride ||
+            (isNumeric ? undefined : trimmed || undefined),
           unit: r.unit || undefined,
           measured_at: r.measured_at || null,
           reference_min: r.reference_min === "" ? null : Number(r.reference_min),
