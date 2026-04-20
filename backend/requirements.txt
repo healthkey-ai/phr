@@ -9,5 +9,9 @@ jsonschema==4.21.1
 Pint==0.23
 celery==5.4.0
 redis==5.0.4
+# Phase 2c — lab report extraction
+pymupdf==1.24.5              # PDF page rasterisation (via fitz)
+anthropic==0.30.1            # Claude vision API client
+openai==1.45.0               # OpenAI vision API client (alternate provider)
 pytest==8.1.1
 pytest-django==4.8.0

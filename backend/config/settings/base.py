@@ -93,6 +93,25 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# User-uploaded files (Phase 2b: lab reports). Production swaps this out for
+# S3 via django-storages (§9.1 of the lab upload design doc) — deferred to a
+# later landing. Local dev writes under MEDIA_ROOT/lab-uploads/YYYY/MM/.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# Hard caps enforced at the view layer. Keep them here as the source of truth
+# so serializers, tests, and the frontend all read the same numbers.
+LAB_UPLOAD_MAX_FILE_BYTES = 10 * 1024 * 1024       # 10 MB per file
+LAB_UPLOAD_MAX_TOTAL_BYTES = 20 * 1024 * 1024      # 20 MB per upload session
+LAB_UPLOAD_MAX_FILES = 10                          # per upload session
+LAB_UPLOAD_ACCEPTED_MIME_TYPES = (
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/heic",
+)
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # DRF
@@ -122,11 +141,42 @@ CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_CREDENTIALS = True
 
 # ── Celery / Redis ────────────────────────────────────────────────────────────
-# Phase 2a: broker isn't actively used yet, but the config is wired up so the
-# worker service can boot in deployed environments before Phase 2b adds tasks.
-# Both URLs default to empty string so local dev without Redis still works.
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="")
-CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="")
+# Phase 2b ships the first real task (apps.labs.process_lab_upload, currently
+# a stub). Production services set CELERY_BROKER_URL + CELERY_RESULT_BACKEND
+# to the Render Redis service. Local dev and tests run without Redis by
+# falling back to always-eager mode: .delay() executes inline, which is
+# exactly what we want for a stub that returns in <1ms.
+# ── Lab upload feature flag + LLM config (Phase 2c) ─────────────────────────
+# LAB_UPLOAD_ENABLED gates the POST /api/v1/labs/uploads/ endpoint. Disabled
+# by default in production until the relevant BAA is on file; dashboard flip
+# turns it on when ready. Local dev defaults to enabled so you can exercise
+# the flow without env vars.
+LAB_UPLOAD_ENABLED = env.bool("LAB_UPLOAD_ENABLED", default=True)
+
+# Which LLM to use for extraction. "claude" (default) or "openai". Picked at
+# task-dispatch time by apps.labs.parsers.llm_parser. Swapping requires only
+# setting the env var — task + matcher + pipeline are provider-agnostic.
+LAB_LLM_PROVIDER = env("LAB_LLM_PROVIDER", default="claude")
+
+# Claude API key — injected via env, never committed. Empty string means the
+# LLM parser raises ExtractionError on first call when LAB_LLM_PROVIDER="claude";
+# the task catches this and marks the upload failed with a configuration-
+# specific message.
+ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", default="")
+
+# OpenAI API key + model. Same semantics as ANTHROPIC_API_KEY. gpt-4o gets
+# us the best accuracy on lab-report extraction; gpt-4o-mini is a cheaper
+# fallback that's still usable on clean typeset PDFs. Override via env.
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+LAB_OPENAI_MODEL = env("LAB_OPENAI_MODEL", default="gpt-4o")
+
+_BROKER_URL = env("CELERY_BROKER_URL", default="")
+# Eager mode needs *some* transport configured even though it never connects.
+# "memory://" keeps kombu quiet and works with always-eager in tests / dev.
+CELERY_BROKER_URL = _BROKER_URL or "memory://"
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="cache+memory://")
+CELERY_TASK_ALWAYS_EAGER = not bool(_BROKER_URL)
+CELERY_TASK_EAGER_PROPAGATES = True  # surface task exceptions in tests
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

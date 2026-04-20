@@ -5,10 +5,11 @@
  * Phase 1: shows the structured record. Lab trends + timeline + conflicts come in Phase 2.
  */
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 
 import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
 import { LabManualEntryDialog } from "@/components/labs/LabManualEntryDialog";
+import { LabUploadDialog } from "@/components/labs/LabUploadDialog";
 import { LabValueCard } from "@/components/labs/LabValueCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -150,6 +151,7 @@ export function Records() {
  */
 function LabsSection() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const { data: results = [], isLoading } = useLabResults();
   const { data: catalog } = useCatalog();
 
@@ -160,14 +162,23 @@ function LabsSection() {
     <section className="mb-6">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-h3 text-foreground">Lab values</h2>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => setDialogOpen(true)}
-          disabled={!catalog}
-        >
-          <Plus className="mr-1 h-4 w-4" /> Add lab result
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setUploadOpen(true)}
+          >
+            <Upload className="mr-1 h-4 w-4" /> Upload report
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setDialogOpen(true)}
+            disabled={!catalog}
+          >
+            <Plus className="mr-1 h-4 w-4" /> Add lab result
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -181,7 +192,7 @@ function LabsSection() {
           <CardContent className="p-6">
             <EmptyState
               title="No lab values yet"
-              body="Add your first result to see it trend over time. Upload + automatic reading of lab reports is coming in Phase 2."
+              body="Upload a lab report, or add values manually to see them trend over time."
             />
           </CardContent>
         </Card>
@@ -194,6 +205,7 @@ function LabsSection() {
       )}
 
       <LabManualEntryDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <LabUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
     </section>
   );
 }

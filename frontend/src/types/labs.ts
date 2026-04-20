@@ -6,11 +6,14 @@
 
 export const MATCH_METHODS = [
   "loinc",
+  "name_fallback",
+  "manual",
+  "unmatched",
+  // Legacy (Phase 2a catalog matching; never produced by Phase 2c+ code,
+  // kept here so old rows serialized from the DB still validate)
   "exact_alias",
   "fuzzy",
   "disambiguation",
-  "manual",
-  "unmatched",
 ] as const;
 export type MatchMethod = (typeof MATCH_METHODS)[number];
 
@@ -45,7 +48,6 @@ export interface LabTestType {
    * Always defined, may be empty for qualitative tests.
    */
   sample_values: Record<string, string>;
-  aliases: string[];
   reference_ranges: Record<string, [number, number]>;
   /**
    * Reference range pre-converted to every unit the UI may render.
@@ -102,4 +104,82 @@ export interface LabResultCreateInput {
   measured_at?: string | null;
   reference_min?: number | null;
   reference_max?: number | null;
+}
+
+// ── Lab uploads (Phase 2b) ──────────────────────────────────────────────────
+
+export type LabUploadStatus = "pending" | "processing" | "completed" | "failed";
+
+export interface LabUploadFile {
+  id: number;
+  original_filename: string;
+  mime_type: string;
+  size_bytes: number;
+  file_order: number;
+  sha256: string;
+  created_at: string;
+}
+
+/**
+ * Parsed result row inside LabUpload.parsed_results.
+ *
+ * Produced by backend/apps/labs/tasks.py:_run_extraction_pipeline. Every
+ * field below comes from either the LLM (raw_*) or the identity resolver
+ * (matched_test_*, match_method). Value stays as a STRING — the commit
+ * endpoint coerces to float when the patient accepts a row.
+ */
+export interface ParsedLabResultRow {
+  source_index: number;
+  raw_name: string;
+  raw_loinc_code: string;
+  raw_unit: string;
+  value: string | null;
+  unit: string;
+  reference_min: number | null;
+  reference_max: number | null;
+  measured_date: string | null;
+  page: number;
+  confidence: number;
+  matched_test_id: number;
+  matched_test_abbreviation: string;
+  matched_test_name: string;
+  match_method: MatchMethod;
+  accepted: boolean | null;
+}
+
+export interface LabUpload {
+  id: number;
+  status: LabUploadStatus;
+  provider: string;
+  lab_date: string | null;
+  notes: string;
+  parsed_results: ParsedLabResultRow[];
+  celery_task_id: string;
+  error_message: string;
+  files: LabUploadFile[];
+  created_at: string;
+  completed_at: string | null;
+}
+
+// ── Commit (Phase 2d) ──────────────────────────────────────────────────────
+
+export interface LabUploadCommitRow {
+  source_index: number;
+  test_type_id: number;
+  value?: number | null;
+  value_qualitative?: string;
+  unit?: string;
+  measured_at?: string | null;
+  reference_min?: number | null;
+  reference_max?: number | null;
+}
+
+export interface LabUploadCommitInput {
+  accepted: LabUploadCommitRow[];
+}
+
+export interface LabUploadCommitResponse {
+  saved_count: number;
+  skipped_count: number;
+  results: LabResult[];
 }
