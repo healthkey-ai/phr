@@ -34,8 +34,8 @@
 ### Goals
 
 - **Upload 1+ lab report files** (PDF, JPEG, PNG, HEIC) from any screen in the Records tab or onboarding Labs step
-- **Extract structured lab values** (test name, value, unit, reference range, date) with an LLM vision model
-- **Match extracted values** against a canonical catalog of tests relevant to HealthKey's oncology-focused patient population
+- **Extract structured lab values** (test name, value, unit, reference range, date, LOINC code) with an LLM vision model
+- **Identify tests by LOINC code.** Two results with the same LOINC are the same test — that is the trendability contract. The LLM returns a LOINC per row; we validate against `loinc_common.json` (§3.4). No curated alias catalog, no fuzzy name matching — LOINC is the identity.
 - **Normalise units** so every saved value is in the same unit as every other measurement of that test
 - **Show provenance + confidence** on every lab value so the patient can trust (or correct) it
 - **Feed existing components**: extracted values populate `LabValueCard`, `LabTrendChart`, and the Records tab automatically
@@ -43,7 +43,8 @@
 
 ### Non-goals (explicitly deferred)
 
-- **No editing of the canonical catalog by users.** The test list is seed data, changes via migration
+- **No curated alias / abbreviation table.** The previous design's `LabTestType.aliases` and `abbreviation` fields are removed. Matching is LOINC-first; if the LLM can't find a LOINC, we fall back to normalized-name grouping (§7). We are not maintaining a synonym dictionary.
+- **No fuzzy / token-set matching.** Deleted along with aliases. A result either has a validated LOINC (matches an existing `LabTestType` or auto-creates one) or falls back to normalized-name grouping. No RapidFuzz, no disambiguation rules, no `match_method="fuzzy"`.
 - **No pathology report parsing.** Different document type, belongs in a separate pipeline
 - **No image annotation / bounding-box highlighting.** Nice-to-have; adds engineering cost without clear Phase 2 value
 - **No automatic conflict resolution with FHIR data.** Lab conflicts surface in the existing `records.ConflictRecord` UI when FHIR sync lands in Phase 2
@@ -113,13 +114,23 @@ No celebration animations. Patient is building a medical record, not winning a g
 
 ---
 
-## 3. Canonical Lab Test Catalog
+## 3. Lab Test Identity — LOINC + Fixture
 
 ### 3.1 Philosophy
 
-The catalog is the **single source of truth** for what HealthKey can track. Every extracted value must match a row here or it's marked `unmatched` and shown in the manual-tagging section. Adding a test requires a migration, not an API call.
+**LOINC is the test identity.** Two `LabResult` rows with the same validated `loinc_code` are the same test — trendable, comparable, chartable. No curated catalog gates what HealthKey can track.
 
-This narrow list is intentional. The patient population is oncology-focused (per PRD), so the catalog prioritises:
+`LabTestType` exists as a thin, **auto-populated** display-metadata table: one row per unique LOINC (or per unique normalized name for the no-LOINC fallback). On first sight of a LOINC, we `get_or_create` a `LabTestType` hydrated from `loinc_common.json` (§3.4). No migration is required to support a new common test — it appears organically the first time a patient uploads a report mentioning it.
+
+This is a deliberate reversal of the earlier "single source of truth" catalog framing. The old model paid for curation (aliases, abbreviations, fuzzy matching, disambiguation rules, migrations to add a test) without a proportional payoff: LLMs now reliably return LOINC codes, and LOINC is already the industry-standard identity. Maintaining a second identity layer on top of that is redundant.
+
+The patient population is still oncology-focused (per PRD), but that now influences only which entries in `loinc_common.json` we **preload** as `LabTestType` rows for a friendlier fresh-install UX (§3.2). Anything else in the fixture is one patient upload away from existing in the DB.
+
+### 3.2 Preloaded tests (fresh-install seed)
+
+The ~35 oncology-relevant tests below ship with rich curation (reference ranges, display order, category, alternative units, molecular weight where applicable) as `loinc_common.json` entries (§3.4). On first deploy, a data migration creates `LabTestType` rows for every fixture entry that carries curation fields — so a fresh install has populated autocompletes and meaningful range labels from day one. Non-preloaded fixture entries (minimal schema: code + name + unit + scale) remain as validation-only dictionary entries until a patient upload triggers auto-creation of a `LabTestType`.
+
+Preload coverage prioritises:
 - Complete Blood Count + differentials (chemo neutropenia monitoring)
 - Renal function (for platinum-based therapy eligibility)
 - Liver function (hepatotoxicity monitoring)
@@ -127,11 +138,9 @@ This narrow list is intentional. The patient population is oncology-focused (per
 - Cardiac baselines (for anthracycline and HER2-targeted therapy)
 - Infection screen (clinical trial eligibility)
 
-Values outside this catalog aren't rejected; they're stored as `unmatched` so the patient sees them and we can add them in a future migration.
+Values outside the preload list aren't rejected or marked special — they auto-create a `LabTestType` on first sight (LOINC path) or land in a normalized-name fallback row (no-LOINC path). Neither case requires engineering work.
 
-### 3.2 Seed catalog (initial migration)
-
-Every row is a `LabTestType` record. Aliases seeded from LOINC `RELATEDNAMES2` plus common abbreviations.
+The tables below are illustrative of what the preload fixture entries contain. They are **not** a closed list of supported tests; they are the subset we hand-curate ranges + display metadata for. Aliases and abbreviation columns are retained below only as historical reference — they are **no longer stored** on `LabTestType` (§1 Non-goals).
 
 #### CBC & haematology (§2.6.1)
 
