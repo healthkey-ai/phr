@@ -213,6 +213,35 @@ Every row is a `LabTestType` record. Aliases seeded from LOINC `RELATEDNAMES2` p
 
 `backend/apps/labs/fixtures/lab_catalog.json` — committed, loaded via `loaddata` on first deploy and in the `/labs/` app's `ready()` hook for development convenience.
 
+### 3.4 LOINC ground-truth fixture (`loinc_common.json`)
+
+A **second, larger fixture** — `backend/apps/labs/fixtures/loinc_common.json` — ships alongside `lab_catalog.json` in Phase 2c. It is **not** a `LabTestType` source; it exists purely to validate LOINC codes the LLM returns before we trust them (see §7 Tier 0a).
+
+```
+# loinc_common.json — ~500 most-common LOINC codes for serum/plasma/whole-blood
+# assays, sourced from the LOINC "Top 2000+" list filtered to analytes HealthKey
+# patients plausibly encounter.
+[
+  {
+    "loinc_code": "718-7",
+    "loinc_name": "Hemoglobin [Mass/volume] in Blood",
+    "loinc_short_name": "Hemoglobin",
+    "loinc_default_unit": "g/dL"
+  },
+  {
+    "loinc_code": "2160-0",
+    "loinc_name": "Creatinine [Mass/volume] in Serum or Plasma",
+    "loinc_short_name": "Creatinine",
+    "loinc_default_unit": "mg/dL"
+  },
+  ...
+]
+```
+
+**Why ship this instead of trusting `LabTestType.loinc_code` alone?** The catalog is narrow (~35 rows) and grows slowly. Many common analytes have a well-known LOINC code that we haven't added yet. When the LLM extracts a test whose LOINC is in `loinc_common.json` but not in the catalog, we preserve the LOINC claim on the `LabResult` even while the row lands in the unmatched section. That audit trail is what lets Phase 3 auto-create the missing `LabTestType` row safely (§14 #9).
+
+**Updates:** the fixture ships as a committed JSON file. Bumps are a code change, not an admin action. A script in `backend/scripts/refresh_loinc_fixture.py` pulls the latest LOINC release and regenerates the filtered subset; we run it when LOINC publishes a new version (~twice a year), not on a schedule.
+
 ---
 
 ## 4. Data Model
@@ -290,6 +319,11 @@ class LabUpload(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="lab_uploads")
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="pending", db_index=True)
 
+    # Which LLM produced the extraction. Phase 2c is Claude-only (§6.3), but
+    # recording the provider per-upload means any future Gemini/OpenAI adapter
+    # doesn't need a backfill — old rows stay "claude", new rows stamp themselves.
+    provider = models.CharField(max_length=32, default="claude")
+
     # Patient-supplied context
     lab_date = models.DateField(null=True, blank=True)              # Date shown on the report
     notes = models.TextField(blank=True, default="")                # Optional patient note
@@ -345,6 +379,15 @@ class LabResult(models.Model):
     unit = models.CharField(max_length=32)                          # Always == test_type.default_unit after save
     source_text = models.CharField(max_length=64)                   # Verbatim original from the source (audit trail)
     source_unit = models.CharField(max_length=32)                   # Verbatim unit from the source
+
+    # LLM-reported LOINC code — the ONLY LOINC field we persist from the LLM.
+    # The model also returns loinc_name + loinc_default_unit (§6.1) but we
+    # intentionally do NOT store them: the LLM can hallucinate a plausible code
+    # paired with a wrong name, and the fixture (§3.4) is authoritative for name
+    # and default unit anyway. Matcher (§7 Tier 0a) validates this code against
+    # loinc_common.json before trusting it. Empty for manual entries and for
+    # rows where the LLM returned no LOINC.
+    raw_loinc_code = models.CharField(max_length=16, blank=True, default="")
 
     reference_min = models.FloatField(null=True, blank=True)        # Normalised
     reference_max = models.FloatField(null=True, blank=True)        # Normalised
@@ -610,7 +653,10 @@ RETURN FORMAT (strict JSON, no prose):
     "reference_max": <number or null>,
     "measured_date": "<YYYY-MM-DD or null>",
     "page": <page index, 0-based>,
-    "confidence": <0.0..1.0>
+    "confidence": <0.0..1.0>,
+    "loinc_code": "<canonical LOINC code for this test, or empty string>",
+    "loinc_name": "<official LOINC long name, or empty string>",
+    "loinc_default_unit": "<LOINC example unit, or empty string>"
   }
 ]
 
@@ -627,6 +673,11 @@ RULES:
 - DO NOT invent reference ranges. If the page does not show a range, return
   null for both reference_min and reference_max.
 - DO NOT include narrative interpretation ("Patient appears healthy", etc.).
+- LOINC fields: return the canonical LOINC code you are confident identifies
+  this test (e.g. "718-7" for Hemoglobin in blood). If you are not sure which
+  LOINC applies, return empty strings for all three LOINC fields — do NOT
+  guess. The system validates every LOINC you return against an authoritative
+  list and discards claims that don't match.
 
 CONTEXT — HealthKey tracks these tests (partial list for your reference):
 {CATALOG_HINT}
@@ -745,11 +796,29 @@ The matcher takes a raw `test_name` from the LLM and returns a `LabTestType` row
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                      MATCH_TEST TIERED STRATEGY                              │
 │                                                                              │
-│  Input: raw_name, value, unit, ref_min, ref_max                              │
+│  Input: raw_name, value, unit, ref_min, ref_max, raw_loinc_code              │
 │                                                                              │
-│  Tier 0 — LOINC code direct lookup                                           │
-│    If the LLM returned a loinc_code (rare but possible), query that          │
-│    → If hit: return the LabTestType, match_method = "loinc"                  │
+│  Tier 0a — Validated LOINC (LLM-reported, fixture-checked)                   │
+│    The LLM returns loinc_code + loinc_name + loinc_default_unit (§6.1), but  │
+│    we persist ONLY loinc_code (§4.2). The fixture is the source of truth     │
+│    for name + unit — the LLM can hallucinate a valid-looking code paired     │
+│    with a wrong name.                                                        │
+│                                                                              │
+│      0. Normalize raw_loinc_code via normalize_loinc():                      │
+│           strip whitespace, map en-dash "–" to "-", extract first match of   │
+│           the regex (\d{1,5}-\d). "LOINC:718-7" → "718-7". "718" → "".       │
+│           Empty string means no usable LOINC; skip to Tier 1.                │
+│                                                                              │
+│      1. Is the normalized code present in loinc_common.json (§3.4)?          │
+│         No → discard the LOINC claim, fall through to Tier 1 (by-name)       │
+│         Yes → keep going                                                     │
+│                                                                              │
+│      2. Does any LabTestType row have loinc_code == normalized code?         │
+│         Yes → return that row, match_method = "loinc"                        │
+│         No  → LOINC is real but not in our catalog. Fall through to Tier 1;  │
+│               raw_loinc_code stays on LabResult so Phase 3's auto-catalog-   │
+│               creation (§14 #10) can look up the canonical name + unit from  │
+│               loinc_common.json.                                             │
 │                                                                              │
 │  Tier 1 — Exact-insensitive match                                            │
 │    Normalise raw_name: lowercase, strip punctuation, collapse whitespace     │
@@ -774,7 +843,7 @@ The matcher takes a raw `test_name` from the LLM and returns a `LabTestType` row
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Implementation lives in `apps/labs/matching.py` as pure functions, fully unit-testable without a database.
+Implementation lives in `apps/labs/matching.py` as pure functions, fully unit-testable without a database. The LOINC fixture is loaded once at module import as an immutable `dict[str, LoincEntry]` keyed by normalized code — O(1) membership checks for Tier 0a, and O(1) name/unit lookup for Phase 3's auto-catalog-creation path. Tiny (~500 entries), no reason to push it to a DB table. Fixture-missing at import is a hard startup failure (§12 adds a test for this); silent degradation of Tier 0a is not an acceptable failure mode.
 
 **Name normalisation** (per eng review §CQ5) uses full Unicode folding:
 
@@ -1155,10 +1224,12 @@ This feature is Phase 2 of the overall patient app plan (see architecture doc §
 
 - [ ] `parsers/pdf_rasteriser.py` (PyMuPDF, generator-based, 2-page overlap for paged mode)
 - [ ] `parsers/llm_parser.py` — **Claude only** (no OpenAI adapter in Phase 2c)
-- [ ] `ParsedLabResult` TypedDict as the matching contract
+- [ ] `ParsedLabResult` TypedDict as the matching contract (includes `loinc_code`, `loinc_name`, `loinc_default_unit`)
 - [ ] Paged extraction merge logic (`§6.4`) for PDFs >10 pages, cap at 60
-- [ ] `prompts/lab_extraction.txt` + catalog-hint injection + cache invalidation on catalog version bump
-- [ ] `matching.py` — tiered strategy + `MatchMethod` enum + `DISAMBIGUATION_RULES` dict + Unicode-folding `normalize_name`
+- [ ] `prompts/lab_extraction.txt` + catalog-hint injection + LOINC output fields (§6.1) + cache invalidation on catalog version bump
+- [ ] `fixtures/loinc_common.json` (~500 common analytes, §3.4) + `scripts/refresh_loinc_fixture.py`
+- [ ] `LabUpload.provider` field + `LabResult.raw_loinc_code` migration (name + unit pulled from fixture, not persisted)
+- [ ] `matching.py` — **Tier 0a validated-LOINC** + tiered strategy + `MatchMethod` enum + `DISAMBIGUATION_RULES` dict + Unicode-folding `normalize_name`
 - [ ] Refusal detection in `llm_parser.py` before JSON parsing
 - [ ] Celery task `process_lab_upload` + refusal/timeout/rate-limit handling
 - [ ] Fixture-based extraction eval suite (no live LLM calls on every CI run)
@@ -1208,6 +1279,11 @@ Decisions resolved during eng review (2026-04-09) are marked ✅. Open items are
 
 8. **Date disambiguation** (MM/DD vs DD/MM): pass patient's `country` from `PatientInfo` as a prompt hint. Falls back to upload's `lab_date` field. Ambiguous dates with no hint land on the review screen for patient correction.
    - **Actionable in Phase 2c prompt.**
+
+9. ✅ **LOINC ground-truth** — resolved. Ship `backend/apps/labs/fixtures/loinc_common.json` (~500 most-common analyte LOINCs, §3.4) as the validator for LLM-reported LOINC codes. Matcher Tier 0a (§7) rejects LOINCs not in the fixture before trusting them. `LabResult.raw_loinc_code/name/default_unit` audit fields preserve the LLM's claim even when matching falls back to name-based tiers.
+
+10. **Auto-create LabTestType from uploaded tests** — deferred to **Phase 3**. When an extraction returns a LOINC that's in `loinc_common.json` but no `LabTestType` row exists for it, Phase 3 can auto-create the catalog row using the fixture's canonical `loinc_name` + `loinc_default_unit` (authoritative — **not** the LLM's name/unit, which we intentionally do not persist per §4.2). Flow: show the uploaded row in the unmatched section pre-creation, let the patient accept/name-tweak the fixture-derived name, then commit the new `LabTestType` row. Out of scope for Phase 2c: for now these rows land in the unmatched section for manual selection from the existing ~35-test catalog.
+   - **Deferred — Phase 3.**
 
 ---
 
