@@ -18,6 +18,16 @@ from apps.labs.models import LabUpload, LabUploadFile, LabUploadStatus
 
 
 @pytest.fixture(autouse=True)
+def _force_celery_eager(settings):
+    """Tests assume `.delay()` runs the task inline — but a developer's `.env`
+    may have CELERY_BROKER_URL set to real Redis, which flips eager mode off.
+    Pin eager=True for this module so the task actually executes against the
+    stubbed pipeline below."""
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
+
+@pytest.fixture(autouse=True)
 def _stub_extraction_pipeline():
     """Replace the real pipeline with an empty-result stub for all tests in
     this module. Tests here verify the UPLOAD API, not extraction — and the

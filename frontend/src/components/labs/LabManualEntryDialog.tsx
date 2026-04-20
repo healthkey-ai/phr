@@ -225,7 +225,7 @@ export function LabManualEntryDialog({
           <DialogDescription>
             {isEditing
               ? "Adjust the value, unit, or date. The test itself can't be changed — create a new result if you need a different test."
-              : "Type in one value from a report. Upload + automatic reading is coming in Phase 2."}
+              : "Type in one value from a report."}
           </DialogDescription>
         </DialogHeader>
 

@@ -35,6 +35,15 @@ from apps.labs.models import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _force_celery_eager(settings):
+    """Same reason as in test_uploads_api.py / test_pipeline.py: tests assume
+    `.delay()` runs the task inline; a dev .env with CELERY_BROKER_URL set
+    to real Redis would break retry-endpoint tests without this pin."""
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
+
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
 @pytest.fixture

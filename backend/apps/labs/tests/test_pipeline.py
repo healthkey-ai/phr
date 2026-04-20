@@ -82,10 +82,15 @@ def client(user):
 def _isolated_llm_env(settings):
     """Pin provider to claude + null both keys, same as test_llm_parser.py.
     Prevents tests from silently hitting a real API when the developer's .env
-    has LAB_LLM_PROVIDER=openai set."""
+    has LAB_LLM_PROVIDER=openai set.
+
+    Also force Celery eager mode so `.delay()` runs tasks inline regardless
+    of CELERY_BROKER_URL in the developer's .env."""
     settings.LAB_LLM_PROVIDER = "claude"
     settings.ANTHROPIC_API_KEY = ""
     settings.OPENAI_API_KEY = ""
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
 
 
 def _mock_client(responses):

@@ -315,10 +315,27 @@ def _encode_image_openai(page: PageImage) -> dict:
 
 def _call_openai(batch: PageBatch, system_prompt: str) -> str:
     """Issue one OpenAI chat.completions call with vision. Returns the raw
-    response text. Mirrors _call_claude's error surface."""
+    response text. Mirrors _call_claude's error surface.
+
+    Empty content is treated as an ExtractionError rather than an empty
+    extraction — a successful 200 with no text usually means an OpenAI-side
+    moderation filter, a reasoning-model `refusal` field, or a finish_reason
+    of "length" (completion tokens exhausted before any text was produced).
+    Returning "" silently would make those look identical to a clean report
+    with no labs, which confuses debugging.
+    """
     client = _get_openai_client()
     model = getattr(settings, "LAB_OPENAI_MODEL", DEFAULT_OPENAI_MODEL) or DEFAULT_OPENAI_MODEL
     content_blocks = [_encode_image_openai(p) for p in batch.pages]
+
+    logger.info(
+        "OpenAI extract_batch call",
+        extra={
+            "model": model,
+            "batch_index": batch.batch_index,
+            "page_count": len(batch.pages),
+        },
+    )
 
     try:
         response = client.chat.completions.create(
@@ -336,12 +353,52 @@ def _call_openai(batch: PageBatch, system_prompt: str) -> str:
         name = type(exc).__name__
         if "Timeout" in name:
             raise TimeoutError(f"OpenAI timed out: {exc}") from exc
+        # Include the actual SDK error message — otherwise "OpenAI API error
+        # (NotFoundError): Error code: 404 ..." stays hidden behind ExtractionError
+        # and the task-level copy.
+        logger.error("OpenAI API raised %s: %s", name, exc)
         raise ExtractionError(f"OpenAI API error ({name}): {exc}") from exc
 
-    # chat.completions response: .choices[0].message.content (str | None)
     if not response.choices:
-        return ""
-    return response.choices[0].message.content or ""
+        raise ExtractionError(
+            "OpenAI returned a response with no choices — usually a signal that "
+            "the content was blocked or the model name is invalid. Check the "
+            "API key, model, and org/project settings."
+        )
+
+    choice = response.choices[0]
+    finish_reason = getattr(choice, "finish_reason", None)
+    content = choice.message.content or ""
+    refusal = getattr(choice.message, "refusal", None)
+
+    if refusal:
+        # Structured refusal field (newer SDKs / reasoning models).
+        raise RefusalError(f"OpenAI refusal: {refusal}")
+
+    if not content:
+        # Log enough detail to diagnose why. Most common causes at this point:
+        # - finish_reason="length" → max_completion_tokens exhausted before text emerged
+        # - finish_reason="content_filter" → moderation blocked the image
+        logger.warning(
+            "OpenAI returned empty content",
+            extra={
+                "finish_reason": finish_reason,
+                "model": model,
+                "batch_index": batch.batch_index,
+            },
+        )
+        raise ExtractionError(
+            f"OpenAI returned no text (finish_reason={finish_reason!r}). "
+            "Check the model name, API key quota, and that the request isn't "
+            "tripping the content filter."
+        )
+
+    logger.info(
+        "OpenAI returned %d chars (finish_reason=%s)",
+        len(content),
+        finish_reason,
+    )
+    return content
 
 
 # ── Top-level batch extraction (provider-agnostic) ───────────────────────────

@@ -462,16 +462,54 @@ class TestOpenAIProvider:
             extract_batch(_page_batch(), total_batches=1)
         assert "OPENAI_API_KEY" in str(exc.value)
 
-    def test_empty_choices_returns_empty_list(self, settings):
-        """Degenerate OpenAI response with empty choices → treated as empty
-        extraction (not a crash, not a refusal)."""
+    def test_empty_choices_raises_extraction_error(self, settings):
+        """A 200 response with no choices is almost always a misconfigured
+        model / blocked content / bad key — surface it, don't silently
+        treat it as 'no labs found'."""
         settings.LAB_LLM_PROVIDER = "openai"
         settings.OPENAI_API_KEY = "sk-fake"
         client = MagicMock()
         client.chat.completions.create.return_value = _OpenAIResponse(choices=[])
         with patch("apps.labs.parsers.llm_parser._get_openai_client", return_value=client):
-            results = extract_batch(_page_batch(), total_batches=1)
-        assert results == []
+            with pytest.raises(ExtractionError) as exc:
+                extract_batch(_page_batch(), total_batches=1)
+        assert "no choices" in str(exc.value).lower()
+
+    def test_empty_content_raises_extraction_error(self, settings):
+        """Choices present but content is empty string / None → ExtractionError
+        with the finish_reason surfaced so the operator can diagnose."""
+        settings.LAB_LLM_PROVIDER = "openai"
+        settings.OPENAI_API_KEY = "sk-fake"
+
+        # choice with None content + finish_reason="length" (tokens exhausted)
+        empty_message = _OpenAIMessage(content=None)
+        empty_message.refusal = None  # type: ignore[attr-defined]
+        empty_choice = _OpenAIChoice(message=empty_message)
+        empty_choice.finish_reason = "length"  # type: ignore[attr-defined]
+
+        client = MagicMock()
+        client.chat.completions.create.return_value = _OpenAIResponse(choices=[empty_choice])
+        with patch("apps.labs.parsers.llm_parser._get_openai_client", return_value=client):
+            with pytest.raises(ExtractionError) as exc:
+                extract_batch(_page_batch(), total_batches=1)
+        assert "length" in str(exc.value).lower()
+
+    def test_refusal_field_raises_refusal_error(self, settings):
+        """Newer SDKs expose structured refusals via choice.message.refusal.
+        We map that to RefusalError (same as natural-language refusal in text)."""
+        settings.LAB_LLM_PROVIDER = "openai"
+        settings.OPENAI_API_KEY = "sk-fake"
+
+        msg = _OpenAIMessage(content="")
+        msg.refusal = "I cannot help with that."  # type: ignore[attr-defined]
+        choice = _OpenAIChoice(message=msg)
+        choice.finish_reason = "stop"  # type: ignore[attr-defined]
+
+        client = MagicMock()
+        client.chat.completions.create.return_value = _OpenAIResponse(choices=[choice])
+        with patch("apps.labs.parsers.llm_parser._get_openai_client", return_value=client):
+            with pytest.raises(RefusalError):
+                extract_batch(_page_batch(), total_batches=1)
 
     def test_paged_batch_context_in_system_prompt(self, settings):
         settings.LAB_LLM_PROVIDER = "openai"
