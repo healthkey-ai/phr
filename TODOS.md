@@ -482,6 +482,25 @@ CREATE TABLE timeline_event (
 
 ---
 
+## P3 — Operational Reminders
+
+### TODO-017: Refresh `loinc_common.json` on LOINC release
+
+**What:** Re-run `backend/scripts/refresh_loinc_fixture.py` when LOINC publishes a new version (~twice a year) and commit the regenerated `backend/apps/labs/fixtures/loinc_common.json`.
+
+**Why:** The fixture is the ground truth for validating LLM-reported LOINC codes (design doc §3.4, §7 Tier 0a). LOINC occasionally adds codes and deprecates a few. Old codes don't get silently re-assigned, so staleness isn't a correctness risk — but new common analytes won't pass Tier 0a validation until the fixture is refreshed, which quietly caps match quality over time.
+
+**Trigger:** LOINC release calendar at https://loinc.org/downloads/ — typically February and August. No automation planned; this is a 10-minute manual operation when a release lands.
+
+**Pros:** Keeps Tier 0a match rate high as LOINC evolves. Cheap.
+**Cons:** None — if we forget, Tier 1 (name-based) still matches; only the `match_method="loinc"` telemetry coverage slips.
+**Context:** Discovered in `/plan-eng-review` delta review of the lab upload design doc (docs/patient-app-lab-upload-design.md §3.4). Added because "we'll remember to run it" decays to "nobody ran it for 3 years" without a reminder captured somewhere.
+**Effort:** XS (human: 10 min / CC: 2 min per refresh)
+**Priority:** P3 — operational hygiene, never blocks a release
+**Depends on:** Phase 2c ships `loinc_common.json` + `refresh_loinc_fixture.py`.
+
+---
+
 ## Decisions Made (Not TODO)
 
 These were resolved during the CEO review and should be reflected in PRD updates:

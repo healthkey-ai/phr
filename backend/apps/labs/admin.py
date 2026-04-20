@@ -13,8 +13,8 @@ class LabCategoryAdmin(admin.ModelAdmin):
 class LabTestTypeAdmin(admin.ModelAdmin):
     list_display = ("abbreviation", "name", "category", "default_unit", "loinc_code")
     list_filter = ("category", "value_type")
-    search_fields = ("abbreviation", "name", "loinc_code")
-    readonly_fields = ("aliases", "reference_ranges")
+    search_fields = ("abbreviation", "name", "loinc_code", "name_normalized")
+    readonly_fields = ("name_normalized", "reference_ranges")
 
 
 @admin.register(LabResult)

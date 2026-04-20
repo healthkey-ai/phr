@@ -57,11 +57,10 @@ class TestCatalogEndpoint:
         assert len(data["categories"]) >= 7
         assert len(data["tests"]) >= 35
 
-    def test_test_includes_aliases_and_loinc(self, client, catalog):
+    def test_test_includes_loinc_and_metadata(self, client, catalog):
         response = client.get(reverse("lab-catalog"))
         hgb = next(t for t in response.json()["tests"] if t["abbreviation"] == "hgb")
         assert hgb["loinc_code"] == "718-7"
-        assert "HGB" in hgb["aliases"]
         assert hgb["default_unit"] == "g/dL"
         assert hgb["category"] == "cbc"
 
