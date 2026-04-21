@@ -8,6 +8,7 @@ GET    /api/v1/labs/results/{id}/             → Single result
 DELETE /api/v1/labs/results/{id}/             → Delete
 
 POST   /api/v1/labs/uploads/                  → Create upload session (Phase 2b)
+GET    /api/v1/labs/uploads/                  → List uploads (Records change log)
 GET    /api/v1/labs/uploads/{id}/             → Poll upload status (Phase 2b)
 """
 from django.conf import settings
@@ -67,6 +68,8 @@ class LabResultViewSet(
         # select_related prevents N+1 on list views (§PF2)
         qs = (
             LabResult.objects.select_related("test_type", "test_type__category")
+            # prefetch upload.files for source_filename (§PF2 — N+1 guard)
+            .prefetch_related("upload__files")
             .filter(user=self.request.user)
             .order_by("-measured_at", "-created_at")
         )
@@ -111,6 +114,7 @@ class LabResultViewSet(
 class LabUploadViewSet(
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.ListModelMixin,
     viewsets.GenericViewSet,
 ):
     """/api/v1/labs/uploads/ — upload sessions (Phase 2b).

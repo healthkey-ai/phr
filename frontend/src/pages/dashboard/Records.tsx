@@ -11,6 +11,7 @@ import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
 import { LabManualEntryDialog } from "@/components/labs/LabManualEntryDialog";
 import { LabUploadDialog } from "@/components/labs/LabUploadDialog";
 import { LabValueCard } from "@/components/labs/LabValueCard";
+import { RecordsChangeLog } from "@/components/labs/RecordsChangeLog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCatalog, useLabResults } from "@/features/labs/api";
@@ -141,6 +142,8 @@ export function Records() {
           </CardContent>
         </Card>
       </section>
+
+      <RecordsChangeLog />
     </div>
   );
 }

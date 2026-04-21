@@ -22,6 +22,7 @@ const KEYS = {
   catalog: ["labs", "catalog"] as const,
   results: (filters?: LabResultFilters) => ["labs", "results", filters ?? {}] as const,
   upload: (id: number) => ["labs", "uploads", id] as const,
+  uploads: ["labs", "uploads", "list"] as const,
 };
 
 export interface LabResultFilters {
@@ -140,6 +141,7 @@ export function useCreateLabUpload() {
     },
     onSuccess: (upload) => {
       queryClient.setQueryData(KEYS.upload(upload.id), upload);
+      queryClient.invalidateQueries({ queryKey: KEYS.uploads });
     },
   });
 }
@@ -167,6 +169,7 @@ export function useCommitLabUpload() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["labs", "results"] });
       queryClient.invalidateQueries({ queryKey: ["labs", "catalog"] });
+      queryClient.invalidateQueries({ queryKey: KEYS.uploads });
     },
   });
 }
@@ -186,6 +189,24 @@ export function useRetryExtraction() {
     },
     onSuccess: (upload) => {
       queryClient.setQueryData(KEYS.upload(upload.id), upload);
+    },
+  });
+}
+
+/**
+ * GET /labs/uploads/ — every upload this user has created, newest first.
+ * Used by the Records change log. Paginated DRF response, so we unwrap
+ * `.results` the same way useLabResults does.
+ */
+export function useLabUploads() {
+  return useQuery({
+    queryKey: KEYS.uploads,
+    queryFn: async () => {
+      const r = await api.get<{ results?: LabUpload[] } | LabUpload[]>(
+        "/labs/uploads/",
+      );
+      const data = r.data;
+      return Array.isArray(data) ? data : (data.results ?? []);
     },
   });
 }

@@ -15,6 +15,7 @@ import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
+import { FileSourceBadge } from "@/components/labs/FileSourceBadge";
 import { LabManualEntryDialog } from "@/components/labs/LabManualEntryDialog";
 import { LabTrendChart } from "@/components/labs/LabTrendChart";
 import { Button } from "@/components/ui/button";
@@ -168,12 +169,16 @@ export function LabTrendDetail() {
                       )}
                       <StatusDot status={r.status} />
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       {r.measured_at && <span>{formatLongDate(r.measured_at)}</span>}
-                      <DataSourceBadge
-                        source={r.source === "manual" ? "manual" : "document"}
-                        detail={r.source === "manual" ? "You" : undefined}
-                      />
+                      {r.source !== "manual" && r.source_filename ? (
+                        <FileSourceBadge filename={r.source_filename} truncate={false} />
+                      ) : (
+                        <DataSourceBadge
+                          source={r.source === "manual" ? "manual" : "document"}
+                          detail={r.source === "manual" ? "You" : undefined}
+                        />
+                      )}
                       {r.reference_min != null && r.reference_max != null && (
                         <span>
                           ref {r.reference_min}–{r.reference_max}

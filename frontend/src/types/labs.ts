@@ -94,6 +94,10 @@ export interface LabResult {
   status: LabResultStatus;
   measured_at: string | null;
   created_at: string;
+  /** FK to the LabUpload this result was committed from, null for manual entry. */
+  upload: number | null;
+  /** Original filename of the source upload, "" for manual entries. */
+  source_filename: string;
 }
 
 export interface LabResultCreateInput {

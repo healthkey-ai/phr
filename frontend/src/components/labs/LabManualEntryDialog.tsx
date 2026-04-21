@@ -231,24 +231,48 @@ export function LabManualEntryDialog({
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           {/* Test selector — grouped.
-              Locked both in edit mode and when opened from a test-specific
-              detail page via defaultTestAbbrev. */}
+              Locked both in edit mode (backend rejects test_type changes) and
+              when opened from a test-specific detail page via defaultTestAbbrev.
+              When locked we render the test name as a read-only label instead
+              of a disabled Select, because:
+                (a) a disabled dropdown still invites the user to click it, and
+                (b) auto-created tests (no category) aren't in categoriesWithTests,
+                    so a locked Select would fall back to "Choose a test…". */}
           <div className="space-y-2">
             <Label htmlFor="test_type_id">Test</Label>
-            <Select
-              value={selectedTestId || undefined}
-              onValueChange={(v) => setValue("test_type_id", v, { shouldValidate: true })}
-              disabled={testSelectorLocked}
-            >
-              <SelectTrigger id="test_type_id">
-                <SelectValue placeholder="Choose a test…" />
-              </SelectTrigger>
-              <SelectContent className="max-h-80">
-                {categoriesWithTests.map((group) => (
-                  <TestGroup key={group.category.key} category={group.category} tests={group.tests} />
-                ))}
-              </SelectContent>
-            </Select>
+            {testSelectorLocked ? (
+              <div
+                id="test_type_id"
+                className="flex h-11 items-center rounded-md border border-input bg-muted px-3 text-sm text-foreground"
+                aria-readonly="true"
+              >
+                <span className="truncate">
+                  {selectedTest?.name ??
+                    editingResult?.test.name ??
+                    defaultTestAbbrev ??
+                    "—"}
+                </span>
+                {(selectedTest?.default_unit ?? editingResult?.test.default_unit) && (
+                  <span className="ml-2 shrink-0 text-xs text-muted-foreground">
+                    ({selectedTest?.default_unit ?? editingResult?.test.default_unit})
+                  </span>
+                )}
+              </div>
+            ) : (
+              <Select
+                value={selectedTestId || undefined}
+                onValueChange={(v) => setValue("test_type_id", v, { shouldValidate: true })}
+              >
+                <SelectTrigger id="test_type_id">
+                  <SelectValue placeholder="Choose a test…" />
+                </SelectTrigger>
+                <SelectContent className="max-h-80">
+                  {categoriesWithTests.map((group) => (
+                    <TestGroup key={group.category.key} category={group.category} tests={group.tests} />
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <input
               type="hidden"
               {...register("test_type_id", { required: "Pick a test" })}
