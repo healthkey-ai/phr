@@ -99,6 +99,10 @@ class LabResultSerializer(serializers.ModelSerializer):
     # Exposed so the Records change log can count how many values each upload
     # actually saved.
     upload = serializers.PrimaryKeyRelatedField(read_only=True)
+    # Original filename of the source upload, or "" for manual entries / no
+    # files. Multi-file uploads show the first file's name (the case is rare —
+    # most uploads are a single PDF).
+    source_filename = serializers.SerializerMethodField()
 
     class Meta:
         model = LabResult
@@ -120,8 +124,15 @@ class LabResultSerializer(serializers.ModelSerializer):
             "measured_at",
             "created_at",
             "upload",
+            "source_filename",
         )
         read_only_fields = fields
+
+    def get_source_filename(self, obj: LabResult) -> str:
+        if obj.upload_id is None:
+            return ""
+        first = obj.upload.files.order_by("file_order", "id").first()
+        return first.original_filename if first else ""
 
     def get_test(self, obj: LabResult) -> dict:
         t = obj.test_type

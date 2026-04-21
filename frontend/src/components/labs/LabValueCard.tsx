@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
+import { FileSourceBadge } from "@/components/labs/FileSourceBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLabResults } from "@/features/labs/api";
 import type { LabResult } from "@/types/labs";
@@ -87,11 +88,21 @@ export function LabValueCard({ testAbbrev, title }: Props) {
 
         <div className="mt-3 flex items-center gap-2 text-xs">
           <StatusChip status={latest.status} />
-          <DataSourceBadge
-            source={latest.source === "manual" ? "manual" : "document"}
-            detail={latest.source === "manual" ? "You" : undefined}
-            timeAgo={formatTimeAgo(latest.measured_at ?? latest.created_at)}
-          />
+          {latest.source !== "manual" && latest.source_filename ? (
+            <div className="min-w-0 flex-1">
+              <FileSourceBadge
+                filename={latest.source_filename}
+                timeAgo={formatTimeAgo(latest.measured_at ?? latest.created_at)}
+                fullWidth
+              />
+            </div>
+          ) : (
+            <DataSourceBadge
+              source={latest.source === "manual" ? "manual" : "document"}
+              detail={latest.source === "manual" ? "You" : undefined}
+              timeAgo={formatTimeAgo(latest.measured_at ?? latest.created_at)}
+            />
+          )}
         </div>
         </CardContent>
       </Card>
