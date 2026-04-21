@@ -46,15 +46,54 @@ envVarGroups:
         value: "7"
 
       # ── LLM vendor (Phase 2c onward — lab upload extraction) ──────────────
-      # LAB_UPLOAD_ENABLED stays "False" until the BAA with Anthropic is
-      # signed (see TODOS.md / docs/patient-app-lab-upload-design.md §14).
-      # Flipping this to "True" in the dashboard is the feature-flag rollout.
+      # LAB_UPLOAD_ENABLED stays "False" until the BAA with the active provider
+      # is signed (see TODOS.md / docs/patient-app-lab-upload-design.md §14).
+      # Flipping to "True" in the dashboard is the feature-flag rollout.
       - key: LAB_UPLOAD_ENABLED
         value: "False"
       - key: LAB_LLM_PROVIDER
-        value: "claude"
+        value: "claude"            # "claude" | "openai"
       - key: ANTHROPIC_API_KEY
         sync: false            # set in dashboard, never committed
+      - key: OPENAI_API_KEY
+        sync: false            # set in dashboard when LAB_LLM_PROVIDER=openai
+      - key: LAB_OPENAI_MODEL
+        value: "gpt-4o"
+
+      # ── Shared file storage (§9.1 of lab upload design doc) ──────────────
+      # Web + worker services live in separate containers so the local
+      # filesystem isn't shared. Uploads route to object storage so the
+      # worker can read what the web process wrote.
+      #
+      # Precedence: if GS_BUCKET_NAME is set, GCS is used. Else if
+      # AWS_STORAGE_BUCKET_NAME is set, S3 is used. Else FileSystemStorage
+      # (dev only). Pick one — setting both just ignores S3.
+
+      # Google Cloud Storage ────────────────────────────────────────────────
+      - key: GS_BUCKET_NAME
+        sync: false
+      - key: GS_PROJECT_ID
+        sync: false
+      # Paste the full service-account key JSON as the value here (single
+      # line or multi-line both work in the Render dashboard). Never commit.
+      - key: GS_CREDENTIALS_JSON
+        sync: false
+
+      # S3-compatible (AWS, R2, B2) ─────────────────────────────────────────
+      - key: AWS_STORAGE_BUCKET_NAME
+        sync: false
+      - key: AWS_S3_REGION_NAME
+        value: "us-east-1"
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      # Leave blank for AWS S3. Set to "https://<account>.r2.cloudflarestorage.com"
+      # for R2, etc. when using an S3-compatible non-AWS backend.
+      - key: AWS_S3_ENDPOINT_URL
+        sync: false
+      - key: AWS_S3_ENCRYPTION
+        value: "AES256"     # bump to "aws:kms" once a KMS key is provisioned
 
 services:
   # ─────────────────────────────────────────────────────────────────────────

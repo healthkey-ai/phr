@@ -186,6 +186,60 @@ class TestCommitHappyPath:
         assert response.json()["saved_count"] == 1
         assert LabResult.objects.count() == 1
 
+    def test_unitless_numeric_accepted(self, client, user, catalog):
+        """Numeric results without any unit (e.g. 'Metaphases Counted: 15')
+        are legit — both source_unit and default_unit are empty strings.
+        Must not fail the unit-convertibility check."""
+        from apps.labs.models import LabTestType
+
+        # Simulate an auto-created no-LOINC numeric test with no unit
+        tt = LabTestType.objects.create(
+            loinc_code="",
+            abbreviation="metaphases-counted",
+            name="Metaphases Counted",
+            default_unit="",
+            value_type="numeric",
+        )
+        upload = _make_completed_upload(
+            user, catalog,
+            parsed_results=[{
+                "source_index": 0,
+                "raw_name": "Metaphases Counted",
+                "raw_loinc_code": "",
+                "raw_unit": "",
+                "value": "15",
+                "unit": "",
+                "reference_min": None,
+                "reference_max": None,
+                "measured_date": "2012-09-19",
+                "page": 0,
+                "confidence": 0.98,
+                "matched_test_id": tt.id,
+                "matched_test_abbreviation": tt.abbreviation,
+                "matched_test_name": tt.name,
+                "match_method": "name_fallback",
+                "accepted": None,
+            }],
+        )
+
+        response = client.post(
+            reverse("lab-upload-commit", args=[upload.id]),
+            data={
+                "accepted": [
+                    {"source_index": 0, "test_type_id": tt.id, "value": 15,
+                     "unit": "", "measured_at": "2012-09-19"},
+                ]
+            },
+            format="json",
+        )
+        assert response.status_code == 200, response.content
+        assert response.json()["saved_count"] == 1
+
+        saved = LabResult.objects.get(user=user, test_type=tt)
+        assert saved.value == 15
+        assert saved.unit == ""
+        assert saved.source_unit == ""
+
     def test_empty_accepted_is_valid_noop(self, client, user, catalog):
         upload = _make_completed_upload(user, catalog)
         response = client.post(

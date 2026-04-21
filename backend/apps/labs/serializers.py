@@ -150,12 +150,18 @@ def _validate_value_fields(attrs: dict, test_type: LabTestType) -> None:
         raise serializers.ValidationError({"value": "Numeric tests require a value."})
 
     if not is_qualitative:
-        source_unit = attrs.get("unit") or test_type.default_unit
-        if not is_convertible(source_unit, test_type.default_unit, test_type.molecular_weight):
+        source_unit = (attrs.get("unit") or test_type.default_unit or "").strip()
+        target_unit = (test_type.default_unit or "").strip()
+        # No-op cases: identical units (including both empty for unitless
+        # counts — "Metaphases Counted", "Banding Resolution", …) don't
+        # need pint conversion. Trivially valid.
+        if source_unit == target_unit:
+            return
+        if not is_convertible(source_unit, target_unit, test_type.molecular_weight):
             raise serializers.ValidationError(
                 {
                     "unit": (
-                        f"Cannot convert {source_unit!r} to {test_type.default_unit!r}. "
+                        f"Cannot convert {source_unit!r} to {target_unit!r}. "
                         "Use the test's default unit or a compatible one."
                     )
                 }
@@ -177,19 +183,25 @@ def _apply_normalised_fields(
     """
     is_qualitative = test_type.value_type == ValueType.QUALITATIVE
     source_value = validated_data.get("value")
-    source_unit = (validated_data.get("unit") or test_type.default_unit).strip()
+    source_unit = (validated_data.get("unit") or test_type.default_unit or "").strip()
+    target_unit = (test_type.default_unit or "").strip()
+
+    def _convert(n):
+        """Convert n from source_unit to target_unit, or return n unchanged
+        when the units are identical (covers unitless counts where both are
+        '')."""
+        if n is None:
+            return None
+        if source_unit == target_unit:
+            return n
+        return normalise(n, source_unit, target_unit, molecular_weight=test_type.molecular_weight)
 
     if is_qualitative:
         result.value = None
         result.value_qualitative = validated_data.get("value_qualitative", "").strip()
         result.source_text = result.value_qualitative
     else:
-        value = normalise(
-            source_value,
-            source_unit,
-            test_type.default_unit,
-            molecular_weight=test_type.molecular_weight,
-        )
+        value = _convert(source_value)
         if value is None:
             raise serializers.ValidationError(
                 {"value": "Unit conversion failed. Contact support if this persists."}
@@ -199,18 +211,14 @@ def _apply_normalised_fields(
         result.source_text = str(source_value)
 
     result.source_unit = source_unit
-    result.unit = test_type.default_unit
+    result.unit = target_unit
 
     # Reference range — report wins when provided, else catalog default
     report_min = validated_data.get("reference_min")
     report_max = validated_data.get("reference_max")
     if report_min is not None and report_max is not None:
-        result.reference_min = normalise(
-            report_min, source_unit, test_type.default_unit, test_type.molecular_weight
-        )
-        result.reference_max = normalise(
-            report_max, source_unit, test_type.default_unit, test_type.molecular_weight
-        )
+        result.reference_min = _convert(report_min)
+        result.reference_max = _convert(report_max)
         result.reference_source = ReferenceSource.REPORT
     else:
         catalog_min, catalog_max = test_type.default_range()
