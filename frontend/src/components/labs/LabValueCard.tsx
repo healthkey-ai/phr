@@ -5,9 +5,10 @@
  * Per docs/patient-app-design.md §4.2. Phase 2a wires it to real data from the
  * /labs/results/ endpoint via a test abbreviation.
  */
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -224,124 +225,83 @@ function StatusChip({ status }: { status: LabResult["status"] }) {
 /**
  * Inline sparkline of the last N values — shape indicator, not a precision plot.
  *
- * Approach:
- *  - The polyline lives inside an SVG with preserveAspectRatio="none" so the
- *    trend stretches horizontally to fill the card width. (A line is still a
- *    line after non-uniform scaling; only the slope changes, which is fine
- *    for a shape indicator.)
- *  - The data points are rendered as **HTML divs** absolutely positioned over
- *    the SVG. CSS circles stay perfectly round regardless of container aspect
- *    ratio — a <circle> inside a non-uniformly scaled SVG would render as an
- *    ellipse, which was the bug.
- *  - Hover (mouse only — touch taps fall through to the parent Link) reveals a
- *    small value/date tooltip above the hovered point. Position is a percentage
- *    so it tracks the dot as the sparkline stretches.
+ * Uses recharts' LineChart with a monotone curve so the line is smooth instead
+ * of a straight polyline between points. The tooltip uses
+ * `allowEscapeViewBox` so it can render above the tiny h-12 container without
+ * being clipped.
  */
-function Sparkline({ results, unit }: { results: LabResult[]; unit: string }) {
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+type SparkPoint = { value: number; measured_at: string | null };
 
-  type NumericPoint = LabResult & { value: number };
-  const dataPoints = useMemo(
-    () => results.filter((r): r is NumericPoint => typeof r.value === "number"),
+function Sparkline({ results, unit }: { results: LabResult[]; unit: string }) {
+  const chartData = useMemo<SparkPoint[]>(
+    () =>
+      results
+        .filter((r): r is LabResult & { value: number } => typeof r.value === "number")
+        .map((r) => ({ value: r.value, measured_at: r.measured_at })),
     [results],
   );
-  if (dataPoints.length < 2) return null;
-
-  const values = dataPoints.map((r) => r.value);
-  const minV = Math.min(...values);
-  const maxV = Math.max(...values);
-  const range = maxV - minV || 1;
-
-  // Shared coordinate system (0-100 in both axes) for both the SVG polyline
-  // and the HTML dot positions. The inset keeps dots off the wrapper edges
-  // so a 7px circle centered with translate(-50%,-50%) stays fully inside.
-  const X_INSET = 4; // %
-  const Y_INSET = 18; // %
-
-  const points = dataPoints.map((r, i) => {
-    const xPct =
-      X_INSET + (i / (dataPoints.length - 1)) * (100 - 2 * X_INSET);
-    // Y=0 is top in both SVG and CSS, so higher values → lower yPct
-    const yPct =
-      Y_INSET + (1 - (r.value - minV) / range) * (100 - 2 * Y_INSET);
-    return { xPct, yPct };
-  });
-  const polylinePoints = points
-    .map((p) => `${p.xPct.toFixed(2)},${p.yPct.toFixed(2)}`)
-    .join(" ");
-
-  const hoveredPoint = hoveredIdx != null ? dataPoints[hoveredIdx] : null;
-  const hoveredXPct = hoveredIdx != null ? points[hoveredIdx].xPct : 0;
+  if (chartData.length < 2) return null;
 
   return (
     <div
-      // Fills the parent's box. The parent is responsible for setting
-      // a fixed height (e.g. h-12) so the SVG has a known viewport.
-      className="relative h-full w-full"
-      onPointerLeave={() => setHoveredIdx(null)}
+      className="h-full w-full text-healthkey-brand-700"
+      role="img"
+      aria-label={`Recent ${unit} trend`}
     >
-      {/* Stretched SVG for the polyline only — the line renders correctly
-          under non-uniform scaling; only circles would have distorted. */}
-      <svg
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        className="absolute inset-0 block h-full w-full overflow-visible text-healthkey-brand-700"
-        role="img"
-        aria-label={`Recent ${unit} trend`}
-      >
-        <polyline
-          points={polylinePoints}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          vectorEffect="non-scaling-stroke"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-
-      {/* HTML dots — CSS circles stay perfectly round regardless of the
-          wrapper's aspect ratio. */}
-      {points.map((p, i) => {
-        const point = dataPoints[i];
-        const titleDate = point.measured_at
-          ? ` · ${formatShortDate(point.measured_at)}`
-          : "";
-        return (
-          <div
-            key={i}
-            className="absolute h-[7px] w-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] border-[hsl(var(--background))] bg-healthkey-brand-700"
-            style={{ left: `${p.xPct}%`, top: `${p.yPct}%` }}
-            title={`${formatValue(point)} ${unit}${titleDate}`}
-            onPointerEnter={(e) => {
-              if (e.pointerType === "mouse") setHoveredIdx(i);
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={chartData} margin={{ top: 6, right: 6, bottom: 6, left: 6 }}>
+          <Tooltip
+            cursor={false}
+            allowEscapeViewBox={{ x: true, y: true }}
+            wrapperStyle={{ outline: "none", zIndex: 10 }}
+            content={<SparkTooltip unit={unit} />}
+          />
+          <Line
+            type="natural"
+            dataKey="value"
+            stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            isAnimationActive={false}
+            dot={{
+              r: 2.5,
+              fill: "currentColor",
+              stroke: "hsl(var(--background))",
+              strokeWidth: 1.5,
             }}
-            onPointerLeave={(e) => {
-              if (e.pointerType === "mouse") setHoveredIdx(null);
+            activeDot={{
+              r: 3.5,
+              fill: "currentColor",
+              stroke: "hsl(var(--background))",
+              strokeWidth: 1.5,
             }}
           />
-        );
-      })}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
-      {hoveredPoint && (
-        <div
-          className="pointer-events-none absolute -top-10 z-10 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-[11px] shadow-md"
-          style={{
-            left: `${hoveredXPct}%`,
-            transform: "translateX(-50%)",
-          }}
-          role="tooltip"
-        >
-          <div className="font-mono font-semibold text-foreground">
-            {formatValue(hoveredPoint)}{" "}
-            <span className="text-muted-foreground">{unit}</span>
-          </div>
-          {hoveredPoint.measured_at && (
-            <div className="text-muted-foreground">
-              {formatShortDate(hoveredPoint.measured_at)}
-            </div>
-          )}
-        </div>
+function SparkTooltip({
+  active,
+  payload,
+  unit,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: SparkPoint }>;
+  unit: string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const { value, measured_at } = payload[0].payload;
+  return (
+    <div className="pointer-events-none whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-[11px] shadow-md">
+      <div className="font-mono font-semibold text-foreground">
+        {String(Number(value.toFixed(2)))}{" "}
+        <span className="text-muted-foreground">{unit}</span>
+      </div>
+      {measured_at && (
+        <div className="text-muted-foreground">{formatShortDate(measured_at)}</div>
       )}
     </div>
   );
