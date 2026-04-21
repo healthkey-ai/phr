@@ -148,6 +148,11 @@ export function useCreateLabUpload() {
  * POST /labs/uploads/{id}/commit/ — convert accepted parsed_results rows
  * into real LabResults. Invalidates the labs queries on success so the
  * Records tab re-renders.
+ *
+ * Also invalidates the CATALOG because the pipeline can have auto-created
+ * new LabTestType rows (no-LOINC name fallbacks, uncurated LOINCs) during
+ * extraction. Without this invalidation the trend-detail page shows
+ * "Unknown test" on first navigation — the catalog cache is stale for 24h.
  */
 export function useCommitLabUpload() {
   const queryClient = useQueryClient();
@@ -161,6 +166,7 @@ export function useCommitLabUpload() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["labs", "results"] });
+      queryClient.invalidateQueries({ queryKey: ["labs", "catalog"] });
     },
   });
 }

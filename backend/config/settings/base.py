@@ -124,11 +124,118 @@ LOGGING = {
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# User-uploaded files (Phase 2b: lab reports). Production swaps this out for
-# S3 via django-storages (§9.1 of the lab upload design doc) — deferred to a
-# later landing. Local dev writes under MEDIA_ROOT/lab-uploads/YYYY/MM/.
+# ── User-uploaded files ─────────────────────────────────────────────────────
+# Default: local filesystem under MEDIA_ROOT/lab-uploads/YYYY/MM/. Fine for
+# dev where web + worker share a disk.
+#
+# Production: must use a network-backed storage so web (uploading) and
+# worker (rasterising) can share files. Precedence:
+#   1. Google Cloud Storage — if GS_BUCKET_NAME is set
+#   2. S3-compatible (AWS S3 / Cloudflare R2 / Backblaze B2) — if
+#      AWS_STORAGE_BUCKET_NAME is set
+#   3. FileSystemStorage default (dev only)
+#
+# Precedence is deliberate — if someone accidentally sets both, GCS wins
+# so the choice is visible in one place (delete the GS_* env to fall to S3).
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# ── Google Cloud Storage config ─────────────────────────────────────────────
+GS_BUCKET_NAME = env("GS_BUCKET_NAME", default="")
+GS_PROJECT_ID = env("GS_PROJECT_ID", default="")
+# Service-account key. Two ways to provide it:
+#   (a) GS_CREDENTIALS_JSON — raw JSON content of the key file, as a string.
+#       Preferred in containers (Render, Fly, K8s) — no file mount needed.
+#   (b) GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json — google-auth finds
+#       it automatically via Application Default Credentials. Simpler for
+#       local dev when you've already got gcloud CLI auth'd.
+GS_CREDENTIALS_JSON = env("GS_CREDENTIALS_JSON", default="")
+
+# ── S3-compatible config ────────────────────────────────────────────────────
+AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
+AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
+# Optional endpoint override for S3-compatible services (R2, B2, MinIO).
+# Leave empty for AWS S3 proper.
+AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default="") or None
+# Server-side encryption. Default AES256 (S3-managed keys). Override to
+# "aws:kms" in prod env + set AWS_S3_OBJECT_PARAMETERS_SSE_KMS_KEY_ID to use
+# a customer-managed KMS key per the PHI/HIPAA posture (§9.1 of design doc).
+AWS_S3_ENCRYPTION = env("AWS_S3_ENCRYPTION", default="AES256")
+# Keep objects private — access goes through the Django app which applies
+# per-user authorization. Public buckets would leak PHI.
+AWS_DEFAULT_ACL = "private"
+AWS_QUERYSTRING_AUTH = True
+AWS_QUERYSTRING_EXPIRE = 300  # 5-min presigned URLs when we generate them
+
+
+def _build_gcs_credentials(raw_json: str):
+    """Parse a service-account JSON blob from an env var into a google-auth
+    Credentials object. Returns None if the blob is empty / malformed — in
+    which case django-storages falls back to Application Default Credentials
+    (GOOGLE_APPLICATION_CREDENTIALS file, gcloud CLI, or GKE workload identity)."""
+    if not raw_json.strip():
+        return None
+    try:
+        import json as _json
+        from google.oauth2 import service_account
+        return service_account.Credentials.from_service_account_info(_json.loads(raw_json))
+    except Exception:  # noqa: BLE001 — refuse to boot-crash on a malformed key
+        import logging as _logging
+        _logging.getLogger(__name__).exception(
+            "GS_CREDENTIALS_JSON was set but couldn't be parsed. "
+            "Falling back to Application Default Credentials."
+        )
+        return None
+
+
+if GS_BUCKET_NAME:
+    # Google Cloud Storage takes precedence over S3.
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+            "OPTIONS": {
+                "bucket_name": GS_BUCKET_NAME,
+                "project_id": GS_PROJECT_ID or None,
+                "credentials": _build_gcs_credentials(GS_CREDENTIALS_JSON),
+                # None = use bucket's default (uniform bucket-level access,
+                # which is what Google recommends for new buckets). Setting
+                # an ACL string on a uniform bucket is a 400 error.
+                "default_acl": None,
+                "file_overwrite": False,
+                "querystring_auth": True,
+                "expiration": timedelta(seconds=300),  # 5-min signed URLs
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+elif AWS_STORAGE_BUCKET_NAME:
+    # S3-compatible mode.
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "bucket_name": AWS_STORAGE_BUCKET_NAME,
+                "region_name": AWS_S3_REGION_NAME,
+                "endpoint_url": AWS_S3_ENDPOINT_URL,
+                "access_key": AWS_ACCESS_KEY_ID or None,
+                "secret_key": AWS_SECRET_ACCESS_KEY or None,
+                "default_acl": AWS_DEFAULT_ACL,
+                "querystring_auth": AWS_QUERYSTRING_AUTH,
+                "querystring_expire": AWS_QUERYSTRING_EXPIRE,
+                "object_parameters": {
+                    "ServerSideEncryption": AWS_S3_ENCRYPTION,
+                },
+                "file_overwrite": False,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 
 # Hard caps enforced at the view layer. Keep them here as the source of truth
 # so serializers, tests, and the frontend all read the same numbers.
