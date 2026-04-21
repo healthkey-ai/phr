@@ -8,6 +8,7 @@ GET    /api/v1/labs/results/{id}/             → Single result
 DELETE /api/v1/labs/results/{id}/             → Delete
 
 POST   /api/v1/labs/uploads/                  → Create upload session (Phase 2b)
+GET    /api/v1/labs/uploads/                  → List uploads (Records change log)
 GET    /api/v1/labs/uploads/{id}/             → Poll upload status (Phase 2b)
 """
 from django.conf import settings
@@ -111,6 +112,7 @@ class LabResultViewSet(
 class LabUploadViewSet(
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.ListModelMixin,
     viewsets.GenericViewSet,
 ):
     """/api/v1/labs/uploads/ — upload sessions (Phase 2b).

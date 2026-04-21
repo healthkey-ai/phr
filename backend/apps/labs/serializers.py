@@ -95,6 +95,10 @@ class CatalogSerializer(serializers.Serializer):
 
 class LabResultSerializer(serializers.ModelSerializer):
     test = serializers.SerializerMethodField()
+    # FK to the upload this result was committed from (null for manual entry).
+    # Exposed so the Records change log can count how many values each upload
+    # actually saved.
+    upload = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = LabResult
@@ -115,6 +119,7 @@ class LabResultSerializer(serializers.ModelSerializer):
             "status",
             "measured_at",
             "created_at",
+            "upload",
         )
         read_only_fields = fields
 
