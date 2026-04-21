@@ -172,22 +172,58 @@ AWS_QUERYSTRING_EXPIRE = 300  # 5-min presigned URLs when we generate them
 
 def _build_gcs_credentials(raw_json: str):
     """Parse a service-account JSON blob from an env var into a google-auth
-    Credentials object. Returns None if the blob is empty / malformed — in
-    which case django-storages falls back to Application Default Credentials
-    (GOOGLE_APPLICATION_CREDENTIALS file, gcloud CLI, or GKE workload identity)."""
+    Credentials object.
+
+    Behavior:
+      - Empty / unset: return None, letting django-storages fall back to
+        Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS file,
+        gcloud CLI, GKE workload identity, etc.). That's the valid
+        "use the file path instead" path.
+      - Non-empty but malformed: raise ImproperlyConfigured. The env var was
+        clearly *intended* to provide creds, so silently falling through to
+        ADC hides the misconfiguration and produces a confusing "no ADC
+        found" error deep inside the worker. Fail loud at startup instead.
+    """
     if not raw_json.strip():
         return None
+    from django.core.exceptions import ImproperlyConfigured
     try:
         import json as _json
-        from google.oauth2 import service_account
-        return service_account.Credentials.from_service_account_info(_json.loads(raw_json))
-    except Exception:  # noqa: BLE001 — refuse to boot-crash on a malformed key
-        import logging as _logging
-        _logging.getLogger(__name__).exception(
-            "GS_CREDENTIALS_JSON was set but couldn't be parsed. "
-            "Falling back to Application Default Credentials."
+        parsed = _json.loads(raw_json)
+    except Exception as exc:
+        raise ImproperlyConfigured(
+            "GS_CREDENTIALS_JSON is set but isn't valid JSON: "
+            f"{type(exc).__name__}: {exc}. "
+            "Paste the full contents of a service-account key file, "
+            "or clear the env var to fall back to GOOGLE_APPLICATION_CREDENTIALS."
+        ) from exc
+
+    # Explicit type check — the #1 failure mode is pasting the output of
+    # `gcloud auth application-default login --impersonate-service-account=...`,
+    # which produces type="impersonated_service_account". That blob works on
+    # a laptop (it delegates to a logged-in gcloud user) but fails in a
+    # container where there's no user session to delegate from. Catch it
+    # here with a clear message instead of a confusing downstream error.
+    blob_type = parsed.get("type")
+    if blob_type != "service_account":
+        raise ImproperlyConfigured(
+            f"GS_CREDENTIALS_JSON has type={blob_type!r} — need type=\"service_account\". "
+            "You probably pasted an impersonated-user credential from "
+            "`gcloud auth application-default login --impersonate-...`. "
+            "Generate a real service-account key instead:\n"
+            "  gcloud iam service-accounts keys create key.json "
+            "--iam-account=<sa>@<project>.iam.gserviceaccount.com"
         )
-        return None
+
+    try:
+        from google.oauth2 import service_account
+        return service_account.Credentials.from_service_account_info(parsed)
+    except Exception as exc:
+        raise ImproperlyConfigured(
+            "GS_CREDENTIALS_JSON parsed as JSON but isn't a valid service-account key: "
+            f"{type(exc).__name__}: {exc}. "
+            "Re-generate with `gcloud iam service-accounts keys create`."
+        ) from exc
 
 
 if GS_BUCKET_NAME:
