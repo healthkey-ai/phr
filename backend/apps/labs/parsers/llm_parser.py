@@ -8,7 +8,8 @@ providers return the same `ParsedLabResult` shape — everything downstream
 is provider-agnostic.
 
 Provider routing (settings.LAB_LLM_PROVIDER):
-  - "claude" (default) → anthropic.Anthropic, model claude-sonnet-4-6
+  - "claude" (default) → anthropic.Anthropic, model settings.LAB_CLAUDE_MODEL
+                         (default "claude-sonnet-4-6")
   - "openai"           → openai.OpenAI, model settings.LAB_OPENAI_MODEL
                          (default "gpt-4o")
 
@@ -36,9 +37,9 @@ from .pdf_rasteriser import PageBatch, PageImage
 
 logger = logging.getLogger(__name__)
 
-# Pinned model IDs so behavior doesn't drift mid-deploy; bump explicitly on
-# upgrades. OpenAI model is runtime-configurable via LAB_OPENAI_MODEL.
-CLAUDE_MODEL = "claude-sonnet-4-6"
+# Model IDs are runtime-configurable via LAB_CLAUDE_MODEL / LAB_OPENAI_MODEL.
+# Defaults are pinned so behavior doesn't drift mid-deploy when env is unset.
+DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-6"
 DEFAULT_OPENAI_MODEL = "gpt-4o"
 
 # Conservative output caps. Claude Sonnet handles 32k out comfortably;
@@ -264,10 +265,11 @@ def _call_claude(batch: PageBatch, system_prompt: str) -> str:
     """
     client = _get_anthropic_client()
     content_blocks = [_encode_image_claude(p) for p in batch.pages]
+    model = getattr(settings, "LAB_CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL) or DEFAULT_CLAUDE_MODEL
 
     try:
         response = client.messages.create(
-            model=CLAUDE_MODEL,
+            model=model,
             max_tokens=CLAUDE_MAX_OUTPUT_TOKENS,
             system=system_prompt,
             messages=[{"role": "user", "content": content_blocks}],
