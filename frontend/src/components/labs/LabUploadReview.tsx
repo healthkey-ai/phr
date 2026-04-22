@@ -44,6 +44,13 @@ interface Props {
   upload: LabUpload;
   onCancel: () => void;
   onSaved: (response: LabUploadCommitResponse) => void;
+  /**
+   * Re-run extraction on the stored upload. Useful when the LLM found nothing
+   * on the first pass — the backend model or prompt may have changed since,
+   * so a retry can yield a different result without re-uploading the file.
+   */
+  onRetry?: () => void;
+  retrying?: boolean;
 }
 
 interface RowState {
@@ -59,7 +66,7 @@ interface RowState {
   reference_max: string;
 }
 
-export function LabUploadReview({ upload, onCancel, onSaved }: Props) {
+export function LabUploadReview({ upload, onCancel, onSaved, onRetry, retrying = false }: Props) {
   const parsed = upload.parsed_results;
   const { data: existingResults = [] } = useLabResults();
   const commit = useCommitLabUpload();
@@ -151,11 +158,19 @@ export function LabUploadReview({ upload, onCancel, onSaved }: Props) {
           We couldn't find any lab values on this report.
         </p>
         <p className="text-caption text-muted-foreground">
-          Try a clearer scan, or add values manually via the{" "}
-          <span className="font-semibold">Add lab result</span> button.
+          Try again (reading may improve over time), upload a clearer scan, or add values
+          manually via the <span className="font-semibold">Add lab result</span> button.
         </p>
-        <div className="flex justify-end pt-2">
-          <Button onClick={onCancel}>Done</Button>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="ghost" onClick={onCancel} disabled={retrying}>
+            Done
+          </Button>
+          {onRetry && (
+            <Button onClick={onRetry} disabled={retrying}>
+              {retrying && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+              Try again
+            </Button>
+          )}
         </div>
       </div>
     );

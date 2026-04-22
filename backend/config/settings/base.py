@@ -336,6 +336,7 @@ LAB_LLM_PROVIDER = env("LAB_LLM_PROVIDER", default="claude")
 # the task catches this and marks the upload failed with a configuration-
 # specific message.
 ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", default="")
+LAB_CLAUDE_MODEL = env("LAB_CLAUDE_MODEL", default="claude-sonnet-4-6")
 
 # OpenAI API key + model. Same semantics as ANTHROPIC_API_KEY. gpt-4o gets
 # us the best accuracy on lab-report extraction; gpt-4o-mini is a cheaper

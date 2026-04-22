@@ -329,6 +329,8 @@ export function LabUploadDialog({ open, onOpenChange }: Props) {
               setCommitResponse(response);
               setPhase("done");
             }}
+            onRetry={handleRetry}
+            retrying={retryExtraction.isPending}
           />
         )}
 
