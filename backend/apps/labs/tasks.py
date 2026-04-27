@@ -1,19 +1,13 @@
 """
-Celery tasks for the labs app.
+Celery tasks for the labs app — v2.
 
-Phase 2c pipeline:
-
-  1. Load LabUpload + its files
+Pipeline:
+  1. Load UploadJob + its files
   2. For each file: rasterise (PDF → pages, image → passthrough)
   3. Concatenate all page images preserving file order
-  4. llm_parser.extract(pages) — handles paged-merge and refusal internally
-  5. For each ParsedLabResult: resolve test identity (LOINC or name_fallback),
-     build the parsed_results entry including matched_test_id
-  6. Save parsed_results onto the LabUpload row + flip status to completed
-
-Phase 2d layers the review/commit step on top (patient decides which rows
-become real LabResult objects). This task writes to `parsed_results` only —
-it does NOT create LabResult rows.
+  4. llm_parser.extract(pages)
+  5. For each ParsedLabResult: resolve test identity (LOINC or name_fallback)
+  6. Save parsed_results onto the UploadJob row + flip status to completed
 """
 import logging
 from datetime import datetime
@@ -21,9 +15,10 @@ from datetime import datetime
 from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
 
-from .models import LabUpload
+from .models import UploadJob
 
 logger = logging.getLogger(__name__)
+
 
 
 @shared_task(
@@ -34,16 +29,9 @@ logger = logging.getLogger(__name__)
     acks_late=True,
 )
 def process_lab_upload(self, upload_id: int) -> dict:
-    """Extract structured lab values from an uploaded report.
-
-    Idempotent. Re-running on an already-completed upload overwrites
-    `parsed_results` — used by the retry endpoint in 2d.
-
-    Returns a compact observability dict (consumed by Flower / logs).
-    """
     try:
-        upload = LabUpload.objects.prefetch_related("files").get(pk=upload_id)
-    except LabUpload.DoesNotExist:
+        upload = UploadJob.objects.prefetch_related("files").get(pk=upload_id)
+    except UploadJob.DoesNotExist:
         logger.warning("process_lab_upload: upload %s disappeared before task ran", upload_id)
         return {"upload_id": upload_id, "status": "missing"}
 
@@ -55,9 +43,6 @@ def process_lab_upload(self, upload_id: int) -> dict:
     try:
         upload.mark_processing()
         parsed = _run_extraction_pipeline(upload)
-        # Stamp which provider actually produced this extraction. Matches the
-        # llm_parser._resolve_provider() result so downstream analytics can
-        # slice accuracy by provider without a second env-var read.
         from .parsers.llm_parser import _resolve_provider
         upload.provider = _resolve_provider()
         upload.mark_completed(parsed_results=parsed)
@@ -82,9 +67,6 @@ def process_lab_upload(self, upload_id: int) -> dict:
         return {"upload_id": upload_id, "status": "failed", "reason": "soft_timeout"}
 
     except Exception as exc:
-        # Branch on our own error hierarchy for user-facing copy; fall through
-        # to a generic message for unknown failures. Imports are local so the
-        # task module loads even if anthropic isn't installed (tests).
         from .parsers.llm_parser import (
             ExtractionError,
             ParseError,
@@ -120,28 +102,16 @@ def process_lab_upload(self, upload_id: int) -> dict:
         return {"upload_id": upload_id, "status": "failed", "reason": reason}
 
 
-# ── Pipeline body ────────────────────────────────────────────────────────────
-
-def _run_extraction_pipeline(upload: LabUpload) -> list[dict]:
-    """Orchestration: rasterise → extract → resolve identity.
-
-    Returns the parsed_results JSON payload (list of dicts) for storage on
-    LabUpload.parsed_results. Each dict is the shape the review UI consumes
-    and the commit endpoint (Phase 2d) turns into LabResult rows.
-    """
-    # Imports are local so this module can load without anthropic installed.
+def _run_extraction_pipeline(upload: UploadJob) -> list[dict]:
     from .matching import resolve_test_identity
     from .parsers.llm_parser import ParsedLabResult, extract
     from .parsers.pdf_rasteriser import PageImage, rasterise
 
-    # ── 1–3. Rasterise all files into a single page list ─────────────────
     all_pages: list[PageImage] = []
     for file_row in upload.files.order_by("file_order"):
         with file_row.file.open("rb") as fp:
             file_bytes = fp.read()
         file_pages = rasterise(file_bytes, file_row.mime_type)
-        # Re-number page_index so it's unique across files in this upload.
-        # The original index is kept as file_row.file_order offset.
         base = len(all_pages)
         for p in file_pages:
             all_pages.append(PageImage(page_index=base + p.page_index, image_bytes=p.image_bytes))
@@ -149,22 +119,23 @@ def _run_extraction_pipeline(upload: LabUpload) -> list[dict]:
     if not all_pages:
         return []
 
-    # ── 4. LLM extraction (handles paged-merge + refusal + retry) ────────
     rows: list[ParsedLabResult] = extract(all_pages)
+    logger.info("llm_extract: upload=%d returned %d rows", upload.pk, len(rows))
+    logger.debug("llm_raw: upload=%d rows=%s", upload.pk, [dict(r) for r in rows])
+    upload.raw_llm_response = [dict(r) for r in rows]
+    upload.save(update_fields=["raw_llm_response"])
     if not rows:
         return []
 
-    # ── 5. Resolve test identity for every row ──────────────────────────
     enriched: list[dict] = []
     for idx, row in enumerate(rows):
-        test_type, match_method = resolve_test_identity(
+        test_entry, match_method = resolve_test_identity(
             raw_name=row["test_name"],
             raw_loinc=row.get("loinc_code"),
             raw_unit=row.get("unit"),
             raw_value=row.get("value"),
         )
         enriched.append({
-            # LLM-extracted fields (verbatim for audit)
             "raw_name": row["test_name"],
             "raw_loinc_code": row.get("loinc_code", ""),
             "raw_unit": row.get("unit", ""),
@@ -175,26 +146,17 @@ def _run_extraction_pipeline(upload: LabUpload) -> list[dict]:
             "measured_date": _parse_measured_date(row.get("measured_date"), upload.lab_date),
             "page": row.get("page", 0),
             "confidence": row.get("confidence", 0.0),
-            # Matched test identity (always populated after 2c pivot —
-            # resolve_test_identity never returns None)
-            "matched_test_id": test_type.pk,
-            "matched_test_abbreviation": test_type.abbreviation,
-            "matched_test_name": test_type.name,
+            "matched_test_id": test_entry.pk,
+            "matched_test_abbreviation": test_entry.abbreviation,
+            "matched_test_name": test_entry.name,
             "match_method": match_method,
-            # Review-state (populated in Phase 2d commit)
             "accepted": None,
-            "source_index": idx,  # stable handle for the commit endpoint
+            "source_index": idx,
         })
     return enriched
 
 
 def _parse_measured_date(raw: str | None, upload_lab_date) -> str | None:
-    """Return a YYYY-MM-DD string or None.
-
-    Precedence: LLM's measured_date > upload.lab_date > None.
-    The LLM's date is trusted when well-formed; malformed dates fall back to
-    the patient-supplied lab_date (design §12.3).
-    """
     if raw:
         try:
             datetime.strptime(raw, "%Y-%m-%d")
@@ -207,8 +169,6 @@ def _parse_measured_date(raw: str | None, upload_lab_date) -> str | None:
 
 
 def _match_rate(parsed: list[dict]) -> float:
-    """Fraction of parsed rows that matched via LOINC (not name fallback).
-    Pushed to observability — feeds `lab_upload.match_rate_percent` metric."""
     if not parsed:
         return 0.0
     loinc_hits = sum(1 for r in parsed if r.get("match_method") == "loinc")

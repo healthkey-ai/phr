@@ -32,7 +32,7 @@ import {
   useCreateLabResult,
   useUpdateLabResult,
 } from "@/features/labs/api";
-import type { LabCategory, LabResult, LabTestType } from "@/types/labs";
+import type { LabTestEntry, LabValue } from "@/types/labs";
 
 /** Fallback placeholder when the backend catalog doesn't supply one. */
 const GENERIC_PLACEHOLDER = "e.g. 12.5";
@@ -49,7 +49,7 @@ interface Props {
    *   - Fields are pre-filled from the stored result's source_text / source_unit
    *   - Submit calls PATCH /labs/results/{id}/ instead of POST
    */
-  editingResult?: LabResult | null;
+  editingResult?: LabValue | null;
 }
 
 interface FormValues {
@@ -142,16 +142,19 @@ export function LabManualEntryDialog({
   // Group tests by category for a sensible Select
   const categoriesWithTests = useMemo(() => {
     if (!catalog) return [];
-    return catalog.categories
-      .map((cat) => ({
-        category: cat,
-        tests: catalog.tests.filter((t) => t.category === cat.key),
-      }))
-      .filter((c) => c.tests.length > 0);
+    const catMap = new Map<string, { key: string; name: string; tests: LabTestEntry[] }>();
+    for (const t of catalog.tests) {
+      const key = t.category || "other";
+      if (!catMap.has(key)) {
+        catMap.set(key, { key, name: key, tests: [] });
+      }
+      catMap.get(key)!.tests.push(t);
+    }
+    return Array.from(catMap.values()).filter((c) => c.tests.length > 0);
   }, [catalog]);
 
   const selectedTestId = watch("test_type_id");
-  const selectedTest: LabTestType | undefined = useMemo(() => {
+  const selectedTest: LabTestEntry | undefined = useMemo(() => {
     if (!catalog || !selectedTestId) return undefined;
     return catalog.tests.find((t) => String(t.id) === selectedTestId);
   }, [catalog, selectedTestId]);
@@ -268,7 +271,7 @@ export function LabManualEntryDialog({
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
                   {categoriesWithTests.map((group) => (
-                    <TestGroup key={group.category.key} category={group.category} tests={group.tests} />
+                    <TestGroup key={group.key} category={group} tests={group.tests} />
                   ))}
                 </SelectContent>
               </Select>
@@ -361,7 +364,7 @@ function NumericValueUnitField({
   selectedUnit,
   onUnitChange,
 }: {
-  test: LabTestType | undefined;
+  test: LabTestEntry | undefined;
   register: UseFormRegister<FormValues>;
   selectedUnit: string | undefined;
   onUnitChange: (unit: string) => void;
@@ -376,15 +379,10 @@ function NumericValueUnitField({
   const hasAlternatives = unitOptions.length > 1;
 
   // Placeholder reflects the currently-selected unit so the user sees the
-  // expected magnitude. Source: backend catalog (LabTestType.sample_values),
+  // expected magnitude. Source: backend catalog (LabTestEntry.sample_values),
   // keyed by unit string. E.g. hgb in g/dL → "14.0", hgb in g/L → "140".
   const activeUnit = selectedUnit ?? test?.default_unit ?? "";
   const placeholder = test?.sample_values?.[activeUnit] ?? GENERIC_PLACEHOLDER;
-
-  // Normal range for the active unit, pre-converted by the backend so the UI
-  // doesn't carry unit-conversion math. Empty for qualitative tests or tests
-  // where the converter couldn't translate the default-unit range.
-  const range = test?.reference_ranges_by_unit?.[activeUnit];
 
   return (
     <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -429,38 +427,19 @@ function NumericValueUnitField({
           </div>
         )}
       </div>
-      {test && (
-        <div className="col-span-2 -mt-1 space-y-0.5 text-xs text-muted-foreground">
-          {range && (
-            <p>
-              Normal range:{" "}
-              <span className="font-mono text-foreground">
-                {formatRange(range[0], range[1])} {activeUnit}
-              </span>
-            </p>
-          )}
-          {hasAlternatives && (
-            <p>
-              Stored as <span className="font-mono">{test.default_unit}</span>. Other units are
-              converted automatically.
-            </p>
-          )}
+      {test && hasAlternatives && (
+        <div className="col-span-2 -mt-1 text-xs text-muted-foreground">
+          <p>
+            Stored as <span className="font-mono">{test.default_unit}</span>. Other units are
+            converted automatically.
+          </p>
         </div>
       )}
     </div>
   );
 }
 
-/** Render a numeric range compactly — "12.0–17.5". Drops trailing ".0"
- * only when both bounds are integers so "150–400" looks clean but
- * "12.0–17.5" stays readable. */
-function formatRange(lo: number, hi: number): string {
-  const bothInt = Number.isInteger(lo) && Number.isInteger(hi);
-  const format = (n: number) => (bothInt ? String(n) : String(Number(n.toFixed(3))));
-  return `${format(lo)}–${format(hi)}`;
-}
-
-function TestGroup({ category, tests }: { category: LabCategory; tests: LabTestType[] }) {
+function TestGroup({ category, tests }: { category: { key: string; name: string }; tests: LabTestEntry[] }) {
   return (
     <>
       <div className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">

@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useCreateLabUpload, useLabUpload, useRetryExtraction } from "@/features/labs/api";
-import type { LabUpload, LabUploadCommitResponse } from "@/types/labs";
+import type { UploadJob, UploadCommitResponse } from "@/types/labs";
 import { LabUploadReview } from "./LabUploadReview";
 
 const MAX_FILES = 10;
@@ -60,8 +60,8 @@ export function LabUploadDialog({ open, onOpenChange }: Props) {
   const [clientError, setClientError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [uploadId, setUploadId] = useState<number | null>(null);
-  const [completedUpload, setCompletedUpload] = useState<LabUpload | null>(null);
-  const [commitResponse, setCommitResponse] = useState<LabUploadCommitResponse | null>(null);
+  const [completedUpload, setCompletedUpload] = useState<UploadJob | null>(null);
+  const [commitResponse, setCommitResponse] = useState<UploadCommitResponse | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const createUpload = useCreateLabUpload();
@@ -411,8 +411,8 @@ function DoneSummary({
   commit,
 }: {
   files: File[];
-  upload: LabUpload | null;
-  commit: LabUploadCommitResponse | null;
+  upload: UploadJob | null;
+  commit: UploadCommitResponse | null;
 }) {
   const saved = commit?.saved_count ?? 0;
   const skipped = commit?.skipped_count ?? 0;

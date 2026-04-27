@@ -218,3 +218,13 @@ Thumbs.db
 samples/
 application_default_credentials.json
 healthkey-patient-dev.json
+
+Loinc_*.zip
+Loinc_*.unpacked/
+**/LoincTable/
+embeddings.jsonl
+embeddings.jsonl.gz
+loinc-codes-aliases.zip
+loinc-codes-aliases.zip.unpacked/
+loinc-codes-aliases*/
+curated_loinc_aliases.json

@@ -33,6 +33,10 @@ _ureg = pint.UnitRegistry()
 # map route every notation to the same target so conversions are a no-op.
 _ureg.define("thousand_per_uL = 1000 / microliter")
 _ureg.define("million_per_uL = 1e6 / microliter")
+_ureg.define("cells_per_uL = 1 / microliter")
+
+# eGFR — BSA-normalized flow rate; multiple notations exist for the same unit
+_ureg.define("egfr_unit = milliliter / minute")
 
 # International Units (for enzyme activity + hormone assays). Dimensionless
 # in pint's view; we treat U/L as its own dimension so U/L ↔ IU/L round-trips
@@ -73,13 +77,18 @@ UNIT_ALIASES: dict[str, str] = {
     "k/ul": "thousand_per_uL",
     "10^3/ul": "thousand_per_uL",
     "10**3/ul": "thousand_per_uL",
+    "10*3/ul": "thousand_per_uL",
     "10e3/ul": "thousand_per_uL",
     "1000/ul": "thousand_per_uL",
+    "thousand/ul": "thousand_per_uL",
     "10^9/l": "thousand_per_uL",    # 10^9/L == 10^3/µL numerically
     "10**9/l": "thousand_per_uL",
     "10^6/ul": "million_per_uL",
     "10**6/ul": "million_per_uL",
+    "10*6/ul": "million_per_uL",
+    "million/ul": "million_per_uL",
     "m/ul": "million_per_uL",
+    "cells/ul": "cells_per_uL",
     # Mass / volume
     "mg/dl": "milligram / deciliter",
     "g/dl": "gram / deciliter",
@@ -105,8 +114,10 @@ UNIT_ALIASES: dict[str, str] = {
     # round-trip cleanly.
     "miu/l": "mIU / liter",
     "miu/ml": "mIU / milliliter",
+    "m[iu]/l": "mIU / liter",
     "uiu/l": "uIU / liter",
     "uiu/ml": "uIU / milliliter",
+    "u[iu]/ml": "uIU / milliliter",
     # Percent
     "%": "percent_unit",
     "pct": "percent_unit",
@@ -118,6 +129,10 @@ UNIT_ALIASES: dict[str, str] = {
     "meq/l": "milliequivalent / liter",
     # Ratio / dimensionless
     "ratio": "ratio",
+    # eGFR — BSA-normalized flow rate, multiple notations for the same unit
+    "ml/min/1.73m2": "egfr_unit",
+    "ml/min/{1.73_m2}": "egfr_unit",
+    "ml/min/1.73 m2": "egfr_unit",
     # Urine
     "mg/24h": "milligram",   # per-24h is a time window, not a unit — drop for comparison
 }

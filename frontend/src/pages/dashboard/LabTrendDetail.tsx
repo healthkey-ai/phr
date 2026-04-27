@@ -25,20 +25,20 @@ import {
   useDeleteLabResult,
   useLabResults,
 } from "@/features/labs/api";
-import type { LabResult } from "@/types/labs";
+import type { LabValue } from "@/types/labs";
 
 export function LabTrendDetail() {
   const { abbreviation = "" } = useParams<{ abbreviation: string }>();
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   // When set, the dialog opens in edit mode pre-filled with this row.
-  const [editingResult, setEditingResult] = useState<LabResult | null>(null);
+  const [editingResult, setEditingResult] = useState<LabValue | null>(null);
 
   const { data: catalog } = useCatalog();
   const { data: results = [], isLoading } = useLabResults({ test: abbreviation });
   const deleteResult = useDeleteLabResult();
 
-  const openForEdit = (r: LabResult) => {
+  const openForEdit = (r: LabValue) => {
     setEditingResult(r);
     setDialogOpen(true);
   };
@@ -226,12 +226,12 @@ export function LabTrendDetail() {
   );
 }
 
-function formatValue(r: LabResult): string {
+function formatValue(r: LabValue): string {
   if (r.value != null) return String(Number(r.value.toFixed(2)));
   return r.value_qualitative || "—";
 }
 
-function formatLatest(r: LabResult): string {
+function formatLatest(r: LabValue): string {
   const v = formatValue(r);
   return r.unit ? `${v} ${r.unit}` : v;
 }
@@ -259,7 +259,7 @@ function prettyCategory(key: string | undefined): string {
   return CATEGORY_LABELS[key] ?? key;
 }
 
-function StatusDot({ status }: { status: LabResult["status"] }) {
+function StatusDot({ status }: { status: LabValue["status"] }) {
   const color =
     status === "in_range"
       ? "bg-success-700"

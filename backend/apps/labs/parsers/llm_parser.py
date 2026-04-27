@@ -50,7 +50,8 @@ OPENAI_MAX_OUTPUT_TOKENS = 16_000
 
 # LLM call timeout (seconds). Celery task's soft time limit is 270s — keep
 # per-call timeout well below so we get multiple retries before the task dies.
-REQUEST_TIMEOUT = 60
+# 120s accommodates multi-page lab reports with image inputs.
+REQUEST_TIMEOUT = 120
 
 PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / "lab_extraction.txt"
 

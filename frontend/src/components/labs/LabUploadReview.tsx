@@ -30,10 +30,10 @@ import {
   useLabResults,
 } from "@/features/labs/api";
 import type {
-  LabResult,
-  LabUpload,
-  LabUploadCommitResponse,
-  LabUploadCommitRow,
+  LabValue,
+  UploadJob,
+  UploadCommitResponse,
+  UploadCommitRow,
   MatchMethod,
   ParsedLabResultRow,
 } from "@/types/labs";
@@ -41,9 +41,9 @@ import type {
 const DUP_TOLERANCE = 0.01; // 1% — matches backend _DUPLICATE_RELATIVE_TOLERANCE
 
 interface Props {
-  upload: LabUpload;
+  upload: UploadJob;
   onCancel: () => void;
-  onSaved: (response: LabUploadCommitResponse) => void;
+  onSaved: (response: UploadCommitResponse) => void;
   /**
    * Re-run extraction on the stored upload. Useful when the LLM found nothing
    * on the first pass — the backend model or prompt may have changed since,
@@ -115,8 +115,8 @@ export function LabUploadReview({ upload, onCancel, onSaved, onRetry, retrying =
 
   async function handleSave() {
     setServerError(null);
-    const accepted: LabUploadCommitRow[] = rows
-      .filter((r) => r.accepted)
+    const accepted: UploadCommitRow[] = rows
+      .filter((r) => r.accepted && (r.value.trim() !== "" || r.value_qualitative.trim() !== ""))
       .map((r) => {
         const parsedRow = parsed.find((p) => p.source_index === r.source_index)!;
         // Route strings that don't parse as a number (e.g. "Not Detected",
@@ -405,6 +405,7 @@ function MatchMethodBadge({ method }: { method: MatchMethod }) {
 
 const METHOD_LABELS: Partial<Record<MatchMethod, string>> = {
   loinc: "LOINC",
+  alias_exact: "Alias",
   name_fallback: "By name",
   manual: "Manual",
   unmatched: "Unmatched",
@@ -427,7 +428,7 @@ function formatShortDate(iso: string): string {
 function findDuplicate(
   row: RowState,
   parsed: ParsedLabResultRow,
-  existing: LabResult[],
+  existing: LabValue[],
 ): string | null {
   if (!row.measured_at) return null;
   if (row.value === "" && !row.value_qualitative) return null;

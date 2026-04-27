@@ -14,7 +14,7 @@ import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
 import { FileSourceBadge } from "@/components/labs/FileSourceBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLabResults } from "@/features/labs/api";
-import type { LabResult } from "@/types/labs";
+import type { LabValue } from "@/types/labs";
 
 interface Props {
   testAbbrev: string;
@@ -110,7 +110,7 @@ export function LabValueCard({ testAbbrev, title }: Props) {
   );
 }
 
-function formatValue(r: LabResult): string {
+function formatValue(r: LabValue): string {
   if (r.value != null) {
     // Keep 1-2 decimals for readability; drop trailing zeros
     return String(Number(r.value.toFixed(2)));
@@ -144,8 +144,8 @@ function TrendBadge({
   latest,
   previous,
 }: {
-  latest: LabResult;
-  previous?: LabResult;
+  latest: LabValue;
+  previous?: LabValue;
 }) {
   if (!previous || latest.value == null || previous.value == null) return null;
 
@@ -208,18 +208,18 @@ function TrendBadge({
   );
 }
 
-function StatusChip({ status }: { status: LabResult["status"] }) {
+function StatusChip({ status }: { status: LabValue["status"] }) {
   // "unknown" means the test has no reference range, so "in / below / above"
   // isn't meaningful. The italic "No range" placeholder in the range line
   // already communicates that — don't double-label it here.
   if (status === "unknown") return null;
 
-  const styles: Record<Exclude<LabResult["status"], "unknown">, string> = {
+  const styles: Record<Exclude<LabValue["status"], "unknown">, string> = {
     in_range: "bg-success-50 text-success-700 border-success-200",
     below: "bg-warning-50 text-warning-700 border-warning-200",
     above: "bg-warning-50 text-warning-700 border-warning-200",
   };
-  const labels: Record<Exclude<LabResult["status"], "unknown">, string> = {
+  const labels: Record<Exclude<LabValue["status"], "unknown">, string> = {
     in_range: "Normal",
     below: "Below",
     above: "Above",
@@ -243,11 +243,11 @@ function StatusChip({ status }: { status: LabResult["status"] }) {
  */
 type SparkPoint = { value: number; measured_at: string | null };
 
-function Sparkline({ results, unit }: { results: LabResult[]; unit: string }) {
+function Sparkline({ results, unit }: { results: LabValue[]; unit: string }) {
   const chartData = useMemo<SparkPoint[]>(
     () =>
       results
-        .filter((r): r is LabResult & { value: number } => typeof r.value === "number")
+        .filter((r): r is LabValue & { value: number } => typeof r.value === "number")
         .map((r) => ({ value: r.value, measured_at: r.measured_at })),
     [results],
   );

@@ -21,7 +21,7 @@ import {
 } from "recharts";
 
 import { useLabResults } from "@/features/labs/api";
-import type { LabResult } from "@/types/labs";
+import type { LabValue } from "@/types/labs";
 
 interface Props {
   testAbbrev: string;
@@ -31,7 +31,7 @@ interface ChartPoint {
   date: string;           // YYYY-MM-DD
   label: string;          // "Mar 15"
   value: number;
-  status: LabResult["status"];
+  status: LabValue["status"];
   unit: string;
 }
 
@@ -42,7 +42,7 @@ export function LabTrendChart({ testAbbrev }: Props) {
     return <div className="h-64 w-full animate-pulse rounded-md bg-muted" />;
   }
 
-  const numeric = results.filter((r) => r.value != null) as Array<LabResult & { value: number }>;
+  const numeric = results.filter((r) => r.value != null) as Array<LabValue & { value: number }>;
   if (numeric.length === 0) {
     return (
       <EmptyState

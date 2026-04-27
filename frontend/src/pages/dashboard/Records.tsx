@@ -4,7 +4,7 @@
  *
  * Phase 1: shows the structured record. Lab trends + timeline + conflicts come in Phase 2.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Upload } from "lucide-react";
 
 import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
@@ -158,8 +158,23 @@ function LabsSection() {
   const { data: results = [], isLoading } = useLabResults();
   const { data: catalog } = useCatalog();
 
-  // Unique test abbreviations across all results, preserving recency order
-  const testAbbrevs = Array.from(new Set(results.map((r) => r.test.abbreviation)));
+  const categoryGroups = useMemo(() => {
+    const seen = new Set<string>();
+    const groups = new Map<string, string[]>();
+    for (const r of results) {
+      if (seen.has(r.test.abbreviation)) continue;
+      seen.add(r.test.abbreviation);
+      const cat = r.test.category || "Other";
+      const list = groups.get(cat);
+      if (list) list.push(r.test.abbreviation);
+      else groups.set(cat, [r.test.abbreviation]);
+    }
+    return Array.from(groups.entries()).sort(([a], [b]) => {
+      if (a === "Other") return 1;
+      if (b === "Other") return -1;
+      return a.localeCompare(b);
+    });
+  }, [results]);
 
   return (
     <section className="mb-6">
@@ -190,7 +205,7 @@ function LabsSection() {
             <div className="h-4 w-32 animate-pulse rounded bg-muted" />
           </CardContent>
         </Card>
-      ) : testAbbrevs.length === 0 ? (
+      ) : categoryGroups.length === 0 ? (
         <Card>
           <CardContent className="p-6">
             <EmptyState
@@ -200,9 +215,18 @@ function LabsSection() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {testAbbrevs.map((abbrev) => (
-            <LabValueCard key={abbrev} testAbbrev={abbrev} />
+        <div className="space-y-6">
+          {categoryGroups.map(([category, abbrevs]) => (
+            <div key={category}>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {category}
+              </h3>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {abbrevs.map((abbrev) => (
+                  <LabValueCard key={abbrev} testAbbrev={abbrev} />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
