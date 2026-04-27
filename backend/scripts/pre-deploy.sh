@@ -11,9 +11,6 @@ set -eu
 echo "[pre-deploy] running database migrations"
 python manage.py migrate --noinput
 
-echo "[pre-deploy] loading lab catalog fixture"
-python manage.py loaddata lab_catalog.json
-
 echo "[pre-deploy] collecting static files"
 python manage.py collectstatic --noinput
 
