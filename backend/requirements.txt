@@ -7,6 +7,7 @@ psycopg[binary]==3.1.18
 gunicorn==21.2.0
 jsonschema==4.21.1
 Pint==0.23
+ucumvert==0.3.1
 celery==5.4.0
 redis==5.0.4
 # Phase 2c — lab report extraction
