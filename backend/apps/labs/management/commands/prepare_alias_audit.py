@@ -81,8 +81,38 @@ class Command(BaseCommand):
                     "existing_alias_count": alias_count,
                 })
 
-        # Rank: fewer aliases first (these need more attention), then by code
-        codes.sort(key=lambda c: (c["existing_alias_count"], c["loinc_num"]))
+        # Rank: catalog-tracked codes first, then common lab tests, then
+        # the long tail.  "Msmt" archetype codes (108xxx+) are deprioritized.
+        from apps.labs.models import LabTestEntry
+        catalog_codes = set(
+            LabTestEntry.objects
+            .exclude(loinc_entry__isnull=True)
+            .values_list("loinc_entry__code", flat=True)
+        )
+
+        _COMMON_SYSTEMS = {
+            "Ser/Plas", "Ser", "Plas", "Bld", "Urine",
+        }
+
+        def _rank_key(c):
+            ac = c["existing_alias_count"]
+            is_catalog = c["loinc_num"] in catalog_codes
+            is_msmt = "Msmt" in c["short_name"]
+            in_common_sys = c["system"] in _COMMON_SYSTEMS
+
+            # Tier 0: codes linked to our LabTestEntry catalog
+            if is_catalog:
+                return (0, ac, c["loinc_num"])
+            # Tier 1: non-Msmt codes with aliases in common systems
+            if not is_msmt and ac >= 1 and in_common_sys:
+                return (1, ac, c["loinc_num"])
+            # Tier 2: non-Msmt codes with aliases in any system
+            if not is_msmt and ac >= 1:
+                return (2, ac, c["loinc_num"])
+            # Tier 3: Msmt codes and 0-alias codes
+            return (3, ac, c["loinc_num"])
+
+        codes.sort(key=_rank_key)
         top = codes[:_TOP_N]
 
         # Split into batches

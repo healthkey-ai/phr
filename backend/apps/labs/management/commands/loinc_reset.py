@@ -194,6 +194,17 @@ class Command(BaseCommand):
                 test_entry.save(update_fields=["loinc_entry"])
                 linked += 1
 
+        # Sync default_unit from LoincEntry → LabTestEntry (only when convertible)
+        from apps.labs.unit_converter import is_convertible
+        for te in LabTestEntry.objects.filter(
+            loinc_entry__isnull=False,
+        ).select_related("loinc_entry").iterator():
+            loinc_unit = te.loinc_entry.default_unit
+            if loinc_unit and te.default_unit != loinc_unit:
+                if not te.default_unit or is_convertible(te.default_unit, loinc_unit):
+                    te.default_unit = loinc_unit
+                    te.save(update_fields=["default_unit"])
+
         # Propagate to LabValue
         propagated = 0
         for lv in LabValue.objects.filter(

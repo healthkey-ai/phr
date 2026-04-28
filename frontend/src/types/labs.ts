@@ -41,6 +41,7 @@ export interface LabValueTestRef {
   id: number;
   abbreviation: string;
   name: string;
+  loinc_name: string;
   category: string;
   default_unit: string;
   value_type: LabValueType;
@@ -56,6 +57,7 @@ export interface LabValue {
   source_unit: string;
   reference_min: number | null;
   reference_max: number | null;
+  reference_text: string;
   reference_source: ReferenceSource;
   match_method: MatchMethod;
   source: "manual" | "document_extraction" | "fhir";
@@ -100,6 +102,7 @@ export interface ParsedLabResultRow {
   unit: string;
   reference_min: number | null;
   reference_max: number | null;
+  reference_text: string;
   measured_date: string | null;
   page: number;
   confidence: number;
@@ -135,6 +138,7 @@ export interface UploadCommitRow {
   measured_at?: string | null;
   reference_min?: number | null;
   reference_max?: number | null;
+  reference_text?: string;
 }
 
 export interface UploadCommitInput {

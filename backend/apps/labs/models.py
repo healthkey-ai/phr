@@ -219,6 +219,7 @@ class LabValue(models.Model):
 
     reference_min = models.FloatField(null=True, blank=True)
     reference_max = models.FloatField(null=True, blank=True)
+    reference_text = models.TextField(blank=True, default="")
     reference_source = models.CharField(
         max_length=8,
         choices=ReferenceSource.choices,
@@ -267,12 +268,12 @@ class LabValue(models.Model):
         return f"{self.test_entry.abbreviation}={val} {self.unit} @ {self.measured_at}"
 
     def recompute_status(self) -> None:
-        if self.value is None or self.reference_min is None or self.reference_max is None:
+        if self.value is None or (self.reference_min is None and self.reference_max is None):
             self.status = "unknown"
             return
-        if self.value < self.reference_min:
+        if self.reference_min is not None and self.value < self.reference_min:
             self.status = "below"
-        elif self.value > self.reference_max:
+        elif self.reference_max is not None and self.value > self.reference_max:
             self.status = "above"
         else:
             self.status = "in_range"

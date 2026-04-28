@@ -316,7 +316,7 @@ export function LabUploadDialog({ open, onOpenChange }: Props) {
             </div>
             <Progress value={phase === "uploading" ? 40 : 80} />
             <p className="text-caption text-muted-foreground">
-              This usually takes 10–30 seconds.
+              This may take a couple of minutes.
             </p>
           </div>
         )}

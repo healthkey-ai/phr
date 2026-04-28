@@ -179,12 +179,28 @@ export function LabTrendDetail() {
                           detail={r.source === "manual" ? "You" : undefined}
                         />
                       )}
-                      {r.reference_min != null && r.reference_max != null && (
+                      {(r.reference_min != null || r.reference_max != null) && (
                         <span>
-                          ref {r.reference_min}–{r.reference_max}
+                          ref{" "}
+                          {r.reference_min != null && r.reference_max != null
+                            ? `${fmtNum(r.reference_min)}–${fmtNum(r.reference_max)}`
+                            : r.reference_max != null
+                              ? `< ${fmtNum(r.reference_max)}`
+                              : `> ${fmtNum(r.reference_min!)}`}
                         </span>
                       )}
                     </div>
+                    {r.reference_text && r.reference_text.includes("\n") && (
+                      <div className="mt-1 space-y-px text-[11px] leading-tight text-muted-foreground/80">
+                        {r.reference_text
+                          .split("\n")
+                          .slice(1)
+                          .filter((l: string) => l.trim())
+                          .map((line: string, i: number) => (
+                            <p key={i}>{line}</p>
+                          ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <button
@@ -226,8 +242,12 @@ export function LabTrendDetail() {
   );
 }
 
+function fmtNum(n: number): string {
+  return String(Number(n.toFixed(2)));
+}
+
 function formatValue(r: LabValue): string {
-  if (r.value != null) return String(Number(r.value.toFixed(2)));
+  if (r.value != null) return fmtNum(r.value);
   return r.value_qualitative || "—";
 }
 

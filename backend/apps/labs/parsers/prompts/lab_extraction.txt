@@ -11,6 +11,7 @@ RETURN FORMAT — STRICT JSON, NO PROSE, NO MARKDOWN FENCING:
     "unit": "<unit exactly as it appears, empty string if none>",
     "reference_min": <number or null>,
     "reference_max": <number or null>,
+    "reference_text": "<full reference range text verbatim from the report, or empty string>",
     "measured_date": "<YYYY-MM-DD or null>",
     "page": <page index within this batch, 0-based>,
     "confidence": <number between 0.0 and 1.0>,
@@ -43,7 +44,15 @@ EXTRACTION RULES:
    "1+" / "2+" / "3+" / "4+" — whichever the report uses. Unit stays empty.
 
 6. DO NOT invent reference ranges. If the page does not show a range, return
-   null for BOTH reference_min and reference_max.
+   null for BOTH reference_min and reference_max, and empty string for
+   reference_text.
+
+6a. `reference_text` — copy the FULL reference range section verbatim from the
+   report, including pregnancy ranges, risk categories, age-specific ranges,
+   and clinical notes. For example a TSH result might have:
+   "0.40-4.50 mIU/L\nPregnancy Ranges\nFirst trimester 0.26-2.66\nSecond trimester 0.55-2.73\nThird trimester 0.43-2.91"
+   Use \n to separate lines. Include everything the report shows under/near
+   the reference range for that test. Keep it verbatim — do NOT summarize.
 
 7. DO NOT include narrative interpretation ("Patient appears healthy",
    physician commentary, recommendations). Only structured test rows.

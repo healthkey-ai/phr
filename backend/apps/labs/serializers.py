@@ -75,6 +75,7 @@ class LabValueSerializer(serializers.ModelSerializer):
             "source_unit",
             "reference_min",
             "reference_max",
+            "reference_text",
             "reference_source",
             "match_method",
             "source",
@@ -95,10 +96,12 @@ class LabValueSerializer(serializers.ModelSerializer):
 
     def get_test(self, obj: LabValue) -> dict:
         t = obj.test_entry
+        loinc = t.loinc_entry
         return {
             "id": t.id,
             "abbreviation": t.abbreviation,
             "name": t.name,
+            "loinc_name": loinc.long_name if loinc else "",
             "category": t.category,
             "default_unit": t.default_unit,
             "value_type": t.value_type,
@@ -116,10 +119,10 @@ def _validate_value_fields(attrs: dict, test_entry: LabTestEntry) -> None:
         raise serializers.ValidationError(
             {"value_qualitative": "Qualitative tests require a value_qualitative."}
         )
-    if not is_qualitative and not has_value:
+    if not is_qualitative and not has_value and not has_qualitative:
         raise serializers.ValidationError({"value": "Numeric tests require a value."})
 
-    if not is_qualitative:
+    if not is_qualitative and has_value:
         source_unit = (attrs.get("unit") or test_entry.default_unit or "").strip()
         target_unit = (test_entry.default_unit or "").strip()
         if source_unit == target_unit:
@@ -152,7 +155,7 @@ def _apply_normalised_fields(
             return n
         return normalise(n, source_unit, target_unit, molecular_weight=test_entry.molecular_weight)
 
-    if is_qualitative:
+    if is_qualitative or (source_value is None and validated_data.get("value_qualitative")):
         result.value = None
         result.value_qualitative = validated_data.get("value_qualitative", "").strip()
         result.source_text = result.value_qualitative
@@ -171,7 +174,8 @@ def _apply_normalised_fields(
 
     report_min = validated_data.get("reference_min")
     report_max = validated_data.get("reference_max")
-    if report_min is not None and report_max is not None:
+    ref_text = validated_data.get("reference_text", "")
+    if report_min is not None or report_max is not None:
         result.reference_min = _convert(report_min)
         result.reference_max = _convert(report_max)
         result.reference_source = ReferenceSource.REPORT
@@ -179,6 +183,7 @@ def _apply_normalised_fields(
         result.reference_min = None
         result.reference_max = None
         result.reference_source = ReferenceSource.NONE
+    result.reference_text = ref_text
 
     result.measured_at = validated_data.get("measured_at")
 
@@ -191,6 +196,7 @@ class LabValueCreateSerializer(serializers.Serializer):
     measured_at = serializers.DateField(required=False, allow_null=True)
     reference_min = serializers.FloatField(required=False, allow_null=True)
     reference_max = serializers.FloatField(required=False, allow_null=True)
+    reference_text = serializers.CharField(required=False, allow_blank=True, default="")
 
     def validate(self, attrs):
         try:
@@ -224,6 +230,7 @@ class LabValueUpdateSerializer(serializers.Serializer):
     measured_at = serializers.DateField(required=False, allow_null=True)
     reference_min = serializers.FloatField(required=False, allow_null=True)
     reference_max = serializers.FloatField(required=False, allow_null=True)
+    reference_text = serializers.CharField(required=False, allow_blank=True, default="")
 
     def validate(self, attrs):
         if not self.instance:
@@ -461,6 +468,7 @@ class _AcceptedRowSerializer(serializers.Serializer):
     measured_at = serializers.DateField(required=False, allow_null=True)
     reference_min = serializers.FloatField(required=False, allow_null=True)
     reference_max = serializers.FloatField(required=False, allow_null=True)
+    reference_text = serializers.CharField(required=False, allow_blank=True, default="")
 
     def validate(self, attrs):
         try:

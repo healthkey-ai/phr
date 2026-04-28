@@ -39,11 +39,18 @@ export function LabValueCard({ testAbbrev, title }: Props) {
     >
       <Card className="transition-colors hover:bg-muted/30">
         <CardContent className="p-5">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="min-w-0 truncate text-base font-semibold text-foreground">
-            {title ?? latest.test.name}
-          </h3>
-          <div className="flex shrink-0 items-center gap-1.5">
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold text-foreground">
+              {title ?? latest.test.name}
+            </h3>
+            {latest.test.loinc_name && latest.test.loinc_name !== latest.test.name && (
+              <p className="truncate text-xs text-muted-foreground">
+                {latest.test.loinc_name}
+              </p>
+            )}
+          </div>
+          <div className="mt-0.5 flex shrink-0 items-center gap-1.5">
             <TrendBadge latest={latest} previous={previous} />
             <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           </div>
@@ -65,18 +72,16 @@ export function LabValueCard({ testAbbrev, title }: Props) {
                 </span>
               )}
             </div>
-            {latest.reference_min != null && latest.reference_max != null ? (
+            {latest.reference_min != null || latest.reference_max != null ? (
               <p className="mt-0.5 whitespace-nowrap text-xs text-muted-foreground">
-                Normal: {latest.reference_min}–{latest.reference_max} {latest.unit}
+                Normal: {formatRange(latest.reference_min, latest.reference_max, latest.unit)}
               </p>
             ) : (
-              // Placeholder so all cards have the same height regardless of
-              // whether the test has a default reference range. Italic so it
-              // reads as "field intentionally empty", not as a real range.
               <p className="mt-0.5 whitespace-nowrap text-xs italic text-muted-foreground/70">
                 No range
               </p>
             )}
+            <ReferenceTextNote text={latest.reference_text} />
           </div>
 
           {results.length > 1 && (
@@ -108,6 +113,32 @@ export function LabValueCard({ testAbbrev, title }: Props) {
       </Card>
     </Link>
   );
+}
+
+function ReferenceTextNote({ text }: { text?: string }) {
+  if (!text) return null;
+  const lines = text.split("\n");
+  if (lines.length <= 1) return null;
+  const extra = lines.slice(1).filter((l) => l.trim());
+  if (extra.length === 0) return null;
+  return (
+    <div className="mt-0.5 space-y-px text-[11px] leading-tight text-muted-foreground/80">
+      {extra.map((line, i) => (
+        <p key={i}>{line}</p>
+      ))}
+    </div>
+  );
+}
+
+function fmtNum(n: number): string {
+  return String(Number(n.toFixed(2)));
+}
+
+function formatRange(min: number | null, max: number | null, unit: string): string {
+  if (min != null && max != null) return `${fmtNum(min)}–${fmtNum(max)} ${unit}`;
+  if (max != null) return `< ${fmtNum(max)} ${unit}`;
+  if (min != null) return `> ${fmtNum(min)} ${unit}`;
+  return "";
 }
 
 function formatValue(r: LabValue): string {

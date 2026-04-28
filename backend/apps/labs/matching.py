@@ -32,6 +32,56 @@ from typing import TypedDict
 from django.db import IntegrityError, transaction
 
 from .normalize import normalize, normalize_loinc, normalize_name  # noqa: F401 — re-exported
+from .unit_converter import is_convertible
+from .unit_family import classify_unit, units_compatible
+
+# Preferred specimen systems, best first.  Common lab panels draw from
+# serum/plasma; more exotic specimens (CSF, urine, tissue) are less likely
+# matches for a generic lab report.
+_MOST_USED_SYSTEMS_ORDER = [
+    "Ser/Plas", "Ser/Plas/Bld", "Ser", "Plas", "Bld", "RBC", "WBC", "Bld.dot",
+]
+_SYSTEM_RANK = {s: i for i, s in enumerate(_MOST_USED_SYSTEMS_ORDER)}
+_WORST_RANK = len(_MOST_USED_SYSTEMS_ORDER)
+
+
+def _value_is_numeric(raw_value: str | None) -> bool:
+    if not raw_value:
+        return False
+    try:
+        float(raw_value)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+def _pick_best_by_system(
+    compatible: list[tuple[int, str, str, str]],
+    incoming_family: str,
+    raw_value: str | None = None,
+) -> int | None:
+    """Select the best LOINC pk from multiple compatible candidates.
+
+    Each item is ``(pk, unit_family, system, value_type)``.
+
+    Priority:
+      0. If the incoming value is non-numeric, prefer qualitative codes;
+         if numeric, prefer numeric codes.
+      1. Prefer codes whose system is in ``_MOST_USED_SYSTEMS_ORDER`` (lower rank wins).
+      2. If incoming unit family is known, prefer exact family match.
+      3. Deterministic tiebreak by PK.
+    """
+    numeric = _value_is_numeric(raw_value)
+
+    def _sort_key(item: tuple[int, str, str, str]):
+        pk, uf, system, vtype = item
+        vtype_rank = 0 if (numeric and vtype == "numeric") or (not numeric and vtype == "qualitative") else 1
+        system_rank = _SYSTEM_RANK.get(system, _WORST_RANK)
+        exact_family = 0 if (incoming_family and incoming_family != "unknown" and uf == incoming_family) else 1
+        return (vtype_rank, system_rank, exact_family, pk)
+
+    ranked = sorted(compatible, key=_sort_key)
+    return ranked[0][0] if ranked else None
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +114,7 @@ def _load_loinc_fixture() -> dict[str, LoincCommonEntry]:
             "loinc_default_unit": row.get("loinc_default_unit", ""),
             "value_type": row["value_type"],
         }
-    logger.info("loaded LOINC validation fixture with %d entries", len(result))
+    logger.debug("loaded LOINC validation fixture with %d entries", len(result))
     return result
 
 
@@ -140,6 +190,11 @@ def _get_or_create_for_loinc(loinc_entry, raw_unit: str | None):
 
     existing = LabTestEntry.objects.filter(loinc_entry=loinc_entry).first()
     if existing:
+        loinc_unit = loinc_entry.default_unit
+        if loinc_unit and existing.default_unit != loinc_unit:
+            if not existing.default_unit or is_convertible(existing.default_unit, loinc_unit):
+                existing.default_unit = loinc_unit
+                existing.save(update_fields=["default_unit"])
         return existing
 
     name = loinc_entry.short_name or loinc_entry.long_name or loinc_entry.component
@@ -184,17 +239,25 @@ def resolve_test_identity(
     code = normalize_loinc(raw_loinc)
     use_db = _loinc_db_populated()
 
+    incoming_family = classify_unit(raw_unit)
+
     # ── Tier 0 — LOINC code lookup ───────────────────────────────────────
     if code:
         if use_db:
             loinc = LoincEntry.objects.filter(code=code).first()
             if loinc:
-                test_entry = _get_or_create_for_loinc(loinc, raw_unit)
-                logger.debug(
-                    "resolve: tier0_db raw_name=%r loinc=%s → entry=%s",
-                    raw_name, code, test_entry.abbreviation,
-                )
-                return test_entry, MatchMethod.LOINC
+                if not units_compatible(incoming_family, loinc.unit_family):
+                    logger.info(
+                        "resolve: tier0_unit_mismatch loinc=%s loinc_family=%s incoming=%s — falling through (raw_name=%r)",
+                        code, loinc.unit_family, incoming_family, raw_name,
+                    )
+                else:
+                    test_entry = _get_or_create_for_loinc(loinc, raw_unit)
+                    logger.debug(
+                        "resolve: tier0_db raw_name=%r loinc=%s → entry=%s",
+                        raw_name, code, test_entry.abbreviation,
+                    )
+                    return test_entry, MatchMethod.LOINC
             else:
                 logger.info(
                     "resolve: tier0_miss loinc=%s not in LoincEntry — falling through (raw_name=%r)",
@@ -203,31 +266,38 @@ def resolve_test_identity(
 
         elif code in LOINC_COMMON:
             fixture_entry = LOINC_COMMON[code]
-            defaults = {
-                "name": fixture_entry["loinc_short_name"],
-                "default_unit": fixture_entry["loinc_default_unit"] or (raw_unit or ""),
-                "value_type": fixture_entry["value_type"],
-                "abbreviation": _slug_with_collision_suffix(
-                    _slug_from_name(fixture_entry["loinc_short_name"]),
-                ),
-            }
-            try:
-                with transaction.atomic():
-                    test_entry, _created = LabTestEntry.objects.get_or_create(
+            fixture_family = classify_unit(fixture_entry["loinc_default_unit"])
+            if not units_compatible(incoming_family, fixture_family):
+                logger.info(
+                    "resolve: tier0_unit_mismatch loinc=%s fixture_family=%s incoming=%s — falling through (raw_name=%r)",
+                    code, fixture_family, incoming_family, raw_name,
+                )
+            else:
+                defaults = {
+                    "name": fixture_entry["loinc_short_name"],
+                    "default_unit": fixture_entry["loinc_default_unit"] or (raw_unit or ""),
+                    "value_type": fixture_entry["value_type"],
+                    "abbreviation": _slug_with_collision_suffix(
+                        _slug_from_name(fixture_entry["loinc_short_name"]),
+                    ),
+                }
+                try:
+                    with transaction.atomic():
+                        test_entry, _created = LabTestEntry.objects.get_or_create(
+                            name_normalized=normalize_name(fixture_entry["loinc_short_name"]),
+                            defaults=defaults,
+                        )
+                except IntegrityError:
+                    test_entry = LabTestEntry.objects.filter(
                         name_normalized=normalize_name(fixture_entry["loinc_short_name"]),
-                        defaults=defaults,
-                    )
-            except IntegrityError:
-                test_entry = LabTestEntry.objects.filter(
-                    name_normalized=normalize_name(fixture_entry["loinc_short_name"]),
-                ).first()
-                if test_entry is None:
-                    raise
-            logger.debug(
-                "resolve: tier0_fixture raw_name=%r loinc=%s → entry=%s",
-                raw_name, code, test_entry.abbreviation,
-            )
-            return test_entry, MatchMethod.LOINC
+                    ).first()
+                    if test_entry is None:
+                        raise
+                logger.debug(
+                    "resolve: tier0_fixture raw_name=%r loinc=%s → entry=%s",
+                    raw_name, code, test_entry.abbreviation,
+                )
+                return test_entry, MatchMethod.LOINC
 
         else:
             logger.info(
@@ -235,31 +305,49 @@ def resolve_test_identity(
                 code, raw_name,
             )
 
-    # ── Tier 1 — Alias lookup ────────────────────────────────────────────
+    # ── Tier 1 — Alias lookup + unit-family gate ──────────────────────────
     if use_db and raw_name:
         normalized_alias = normalize(raw_name)
         if normalized_alias:
-            aliases = (
+            candidates = list(
                 LoincAlias.objects
                 .filter(text_normalized=normalized_alias)
                 .select_related("loinc_entry")
-                .values_list("loinc_entry", flat=True)
+                .values_list("loinc_entry", "loinc_entry__unit_family", "loinc_entry__system", "loinc_entry__value_type")
                 .distinct()
             )
-            loinc_ids = list(aliases[:2])
-            if len(loinc_ids) == 1:
-                loinc = LoincEntry.objects.get(pk=loinc_ids[0])
-                test_entry = _get_or_create_for_loinc(loinc, raw_unit)
-                logger.debug(
-                    "resolve: tier1_alias raw_name=%r normalized=%r → loinc=%s entry=%s",
-                    raw_name, normalized_alias, loinc.code, test_entry.abbreviation,
-                )
-                return test_entry, MatchMethod.ALIAS_EXACT
-            elif len(loinc_ids) > 1:
-                logger.info(
-                    "resolve: tier1_ambiguous raw_name=%r normalized=%r → %d codes — falling through",
-                    raw_name, normalized_alias, len(loinc_ids),
-                )
+            if candidates:
+                compatible = [
+                    (pk, uf, sys, vt) for pk, uf, sys, vt in candidates
+                    if units_compatible(incoming_family, uf)
+                ]
+                if len(compatible) == 1:
+                    loinc = LoincEntry.objects.get(pk=compatible[0][0])
+                    test_entry = _get_or_create_for_loinc(loinc, raw_unit)
+                    logger.debug(
+                        "resolve: tier1_alias raw_name=%r normalized=%r → loinc=%s entry=%s (filtered %d→1)",
+                        raw_name, normalized_alias, loinc.code, test_entry.abbreviation, len(candidates),
+                    )
+                    return test_entry, MatchMethod.ALIAS_EXACT
+                elif len(compatible) > 1:
+                    best_pk = _pick_best_by_system(compatible, incoming_family, raw_value)
+                    if best_pk is not None:
+                        loinc = LoincEntry.objects.get(pk=best_pk)
+                        test_entry = _get_or_create_for_loinc(loinc, raw_unit)
+                        logger.debug(
+                            "resolve: tier1_collision raw_name=%r → loinc=%s (picked from %d compatible, incoming=%s)",
+                            raw_name, loinc.code, len(compatible), incoming_family,
+                        )
+                        return test_entry, MatchMethod.ALIAS_EXACT
+                    logger.info(
+                        "resolve: tier1_ambiguous raw_name=%r normalized=%r → %d compatible (%d total) — falling through",
+                        raw_name, normalized_alias, len(compatible), len(candidates),
+                    )
+                else:
+                    logger.info(
+                        "resolve: tier1_unit_filtered raw_name=%r normalized=%r → %d candidates, 0 compatible (incoming=%s) — falling through",
+                        raw_name, normalized_alias, len(candidates), incoming_family,
+                    )
             else:
                 logger.info(
                     "resolve: tier1_miss raw_name=%r normalized=%r — no alias match",
