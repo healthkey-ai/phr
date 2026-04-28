@@ -32,6 +32,7 @@ from typing import TypedDict
 from django.db import IntegrityError, transaction
 
 from .normalize import normalize, normalize_loinc, normalize_name  # noqa: F401 — re-exported
+from .unit_converter import is_convertible
 from .unit_family import classify_unit, units_compatible
 
 # Preferred specimen systems, best first.  Common lab panels draw from
@@ -44,24 +45,40 @@ _SYSTEM_RANK = {s: i for i, s in enumerate(_MOST_USED_SYSTEMS_ORDER)}
 _WORST_RANK = len(_MOST_USED_SYSTEMS_ORDER)
 
 
+def _value_is_numeric(raw_value: str | None) -> bool:
+    if not raw_value:
+        return False
+    try:
+        float(raw_value)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
 def _pick_best_by_system(
-    compatible: list[tuple[int, str, str]],
+    compatible: list[tuple[int, str, str, str]],
     incoming_family: str,
+    raw_value: str | None = None,
 ) -> int | None:
     """Select the best LOINC pk from multiple compatible candidates.
 
-    Each item is ``(pk, unit_family, system)``.
+    Each item is ``(pk, unit_family, system, value_type)``.
 
     Priority:
+      0. If the incoming value is non-numeric, prefer qualitative codes;
+         if numeric, prefer numeric codes.
       1. Prefer codes whose system is in ``_MOST_USED_SYSTEMS_ORDER`` (lower rank wins).
       2. If incoming unit family is known, prefer exact family match.
       3. Deterministic tiebreak by PK.
     """
-    def _sort_key(item: tuple[int, str, str]):
-        pk, uf, system = item
+    numeric = _value_is_numeric(raw_value)
+
+    def _sort_key(item: tuple[int, str, str, str]):
+        pk, uf, system, vtype = item
+        vtype_rank = 0 if (numeric and vtype == "numeric") or (not numeric and vtype == "qualitative") else 1
         system_rank = _SYSTEM_RANK.get(system, _WORST_RANK)
         exact_family = 0 if (incoming_family and incoming_family != "unknown" and uf == incoming_family) else 1
-        return (system_rank, exact_family, pk)
+        return (vtype_rank, system_rank, exact_family, pk)
 
     ranked = sorted(compatible, key=_sort_key)
     return ranked[0][0] if ranked else None
@@ -173,6 +190,11 @@ def _get_or_create_for_loinc(loinc_entry, raw_unit: str | None):
 
     existing = LabTestEntry.objects.filter(loinc_entry=loinc_entry).first()
     if existing:
+        loinc_unit = loinc_entry.default_unit
+        if loinc_unit and existing.default_unit != loinc_unit:
+            if not existing.default_unit or is_convertible(existing.default_unit, loinc_unit):
+                existing.default_unit = loinc_unit
+                existing.save(update_fields=["default_unit"])
         return existing
 
     name = loinc_entry.short_name or loinc_entry.long_name or loinc_entry.component
@@ -291,12 +313,12 @@ def resolve_test_identity(
                 LoincAlias.objects
                 .filter(text_normalized=normalized_alias)
                 .select_related("loinc_entry")
-                .values_list("loinc_entry", "loinc_entry__unit_family", "loinc_entry__system")
+                .values_list("loinc_entry", "loinc_entry__unit_family", "loinc_entry__system", "loinc_entry__value_type")
                 .distinct()
             )
             if candidates:
                 compatible = [
-                    (pk, uf, sys) for pk, uf, sys in candidates
+                    (pk, uf, sys, vt) for pk, uf, sys, vt in candidates
                     if units_compatible(incoming_family, uf)
                 ]
                 if len(compatible) == 1:
@@ -308,7 +330,7 @@ def resolve_test_identity(
                     )
                     return test_entry, MatchMethod.ALIAS_EXACT
                 elif len(compatible) > 1:
-                    best_pk = _pick_best_by_system(compatible, incoming_family)
+                    best_pk = _pick_best_by_system(compatible, incoming_family, raw_value)
                     if best_pk is not None:
                         loinc = LoincEntry.objects.get(pk=best_pk)
                         test_entry = _get_or_create_for_loinc(loinc, raw_unit)
