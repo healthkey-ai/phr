@@ -140,6 +140,7 @@ export function LabUploadReview({ upload, onCancel, onSaved, onRetry, retrying =
           measured_at: r.measured_at || null,
           reference_min: r.reference_min === "" ? null : Number(r.reference_min),
           reference_max: r.reference_max === "" ? null : Number(r.reference_max),
+          reference_text: parsedRow.reference_text || "",
         };
       });
 
@@ -362,7 +363,12 @@ function ReviewRow({ row, parsed, duplicateNote, onChange }: RowProps) {
         {/* Reference range summary when not editing */}
         {!editing && (row.reference_min || row.reference_max) && (
           <p className="text-caption text-muted-foreground">
-            Reference {row.reference_min || "?"}–{row.reference_max || "?"}
+            Reference{" "}
+            {row.reference_min && row.reference_max
+              ? `${row.reference_min}–${row.reference_max}`
+              : row.reference_max
+                ? `< ${row.reference_max}`
+                : `> ${row.reference_min}`}
           </p>
         )}
 

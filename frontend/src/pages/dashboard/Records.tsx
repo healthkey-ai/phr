@@ -218,7 +218,7 @@ function LabsSection() {
         <div className="space-y-6">
           {categoryGroups.map(([category, abbrevs]) => (
             <div key={category}>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <h3 className="mb-2 text-sm font-semibold text-foreground">
                 {category}
               </h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

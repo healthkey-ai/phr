@@ -10,6 +10,9 @@ Pipeline:
   6. Save parsed_results onto the UploadJob row + flip status to completed
 """
 import logging
+import resource
+import sys
+import time
 from datetime import datetime
 
 from celery import shared_task
@@ -35,9 +38,14 @@ def process_lab_upload(self, upload_id: int) -> dict:
         logger.warning("process_lab_upload: upload %s disappeared before task ran", upload_id)
         return {"upload_id": upload_id, "status": "missing"}
 
+    file_count = upload.files.count()
+    total_bytes = sum(f.size_bytes for f in upload.files.all())
+    t0 = time.monotonic()
+    mem0 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
     logger.info(
-        "process_lab_upload starting",
-        extra={"upload_id": upload_id, "file_count": upload.files.count()},
+        "upload_start: id=%d files=%d size=%.1fKB",
+        upload_id, file_count, total_bytes / 1024,
     )
 
     try:
@@ -47,13 +55,17 @@ def process_lab_upload(self, upload_id: int) -> dict:
         upload.provider = _resolve_provider()
         upload.mark_completed(parsed_results=parsed)
         upload.save(update_fields=["provider"])
+
+        elapsed = time.monotonic() - t0
+        mem1 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # ru_maxrss: bytes on macOS, KB on Linux
+        _rss_scale = 1024 * 1024 if sys.platform == "darwin" else 1024
+        mem_delta_mb = (mem1 - mem0) / _rss_scale
         logger.info(
-            "process_lab_upload completed",
-            extra={
-                "upload_id": upload_id,
-                "result_count": len(parsed),
-                "match_rate": _match_rate(parsed),
-            },
+            "upload_done: id=%d results=%d match_rate=%.1f%% "
+            "elapsed=%.1fs mem_delta=%.1fMB",
+            upload_id, len(parsed), _match_rate(parsed) * 100,
+            elapsed, mem_delta_mb,
         )
         return {
             "upload_id": upload_id,
@@ -63,7 +75,8 @@ def process_lab_upload(self, upload_id: int) -> dict:
 
     except SoftTimeLimitExceeded:
         upload.mark_failed("Reading took too long — try a clearer scan.")
-        logger.warning("process_lab_upload soft timeout", extra={"upload_id": upload_id})
+        logger.warning("upload_fail: id=%d reason=soft_timeout elapsed=%.1fs",
+                        upload_id, time.monotonic() - t0)
         return {"upload_id": upload_id, "status": "failed", "reason": "soft_timeout"}
 
     except Exception as exc:
@@ -95,9 +108,10 @@ def process_lab_upload(self, upload_id: int) -> dict:
             reason = "unexpected"
 
         upload.mark_failed(msg)
+        elapsed = time.monotonic() - t0
         logger.exception(
-            "process_lab_upload failed",
-            extra={"upload_id": upload_id, "reason": reason, "error": str(exc)},
+            "upload_fail: id=%d reason=%s elapsed=%.1fs error=%s",
+            upload_id, reason, elapsed, exc,
         )
         return {"upload_id": upload_id, "status": "failed", "reason": reason}
 
@@ -149,6 +163,7 @@ def _run_extraction_pipeline(upload: UploadJob) -> list[dict]:
             "matched_test_id": test_entry.pk,
             "matched_test_abbreviation": test_entry.abbreviation,
             "matched_test_name": test_entry.name,
+            "reference_text": row.get("reference_text", ""),
             "match_method": match_method,
             "accepted": None,
             "source_index": idx,

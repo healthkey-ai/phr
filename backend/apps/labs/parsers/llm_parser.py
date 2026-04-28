@@ -69,6 +69,7 @@ class ParsedLabResult(TypedDict):
     unit: str
     reference_min: float | None
     reference_max: float | None
+    reference_text: str
     measured_date: str | None
     page: int
     confidence: float
@@ -472,6 +473,7 @@ def _coerce_row(row: dict, *, batch_index: int) -> ParsedLabResult:
         unit=str(row.get("unit") or "").strip(),
         reference_min=_num_or_none(row.get("reference_min")),
         reference_max=_num_or_none(row.get("reference_max")),
+        reference_text=str(row.get("reference_text") or "").strip(),
         measured_date=(row.get("measured_date") or None),
         page=int(row.get("page") or 0),
         confidence=max(0.0, min(1.0, _num_or_none(row.get("confidence")) or 0.0)),

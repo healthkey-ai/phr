@@ -91,7 +91,7 @@ export function LabTrendChart({ testAbbrev }: Props) {
       {/* Legend caption: "Normal range" swatch + numeric bounds live OUTSIDE
           the chart so they stay readable regardless of the curve's shape.
           Matches the dashed style used for the ReferenceLines below. */}
-      {refMin != null && refMax != null && (
+      {(refMin != null || refMax != null) && (
         <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
           <svg width="16" height="8" aria-hidden="true" className="shrink-0">
             <line
@@ -107,7 +107,12 @@ export function LabTrendChart({ testAbbrev }: Props) {
           <span>
             Normal range:{" "}
             <span className="font-mono text-foreground">
-              {refMin}–{refMax} {latest.unit}
+              {refMin != null && refMax != null
+                ? `${fmtNum(refMin)}–${fmtNum(refMax)}`
+                : refMax != null
+                  ? `< ${fmtNum(refMax)}`
+                  : `> ${fmtNum(refMin!)}`}{" "}
+              {latest.unit}
             </span>
           </span>
         </div>
@@ -209,7 +214,8 @@ export function LabTrendChart({ testAbbrev }: Props) {
             }}
             formatter={(value, _name, item) => {
               const unit = (item as unknown as { payload?: ChartPoint }).payload?.unit ?? "";
-              return [`${value} ${unit}`, "Value"];
+              const display = typeof value === "number" ? fmtNum(value) : value;
+              return [`${display} ${unit}`, "Value"];
             }}
           />
 
@@ -260,6 +266,10 @@ export function LabTrendChart({ testAbbrev }: Props) {
   );
 }
 
+function fmtNum(n: number): string {
+  return String(Number(n.toFixed(2)));
+}
+
 function SinglePoint({
   point,
   refMin,
@@ -273,11 +283,17 @@ function SinglePoint({
     <div className="rounded-md border border-border bg-card p-6">
       <p className="text-xs text-muted-foreground">{point.label}</p>
       <p className="mt-1 font-mono text-3xl font-semibold text-foreground">
-        {point.value} <span className="text-base text-muted-foreground">{point.unit}</span>
+        {fmtNum(point.value)} <span className="text-base text-muted-foreground">{point.unit}</span>
       </p>
-      {refMin != null && refMax != null && (
+      {(refMin != null || refMax != null) && (
         <p className="mt-1 text-xs text-muted-foreground">
-          Normal range: {refMin}–{refMax} {point.unit}
+          Normal range:{" "}
+          {refMin != null && refMax != null
+            ? `${fmtNum(refMin)}–${fmtNum(refMax)}`
+            : refMax != null
+              ? `< ${fmtNum(refMax)}`
+              : `> ${fmtNum(refMin!)}`}{" "}
+          {point.unit}
         </p>
       )}
     </div>
