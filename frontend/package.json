@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:remote": "vite --config vite.remote.config.ts dev-harness.html",
+    "dev:remote": "vite --config vite.remote.config.ts",
     "build": "tsc -b && vite build",
     "build:remote": "vite build --config vite.remote.config.ts",
     "preview": "vite preview",
