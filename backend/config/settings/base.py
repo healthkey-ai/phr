@@ -363,3 +363,33 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_SOFT_TIME_LIMIT = 270  # 4.5 min — matches design doc §6 for LLM jobs
 CELERY_TASK_TIME_LIMIT = 300        # 5 min hard limit
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# ── Firebase Admin SDK (partner token exchange) ────────────────────────────
+# Used by PartnerTokenView to verify Firebase ID tokens from host apps.
+# Provide credentials via FIREBASE_CREDENTIALS_JSON (raw JSON blob of a
+# service-account key) or the standard GOOGLE_APPLICATION_CREDENTIALS env
+# (path to key file). In tests/dev without Firebase, the endpoint returns 401
+# for all tokens — no crash.
+FIREBASE_CREDENTIALS_JSON = env("FIREBASE_CREDENTIALS_JSON", default="")
+
+
+def _init_firebase_admin():
+    import firebase_admin
+    from firebase_admin import credentials as fb_credentials
+
+    if firebase_admin._apps:
+        return
+
+    raw_json = FIREBASE_CREDENTIALS_JSON
+    if raw_json.strip():
+        import json as _json
+        cred = fb_credentials.Certificate(_json.loads(raw_json))
+        firebase_admin.initialize_app(cred)
+    else:
+        try:
+            firebase_admin.initialize_app()
+        except ValueError:
+            pass
+
+
+_init_firebase_admin()

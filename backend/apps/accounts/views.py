@@ -1,11 +1,16 @@
+import logging
+
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import User
 from .serializers import RegisterSerializer, UserSerializer
+
+logger = logging.getLogger(__name__)
 
 
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -60,3 +65,56 @@ class MeView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class PartnerTokenView(APIView):
+    """Exchange a Firebase ID token for PHR JWT credentials.
+
+    Called by host apps before mounting the federated labs module.
+    Verifies the Firebase token, finds or creates a linked PHR user,
+    and returns a PHR access + refresh token pair.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        firebase_token = request.data.get("firebase_token", "")
+        if not firebase_token:
+            return Response(
+                {"detail": "firebase_token required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            from firebase_admin import auth as firebase_auth
+
+            decoded = firebase_auth.verify_id_token(firebase_token)
+        except Exception:
+            return Response(
+                {"detail": "Invalid Firebase token"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        uid = decoded["uid"]
+        email = decoded.get("email", "")
+
+        user, created = User.objects.get_or_create(
+            firebase_uid=uid,
+            defaults={"email": email},
+        )
+        if created:
+            user.set_unusable_password()
+            user.save(update_fields=["password"])
+            logger.info(
+                "partner_token: provisioned new PHR user %d for firebase_uid=%s",
+                user.pk,
+                uid,
+            )
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user_id": user.pk,
+            "created": created,
+        })
