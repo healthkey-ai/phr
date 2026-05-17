@@ -134,6 +134,7 @@ function UploadItem({
   showRetry?: boolean;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const retryExtraction = useRetryExtraction();
 
   const filenames =
@@ -144,23 +145,31 @@ function UploadItem({
     year: "numeric",
   });
 
+  const hasDetails =
+    (upload.files?.length ?? 0) > 0 || (upload.parsed_results?.length ?? 0) > 0 || upload.error_message;
+
   return (
-    <li className="flex items-center justify-between gap-3 rounded-md border border-gray-200 px-3 py-2.5 text-sm">
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-gray-900">{filenames}</p>
-        <p className="text-xs text-gray-500">
-          {date} · {statusLabel(upload.status)}
-          {upload.parsed_results?.length > 0 &&
-            ` · ${upload.parsed_results.length} results found`}
-        </p>
-        {upload.error_message && (
-          <p className="mt-1 text-xs text-red-600">{upload.error_message}</p>
-        )}
-      </div>
-      <div className="flex items-center gap-1.5">
-        {upload.status === "processing" && (
-          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-        )}
+    <li className="rounded-md border border-gray-200 text-sm">
+      <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+        <button
+          type="button"
+          onClick={() => hasDetails && setExpanded(!expanded)}
+          className="min-w-0 flex-1 text-left"
+        >
+          <p className="truncate font-medium text-gray-900">{filenames}</p>
+          <p className="text-xs text-gray-500">
+            {date} · {statusLabel(upload.status)}
+            {upload.parsed_results?.length > 0 &&
+              ` · ${upload.parsed_results.length} results found`}
+            {hasDetails && (
+              <span className="ml-1">{expanded ? "▾" : "›"}</span>
+            )}
+          </p>
+        </button>
+        <div className="flex items-center gap-1.5">
+          {upload.status === "processing" && (
+            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+          )}
         {showRetry && (
           <button
             type="button"
@@ -203,6 +212,70 @@ function UploadItem({
           )
         )}
       </div>
+      </div>
+
+      {expanded && (
+        <div className="border-t border-gray-100 px-3 py-2.5 text-xs text-gray-600">
+          {upload.files?.length > 0 && (
+            <div className="mb-2">
+              <p className="font-semibold text-gray-700 mb-1">Files</p>
+              <ul className="space-y-0.5">
+                {upload.files.map((f) => (
+                  <li key={f.id} className="flex justify-between">
+                    <span className="truncate">{f.original_filename}</span>
+                    <span className="shrink-0 ml-2 text-gray-400">
+                      {f.size_bytes >= 1024 * 1024
+                        ? `${(f.size_bytes / (1024 * 1024)).toFixed(1)} MB`
+                        : `${(f.size_bytes / 1024).toFixed(1)} KB`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {upload.error_message && (
+            <div className="mb-2">
+              <p className="font-semibold text-red-600 mb-0.5">Error</p>
+              <p className="text-red-600">{upload.error_message}</p>
+            </div>
+          )}
+
+          {upload.parsed_results?.length > 0 && (
+            <div>
+              <p className="font-semibold text-gray-700 mb-1">
+                Parsed results ({upload.parsed_results.length})
+              </p>
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-gray-400">
+                    <th className="pr-2 font-medium">Test</th>
+                    <th className="pr-2 font-medium">Value</th>
+                    <th className="pr-2 font-medium">Unit</th>
+                    <th className="font-medium">Match</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {upload.parsed_results.map((row) => (
+                    <tr key={row.source_index}>
+                      <td className="pr-2 truncate max-w-[120px]" title={row.raw_name}>
+                        {row.matched_test_name || row.raw_name}
+                      </td>
+                      <td className="pr-2 font-mono">{row.value ?? "—"}</td>
+                      <td className="pr-2">{row.unit || "—"}</td>
+                      <td className="text-gray-400">{row.match_method}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {!upload.files?.length && !upload.parsed_results?.length && !upload.error_message && (
+            <p className="text-gray-400">No details available.</p>
+          )}
+        </div>
+      )}
     </li>
   );
 }
