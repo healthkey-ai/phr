@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, Upload, Trash2, RotateCcw } from "lucide-react";
 
 import { LabsProvider } from "./LabsProvider";
+import { useLabsContext } from "./LabsContext";
 import type { LabUploadsProps } from "./types";
 import type { UploadJob } from "@/types/labs";
 import {
@@ -15,6 +16,7 @@ function LabUploadsInner({
   onUploadComplete: _onUploadComplete,
   onResultsSaved: _onResultsSaved,
 }: Pick<LabUploadsProps, "onUploadComplete" | "onResultsSaved">) {
+  const { apiClient } = useLabsContext();
   const [dialogOpen, setDialogOpen] = useState(false);
   const { data: uploads = [], isLoading } = useLabUploads();
   const deleteUpload = useDeleteLabUpload();
@@ -77,7 +79,7 @@ function LabUploadsInner({
         />
       )}
 
-      <LabUploadDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <LabUploadDialog open={dialogOpen} onOpenChange={setDialogOpen} apiClient={apiClient} />
     </div>
   );
 }

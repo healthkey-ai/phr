@@ -29,6 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import type { AxiosInstance } from "axios";
 import { useCreateLabUpload, useLabUpload, useRetryExtraction } from "@/features/labs/api";
 import type { UploadJob, UploadCommitResponse } from "@/types/labs";
 import { LabUploadReview } from "./LabUploadReview";
@@ -50,9 +51,10 @@ type Phase =
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  apiClient?: AxiosInstance;
 }
 
-export function LabUploadDialog({ open, onOpenChange }: Props) {
+export function LabUploadDialog({ open, onOpenChange, apiClient }: Props) {
   const [phase, setPhase] = useState<Phase>("picker");
   const [files, setFiles] = useState<File[]>([]);
   const [labDate, setLabDate] = useState<string>("");
@@ -64,12 +66,12 @@ export function LabUploadDialog({ open, onOpenChange }: Props) {
   const [commitResponse, setCommitResponse] = useState<UploadCommitResponse | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const createUpload = useCreateLabUpload();
-  const retryExtraction = useRetryExtraction();
+  const createUpload = useCreateLabUpload(apiClient);
+  const retryExtraction = useRetryExtraction(apiClient);
 
   // Poll the upload once we have an id and we're in processing phase.
   // Stops automatically when status flips to completed/failed (see hook).
-  const { data: polled } = useLabUpload(uploadId, phase === "processing");
+  const { data: polled } = useLabUpload(uploadId, phase === "processing", apiClient);
 
   // Transition out of `processing` when the polled upload reports a terminal state.
   // Phase 2d: a completed upload now lands on the review screen, not straight to done.
@@ -331,6 +333,7 @@ export function LabUploadDialog({ open, onOpenChange }: Props) {
             }}
             onRetry={handleRetry}
             retrying={retryExtraction.isPending}
+            apiClient={apiClient}
           />
         )}
 

@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { AxiosInstance } from "axios";
 import {
   useCommitLabUpload,
   useLabResults,
@@ -51,6 +52,7 @@ interface Props {
    */
   onRetry?: () => void;
   retrying?: boolean;
+  apiClient?: AxiosInstance;
 }
 
 interface RowState {
@@ -66,10 +68,10 @@ interface RowState {
   reference_max: string;
 }
 
-export function LabUploadReview({ upload, onCancel, onSaved, onRetry, retrying = false }: Props) {
+export function LabUploadReview({ upload, onCancel, onSaved, onRetry, retrying = false, apiClient }: Props) {
   const parsed = upload.parsed_results;
-  const { data: existingResults = [] } = useLabResults();
-  const commit = useCommitLabUpload();
+  const { data: existingResults = [] } = useLabResults(undefined, apiClient);
+  const commit = useCommitLabUpload(apiClient);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const [rows, setRows] = useState<RowState[]>(() =>
