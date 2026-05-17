@@ -68,47 +68,45 @@ class MeView(generics.RetrieveAPIView):
 
 
 class PartnerTokenView(APIView):
-    """Exchange a Firebase ID token for PHR JWT credentials.
+    """Exchange a partner token for PHR JWT credentials.
 
-    Called by host apps before mounting the federated labs module.
-    Verifies the Firebase token, finds or creates a linked PHR user,
-    and returns a PHR access + refresh token pair.
+    Accepts any token recognised by the configured PARTNER_AUTH_PROVIDERS
+    (Firebase, external JWT, etc.) and returns a PHR access + refresh pair.
+    Host apps that prefer explicit token exchange over direct bearer auth
+    use this endpoint before mounting the federated labs module.
     """
 
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        firebase_token = request.data.get("firebase_token", "")
-        if not firebase_token:
+        from .providers import get_providers
+        from .providers.base import decode_jwt_unverified
+        from .partner_auth import PartnerAuthentication
+
+        token = request.data.get("token", "") or request.data.get("firebase_token", "")
+        if not token:
             return Response(
-                {"detail": "firebase_token required"},
+                {"detail": "token required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        try:
-            from firebase_admin import auth as firebase_auth
+        providers = get_providers()
+        unverified = decode_jwt_unverified(token)
+        user = None
+        for provider in providers:
+            if not provider.can_handle(token, unverified):
+                continue
+            claims = provider.verify(token)
+            if claims is None:
+                continue
+            field, value = provider.user_lookup(claims)
+            user = PartnerAuthentication._get_or_create(provider, claims, field, value)
+            break
 
-            decoded = firebase_auth.verify_id_token(firebase_token)
-        except Exception:
+        if user is None:
             return Response(
-                {"detail": "Invalid Firebase token"},
+                {"detail": "Token not recognised by any configured provider"},
                 status=status.HTTP_401_UNAUTHORIZED,
-            )
-
-        uid = decoded["uid"]
-        email = decoded.get("email", "")
-
-        user, created = User.objects.get_or_create(
-            firebase_uid=uid,
-            defaults={"email": email},
-        )
-        if created:
-            user.set_unusable_password()
-            user.save(update_fields=["password"])
-            logger.info(
-                "partner_token: provisioned new PHR user %d for firebase_uid=%s",
-                user.pk,
-                uid,
             )
 
         refresh = RefreshToken.for_user(user)
@@ -116,5 +114,4 @@ class PartnerTokenView(APIView):
             "access": str(refresh.access_token),
             "refresh": str(refresh),
             "user_id": user.pk,
-            "created": created,
         })

@@ -26,7 +26,9 @@ export interface LabUploadsProps extends LabsBaseProps {
 }
 
 export interface LabResultsProps extends LabsBaseProps {
+  selectedTest?: string;
   onNavigateToDetail?: (testAbbreviation: string) => void;
+  onBack?: () => void;
   onResultDeleted?: (resultId: number) => void;
   filters?: { test?: string; from?: string; to?: string };
 }

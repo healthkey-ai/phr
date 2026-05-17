@@ -12,3 +12,4 @@ htmlcov/
 *.egg-info/
 build/
 dist/
+healthtree-test-firebase.json

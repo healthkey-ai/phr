@@ -128,13 +128,17 @@ function ResultDetail({
 }
 
 function LabResultsInner({
+  selectedTest: selectedTestProp,
   onNavigateToDetail,
+  onBack,
   onResultDeleted,
   filters,
-}: Pick<LabResultsProps, "onNavigateToDetail" | "onResultDeleted" | "filters">) {
+}: Pick<LabResultsProps, "selectedTest" | "onNavigateToDetail" | "onBack" | "onResultDeleted" | "filters">) {
   const { apiClient } = useLabsContext();
   const { data: results = [], isLoading } = useLabResults(filters);
   const [selectedTest, setSelectedTest] = useState<string | null>(null);
+
+  const activeTest = selectedTestProp ?? selectedTest;
 
   const categoryGroups = useMemo(() => {
     const seen = new Set<string>();
@@ -162,11 +166,11 @@ function LabResultsInner({
     }
   };
 
-  if (selectedTest && !onNavigateToDetail) {
+  if (activeTest) {
     return (
       <ResultDetail
-        abbreviation={selectedTest}
-        onBack={() => setSelectedTest(null)}
+        abbreviation={activeTest}
+        onBack={onBack ?? (() => setSelectedTest(null))}
         onResultDeleted={onResultDeleted}
       />
     );
@@ -226,7 +230,9 @@ export function LabResults({
   queryClient,
   className,
   theme,
+  selectedTest,
   onNavigateToDetail,
+  onBack,
   onResultDeleted,
   filters,
 }: LabResultsProps) {
@@ -239,7 +245,9 @@ export function LabResults({
       className={className}
     >
       <LabResultsInner
+        selectedTest={selectedTest}
         onNavigateToDetail={onNavigateToDetail}
+        onBack={onBack}
         onResultDeleted={onResultDeleted}
         filters={filters}
       />

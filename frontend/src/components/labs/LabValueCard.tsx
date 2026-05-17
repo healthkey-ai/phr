@@ -116,7 +116,7 @@ export function LabValueCard({ testAbbrev, title, onNavigate, apiClient }: Props
       <button
         type="button"
         onClick={() => onNavigate(testAbbrev)}
-        className="block w-full rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-healthkey-brand-700 focus-visible:ring-offset-2"
+        className="block w-full cursor-pointer rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-healthkey-brand-700 focus-visible:ring-offset-2"
         aria-label={`Open ${title ?? latest.test.name} trend`}
       >
         {cardContent}

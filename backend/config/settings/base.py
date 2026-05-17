@@ -292,9 +292,18 @@ LAB_UPLOAD_ACCEPTED_MIME_TYPES = (
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# ── Pluggable partner auth providers ──────────────────────────────────────
+# PartnerAuthentication iterates these in order; the first provider that
+# recognises the bearer token wins.  Add or remove providers to support
+# different host-app identity systems (Firebase, Auth0, Cognito, …).
+PARTNER_AUTH_PROVIDERS = [
+    "apps.accounts.providers.firebase.FirebaseTokenProvider",
+]
+
 # DRF
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
+        "apps.accounts.partner_auth.PartnerAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
@@ -364,32 +373,44 @@ CELERY_TASK_SOFT_TIME_LIMIT = 270  # 4.5 min — matches design doc §6 for LLM 
 CELERY_TASK_TIME_LIMIT = 300        # 5 min hard limit
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
-# ── Firebase Admin SDK (partner token exchange) ────────────────────────────
-# Used by PartnerTokenView to verify Firebase ID tokens from host apps.
-# Provide credentials via FIREBASE_CREDENTIALS_JSON (raw JSON blob of a
-# service-account key) or the standard GOOGLE_APPLICATION_CREDENTIALS env
-# (path to key file). In tests/dev without Firebase, the endpoint returns 401
-# for all tokens — no crash.
+# ── Firebase Admin SDK ────────────────────────────────────────────────────
+# Shared credentials with the host app (ht-phr).
+# FIREBASE_CREDENTIALS_JSON: raw JSON blob of the service-account key.
+# FIREBASE_PROJECT_ID: used when falling back to Application Default Creds.
 FIREBASE_CREDENTIALS_JSON = env("FIREBASE_CREDENTIALS_JSON", default="")
+FIREBASE_PROJECT_ID = env("FIREBASE_PROJECT_ID", default="")
+FIREBASE_SKIP_REVOCATION_CHECK = env.bool("FIREBASE_SKIP_REVOCATION_CHECK", default=False)
 
 
 def _init_firebase_admin():
+    import os
     import firebase_admin
     from firebase_admin import credentials as fb_credentials
 
     if firebase_admin._apps:
         return
 
+    project_id = FIREBASE_PROJECT_ID
+    options = {"projectId": project_id} if project_id else {}
+
     raw_json = FIREBASE_CREDENTIALS_JSON
     if raw_json.strip():
         import json as _json
         cred = fb_credentials.Certificate(_json.loads(raw_json))
-        firebase_admin.initialize_app(cred)
+    elif os.environ.get("FIREBASE_AUTH_EMULATOR_HOST"):
+
+        class _EmulatorCredential(fb_credentials.Base):
+            def get_credential(self):
+                return None
+
+        cred = _EmulatorCredential()
     else:
-        try:
-            firebase_admin.initialize_app()
-        except ValueError:
-            pass
+        cred = fb_credentials.ApplicationDefault()
+
+    try:
+        firebase_admin.initialize_app(cred, options)
+    except ValueError:
+        pass
 
 
 _init_firebase_admin()
