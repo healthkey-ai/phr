@@ -49,6 +49,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     ]
 
     email = models.EmailField(unique=True, db_index=True)
+    firebase_uid = models.CharField(
+        max_length=128, unique=True, null=True, blank=True, db_index=True,
+    )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 

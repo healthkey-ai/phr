@@ -20,11 +20,13 @@ import {
   YAxis,
 } from "recharts";
 
+import type { AxiosInstance } from "axios";
 import { useLabResults } from "@/features/labs/api";
 import type { LabValue } from "@/types/labs";
 
 interface Props {
   testAbbrev: string;
+  apiClient?: AxiosInstance;
 }
 
 interface ChartPoint {
@@ -35,8 +37,8 @@ interface ChartPoint {
   unit: string;
 }
 
-export function LabTrendChart({ testAbbrev }: Props) {
-  const { data: results = [], isLoading } = useLabResults({ test: testAbbrev });
+export function LabTrendChart({ testAbbrev, apiClient }: Props) {
+  const { data: results = [], isLoading } = useLabResults({ test: testAbbrev }, apiClient);
 
   if (isLoading) {
     return <div className="h-64 w-full animate-pulse rounded-md bg-muted" />;

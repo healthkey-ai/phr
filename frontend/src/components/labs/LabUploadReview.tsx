@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { AxiosInstance } from "axios";
 import {
   useCommitLabUpload,
   useLabResults,
@@ -51,6 +52,7 @@ interface Props {
    */
   onRetry?: () => void;
   retrying?: boolean;
+  apiClient?: AxiosInstance;
 }
 
 interface RowState {
@@ -66,10 +68,10 @@ interface RowState {
   reference_max: string;
 }
 
-export function LabUploadReview({ upload, onCancel, onSaved, onRetry, retrying = false }: Props) {
+export function LabUploadReview({ upload, onCancel, onSaved, onRetry, retrying = false, apiClient }: Props) {
   const parsed = upload.parsed_results;
-  const { data: existingResults = [] } = useLabResults();
-  const commit = useCommitLabUpload();
+  const { data: existingResults = [] } = useLabResults(undefined, apiClient);
+  const commit = useCommitLabUpload(apiClient);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const [rows, setRows] = useState<RowState[]>(() =>
@@ -178,14 +180,14 @@ export function LabUploadReview({ upload, onCancel, onSaved, onRetry, retrying =
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-body text-foreground">
+    <div className="flex min-h-0 flex-col gap-3">
+      <p className="shrink-0 text-body text-foreground">
         We found <span className="font-semibold">{parsed.length}</span> value
         {parsed.length === 1 ? "" : "s"} in your report. Review, edit, then save what you want to
         keep.
       </p>
 
-      <div className="max-h-[60vh] overflow-y-auto rounded-md border border-border">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-border">
         <ul className="divide-y divide-border">
           {rows.map((row) => {
             const parsedRow = parsed.find((p) => p.source_index === row.source_index)!;
@@ -217,7 +219,7 @@ export function LabUploadReview({ upload, onCancel, onSaved, onRetry, retrying =
         </p>
       )}
 
-      <div className="flex items-center justify-end gap-2 pt-1">
+      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border pt-3">
         <Button variant="ghost" onClick={onCancel} disabled={commit.isPending}>
           Cancel
         </Button>

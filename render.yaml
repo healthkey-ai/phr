@@ -45,6 +45,16 @@ envVarGroups:
       - key: JWT_REFRESH_LIFETIME_DAYS
         value: "7"
 
+      # ── Firebase Admin SDK (partner auth — shared with ht-phr) ───────────
+      # Paste the service-account key JSON as a single-line value in the
+      # Render dashboard. Never commit.
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        value: "healthtree-test"
+      - key: FIREBASE_SKIP_REVOCATION_CHECK
+        value: "False"
+
       # ── LLM vendor (Phase 2c onward — lab upload extraction) ──────────────
       # LAB_UPLOAD_ENABLED stays "False" until the BAA with the active provider
       # is signed (see TODOS.md / docs/patient-app-lab-upload-design.md §14).
@@ -189,17 +199,38 @@ services:
 
   # ─────────────────────────────────────────────────────────────────────────
   # 4. Vite frontend (static site)
+  #
+  #    Builds both the main patient app and the federation remote bundle.
+  #    Main app lives at /*, remote entry at /remote/remoteEntry.js.
+  #    The /remote/* path has CORS headers so host apps (ht-phr) can load
+  #    federated modules cross-origin.
   # ─────────────────────────────────────────────────────────────────────────
   - type: web
     name: healthkey-frontend
     runtime: static
 
     rootDir: ./frontend
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci && npm run build && npm run build:remote
     staticPublishPath: ./dist
 
-    # Routes fall back to index.html so React Router handles them client-side.
+    headers:
+      - path: /remote/*
+        name: Access-Control-Allow-Origin
+        value: "*"
+      - path: /remote/*
+        name: Access-Control-Allow-Methods
+        value: GET
+      - path: /remote/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+
     routes:
+      # Serve federation remote assets from dist/remote/
+      - type: rewrite
+        source: /remote/*
+        destination: /remote/*
+
+      # Everything else falls back to index.html for React Router
       - type: rewrite
         source: /*
         destination: /index.html
