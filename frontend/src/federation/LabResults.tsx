@@ -155,11 +155,14 @@ function LabResultsInner({
   }, [results]);
 
   const handleNavigate = (abbrev: string) => {
-    onNavigateToDetail?.(abbrev);
-    setSelectedTest(abbrev);
+    if (onNavigateToDetail) {
+      onNavigateToDetail(abbrev);
+    } else {
+      setSelectedTest(abbrev);
+    }
   };
 
-  if (selectedTest) {
+  if (selectedTest && !onNavigateToDetail) {
     return (
       <ResultDetail
         abbreviation={selectedTest}
