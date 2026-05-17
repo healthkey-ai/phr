@@ -1,6 +1,6 @@
-import { StrictMode, useCallback, useRef, useState } from "react";
+import { StrictMode, useCallback, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import axios from "axios";
+import axios, { type AxiosInstance } from "axios";
 
 import { LabUploads } from "./LabUploads";
 import { LabResults } from "./LabResults";
@@ -8,11 +8,67 @@ import "./labs.css";
 
 const API_BASE = "http://localhost:9000/api/v1";
 
+function loadTokens(): { access: string; refresh: string } | null {
+  const raw = localStorage.getItem("dev_phr_tokens");
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed.access && parsed.refresh) return parsed;
+  } catch {}
+  return null;
+}
+
+function saveTokens(tokens: { access: string; refresh: string }) {
+  localStorage.setItem("dev_phr_tokens", JSON.stringify(tokens));
+}
+
+function clearTokens() {
+  localStorage.removeItem("dev_phr_tokens");
+  localStorage.removeItem("dev_phr_token");
+}
+
+function createApiClient(
+  tokens: { access: string; refresh: string },
+  onSessionExpired: () => void,
+): AxiosInstance {
+  const client = axios.create({
+    baseURL: API_BASE,
+    headers: { Authorization: `Bearer ${tokens.access}` },
+  });
+
+  client.interceptors.response.use(
+    (res) => res,
+    async (err) => {
+      if (err.response?.status === 401 && !err.config._retry) {
+        err.config._retry = true;
+        try {
+          const refreshRes = await axios.post(`${API_BASE}/auth/token/refresh/`, {
+            refresh: tokens.refresh,
+          });
+          tokens.access = refreshRes.data.access;
+          saveTokens(tokens);
+          err.config.headers.Authorization = `Bearer ${tokens.access}`;
+          return client.request(err.config);
+        } catch {
+          onSessionExpired();
+        }
+      }
+      return Promise.reject(err);
+    },
+  );
+
+  return client;
+}
+
 function App() {
-  const [token, setToken] = useState(localStorage.getItem("dev_phr_token") || "");
-  const [authenticated, setAuthenticated] = useState(!!token);
+  const [tokens, setTokens] = useState(loadTokens);
   const [events, setEvents] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleSessionExpired = useCallback(() => {
+    clearTokens();
+    setTokens(null);
+  }, []);
 
   const logEvent = useCallback((name: string, data?: unknown) => {
     const entry = data
@@ -21,6 +77,11 @@ function App() {
     setEvents((prev) => [entry, ...prev].slice(0, 50));
   }, []);
 
+  const apiClient = useMemo(() => {
+    if (!tokens) return null;
+    return createApiClient(tokens, handleSessionExpired);
+  }, [tokens, handleSessionExpired]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
@@ -28,16 +89,15 @@ function App() {
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
     try {
       const res = await axios.post(`${API_BASE}/auth/login/`, { email, password });
-      const t = res.data.access;
-      localStorage.setItem("dev_phr_token", t);
-      setToken(t);
-      setAuthenticated(true);
-    } catch (err) {
+      const t = { access: res.data.access, refresh: res.data.refresh };
+      saveTokens(t);
+      setTokens(t);
+    } catch {
       alert("Login failed — check credentials and that Django is running on :9000");
     }
   };
 
-  if (!authenticated) {
+  if (!tokens || !apiClient) {
     return (
       <div style={{ padding: 40, maxWidth: 400, margin: "0 auto", fontFamily: "sans-serif" }}>
         <h1>Dev Harness — Login</h1>
@@ -51,37 +111,39 @@ function App() {
         </form>
         <hr style={{ margin: "24px 0" }} />
         <p style={{ color: "#666", fontSize: 14 }}>
-          Or paste a JWT token directly:
+          Or paste access + refresh tokens (JSON):
         </p>
         <input
           ref={inputRef}
-          placeholder="paste JWT"
+          placeholder='{"access":"...","refresh":"..."}'
           style={{ display: "block", width: "100%", padding: 8, marginBottom: 8 }}
         />
         <button
           onClick={() => {
-            const t = inputRef.current?.value || "";
-            if (t) { localStorage.setItem("dev_phr_token", t); setToken(t); setAuthenticated(true); }
+            try {
+              const parsed = JSON.parse(inputRef.current?.value || "");
+              if (parsed.access && parsed.refresh) {
+                saveTokens(parsed);
+                setTokens(parsed);
+              }
+            } catch {
+              alert("Paste valid JSON: {\"access\":\"...\",\"refresh\":\"...\"}");
+            }
           }}
           style={{ padding: "8px 16px" }}
         >
-          Use token
+          Use tokens
         </button>
       </div>
     );
   }
-
-  const apiClient = axios.create({
-    baseURL: API_BASE,
-    headers: { Authorization: `Bearer ${token}` },
-  });
 
   return (
     <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
       <header style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1 style={{ fontSize: 20, fontWeight: 700 }}>Labs Federation — Dev Harness</h1>
         <button
-          onClick={() => { localStorage.removeItem("dev_phr_token"); setToken(""); setAuthenticated(false); }}
+          onClick={() => { clearTokens(); setTokens(null); }}
           style={{ padding: "4px 12px", fontSize: 12 }}
         >
           Logout
