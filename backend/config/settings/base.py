@@ -118,6 +118,11 @@ LOGGING = {
         "apps": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
         # Celery's own internal logging (task dispatch, eager-mode traces).
         "celery": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # Third-party HTTP clients — suppress request body dumps at DEBUG.
+        "httpx": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "httpcore": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "anthropic": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "openai": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 

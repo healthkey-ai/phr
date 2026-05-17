@@ -121,6 +121,12 @@ class UploadJobViewSet(
             return UploadJobCreateSerializer
         return UploadJobSerializer
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.check_stale_processing()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
     def create(self, request, *args, **kwargs):
         if not getattr(settings, "LAB_UPLOAD_ENABLED", False):
             raise PermissionDenied(

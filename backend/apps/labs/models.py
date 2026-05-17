@@ -317,6 +317,7 @@ class UploadJob(models.Model):
     celery_task_id = models.CharField(max_length=64, blank=True, default="")
     error_message = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(default=timezone.now)
+    processing_started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -331,7 +332,8 @@ class UploadJob(models.Model):
 
     def mark_processing(self) -> None:
         self.status = UploadStatus.PROCESSING
-        self.save(update_fields=["status"])
+        self.processing_started_at = timezone.now()
+        self.save(update_fields=["status", "processing_started_at"])
 
     def mark_completed(self, parsed_results: list | None = None) -> None:
         self.status = UploadStatus.COMPLETED
@@ -344,6 +346,22 @@ class UploadJob(models.Model):
         self.error_message = message
         self.completed_at = timezone.now()
         self.save(update_fields=["status", "error_message", "completed_at"])
+
+    STALE_PROCESSING_SECONDS = 360
+
+    def check_stale_processing(self) -> bool:
+        """If stuck in PROCESSING longer than the task time limit, auto-fail.
+        Returns True if the upload was marked failed."""
+        if self.status != UploadStatus.PROCESSING:
+            return False
+        started = self.processing_started_at or self.created_at
+        elapsed = (timezone.now() - started).total_seconds()
+        if elapsed > self.STALE_PROCESSING_SECONDS:
+            self.mark_failed(
+                "Processing timed out — please re-upload or try again."
+            )
+            return True
+        return False
 
 
 class UploadFile(models.Model):
