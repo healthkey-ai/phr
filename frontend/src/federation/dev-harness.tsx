@@ -1,5 +1,6 @@
 import { StrictMode, useCallback, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { QueryClient } from "@tanstack/react-query";
 import axios, { type AxiosInstance } from "axios";
 
 import { LabUploads } from "./LabUploads";
@@ -63,6 +64,7 @@ function createApiClient(
 function App() {
   const [tokens, setTokens] = useState(loadTokens);
   const [events, setEvents] = useState<string[]>([]);
+  const queryClientRef = useRef(new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } }));
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSessionExpired = useCallback(() => {
@@ -153,6 +155,7 @@ function App() {
       <section style={{ marginBottom: 32 }}>
         <LabUploads
           apiClient={apiClient}
+          queryClient={queryClientRef.current}
           onUploadComplete={(upload) => logEvent("onUploadComplete", { id: upload.id, status: upload.status })}
           onResultsSaved={(res) => logEvent("onResultsSaved", { saved: res.saved_count })}
         />
@@ -163,6 +166,7 @@ function App() {
       <section style={{ marginBottom: 32 }}>
         <LabResults
           apiClient={apiClient}
+          queryClient={queryClientRef.current}
           onResultDeleted={(id) => logEvent("onResultDeleted", { id })}
         />
       </section>

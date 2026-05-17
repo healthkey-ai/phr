@@ -64,11 +64,7 @@ export function LabsProvider({
       className={`hk-labs-root ${className ?? ""}`}
       style={cssVars as React.CSSProperties}
     >
-      {externalQC ? (
-        content
-      ) : (
-        <QueryClientProvider client={qc}>{content}</QueryClientProvider>
-      )}
+      <QueryClientProvider client={qc}>{content}</QueryClientProvider>
     </div>
   );
 }

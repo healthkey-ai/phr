@@ -31,13 +31,19 @@ const LabResults = React.lazy(() => loadRemote('labs_remote/LabResults'));
 // 3. Create authenticated axios instance (see token exchange below)
 const phrClient = await getPhrApiClient();
 
-// 4. Render
+// 4. Share a single QueryClient so cache invalidation propagates
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+});
+
+// 5. Render
 function LabsPage() {
   return (
     <>
       <Suspense fallback={<div>Loading uploads...</div>}>
         <LabUploads
           apiClient={phrClient}
+          queryClient={queryClient}
           onResultsSaved={() => refetchMyData()}
         />
       </Suspense>
@@ -45,6 +51,7 @@ function LabsPage() {
       <Suspense fallback={<div>Loading results...</div>}>
         <LabResults
           apiClient={phrClient}
+          queryClient={queryClient}
           onNavigateToDetail={(abbrev) => router.push(`/labs/${abbrev}`)}
         />
       </Suspense>
@@ -131,6 +138,23 @@ export async function getPhrApiClient() {
 | `onNavigateToDetail` | `(testAbbreviation: string) => void` | Called when user clicks a result card |
 | `onResultDeleted` | `(resultId: number) => void` | Called after a result is deleted |
 | `filters` | `{ test?: string; from?: string; to?: string }` | Filter results |
+
+## Sharing a QueryClient
+
+When rendering both `<LabUploads />` and `<LabResults />` on the same page, pass the **same** `QueryClient` instance to both so that cache invalidation propagates (e.g., newly saved results appear immediately in the results list after committing an upload):
+
+```typescript
+import { QueryClient } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+});
+
+<LabUploads apiClient={phrClient} queryClient={queryClient} />
+<LabResults apiClient={phrClient} queryClient={queryClient} />
+```
+
+If `queryClient` is omitted, each component creates its own internal instance — fine for standalone use, but cross-component invalidation won't work.
 
 ## Shared Dependencies
 
