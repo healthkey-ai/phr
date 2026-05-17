@@ -31,6 +31,39 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 222.2 84% 4.9%;
   --radius: 0.5rem;
+
+  /* HealthKey design system tokens — needed by Button, Card, etc. */
+  --app-bg-secondary: 0 0% 98%;
+  --app-bg-primary: 0 0% 100%;
+  --app-bg-active: 0 0% 98%;
+  --text-primary-900: 216 17% 14%;
+  --text-secondary-700: 220 9% 32%;
+  --text-quaternary-500: 218 8% 46%;
+  --text-disabled: 0 0% 83%;
+  --text-brand-secondary-700: 212 87% 33%;
+  --text-white: 0 0% 100%;
+  --border-secondary: 0 0% 91.4%;
+  --gray-50: 0 0% 98%;
+  --gray-100: 0 0% 96%;
+  --gray-200: 0 0% 91.4%;
+  --gray-700: 220 9% 32%;
+  --brand-25: 199 100% 97%;
+  --brand-50: 199 100% 92%;
+  --brand-200: 199 100% 64%;
+  --brand-700: 212 87% 33%;
+  --brand-primary-alt: 212 95% 40%;
+  --brand-green-500: 146 70% 45%;
+  --success-50: 152 88% 95%;
+  --success-200: 152 68% 81%;
+  --success-700: 152 91% 29%;
+  --warning-50: 48 100% 96%;
+  --warning-200: 43 98% 77%;
+  --warning-700: 25 95% 37%;
+  --error-50: 4 86% 97%;
+  --error-200: 5 86% 89%;
+  --error-700: 5 79% 40%;
+  --link-primary: 212 95% 40%;
+  --link-primary-hover: 212 87% 33%;
 }
 
 .hk-labs-root {
