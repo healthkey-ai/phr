@@ -163,7 +163,6 @@ function App() {
       <section style={{ marginBottom: 32 }}>
         <LabResults
           apiClient={apiClient}
-          onNavigateToDetail={(abbrev) => logEvent("onNavigateToDetail", { abbrev })}
           onResultDeleted={(id) => logEvent("onResultDeleted", { id })}
         />
       </section>
