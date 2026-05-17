@@ -394,7 +394,7 @@ class UploadJobCreateSerializer(serializers.Serializer):
             existing = (
                 UploadJob.objects
                 .filter(user=user, files__sha256=hash_)
-                .exclude(status=UploadStatus.FAILED)
+                .filter(status__in=[UploadStatus.PENDING, UploadStatus.COMPLETED])
                 .order_by("-created_at")
                 .first()
             )

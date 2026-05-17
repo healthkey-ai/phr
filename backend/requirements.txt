@@ -11,7 +11,7 @@ ucumvert==0.3.1
 celery==5.4.0
 redis==5.0.4
 # Phase 2c — lab report extraction
-pymupdf==1.24.5              # PDF page rasterisation (via fitz)
+pymupdf>=1.24.5              # PDF page rasterisation (via fitz)
 anthropic>=0.40,<1.0         # Claude vision API client. 0.40+ needed for httpx>=0.28 compat (earlier versions pass removed `proxies=` kwarg)
 openai>=1.60.0,<3.0          # OpenAI vision API. 1.60+ needed for httpx>=0.28 compat (earlier versions pass removed `proxies=` kwarg)
 django-storages[s3,google]==1.14.4  # Shared backend for web + worker; GCS preferred, S3 fallback

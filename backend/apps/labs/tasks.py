@@ -50,6 +50,7 @@ def process_lab_upload(self, upload_id: int) -> dict:
 
     try:
         upload.mark_processing()
+        logger.debug("upload_trace: id=%d marked processing, entering pipeline", upload_id)
         parsed = _run_extraction_pipeline(upload)
         from .parsers.llm_parser import _resolve_provider
         upload.provider = _resolve_provider()
@@ -123,17 +124,41 @@ def _run_extraction_pipeline(upload: UploadJob) -> list[dict]:
 
     all_pages: list[PageImage] = []
     for file_row in upload.files.order_by("file_order"):
+        logger.debug(
+            "pipeline_file_open: upload=%d file_id=%d name=%s mime=%s size=%d",
+            upload.pk, file_row.pk, file_row.file.name, file_row.mime_type, file_row.size_bytes,
+        )
+        t_file = time.monotonic()
         with file_row.file.open("rb") as fp:
             file_bytes = fp.read()
+        logger.debug(
+            "pipeline_file_read: upload=%d file_id=%d read_bytes=%d elapsed=%.2fs",
+            upload.pk, file_row.pk, len(file_bytes), time.monotonic() - t_file,
+        )
+        t_raster = time.monotonic()
         file_pages = rasterise(file_bytes, file_row.mime_type)
+        logger.debug(
+            "pipeline_rasterise: upload=%d file_id=%d pages=%d elapsed=%.2fs",
+            upload.pk, file_row.pk, len(file_pages), time.monotonic() - t_raster,
+        )
         base = len(all_pages)
         for p in file_pages:
             all_pages.append(PageImage(page_index=base + p.page_index, image_bytes=p.image_bytes))
 
     if not all_pages:
+        logger.debug("pipeline_empty: upload=%d no pages after rasterisation", upload.pk)
         return []
 
+    logger.debug(
+        "pipeline_llm_start: upload=%d total_pages=%d total_image_bytes=%d",
+        upload.pk, len(all_pages), sum(p.image_bytes.__len__() for p in all_pages),
+    )
+    t_llm = time.monotonic()
     rows: list[ParsedLabResult] = extract(all_pages)
+    logger.debug(
+        "pipeline_llm_done: upload=%d rows=%d elapsed=%.2fs",
+        upload.pk, len(rows), time.monotonic() - t_llm,
+    )
     logger.info("llm_extract: upload=%d returned %d rows", upload.pk, len(rows))
     logger.debug("llm_raw: upload=%d rows=%s", upload.pk, [dict(r) for r in rows])
     upload.raw_llm_response = [dict(r) for r in rows]
@@ -141,6 +166,8 @@ def _run_extraction_pipeline(upload: UploadJob) -> list[dict]:
     if not rows:
         return []
 
+    logger.debug("pipeline_resolve_start: upload=%d matching %d rows", upload.pk, len(rows))
+    t_resolve = time.monotonic()
     enriched: list[dict] = []
     for idx, row in enumerate(rows):
         test_entry, match_method = resolve_test_identity(
@@ -168,6 +195,10 @@ def _run_extraction_pipeline(upload: UploadJob) -> list[dict]:
             "accepted": None,
             "source_index": idx,
         })
+    logger.debug(
+        "pipeline_resolve_done: upload=%d enriched=%d elapsed=%.2fs",
+        upload.pk, len(enriched), time.monotonic() - t_resolve,
+    )
     return enriched
 
 
