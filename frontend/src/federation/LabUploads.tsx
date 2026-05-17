@@ -57,7 +57,12 @@ function LabUploadsInner({
       )}
 
       {inProgress.length > 0 && (
-        <UploadSection title="Processing" uploads={inProgress} />
+        <UploadSection
+          title="Processing"
+          uploads={inProgress}
+          onDelete={(id) => deleteUpload.mutate(id)}
+          deletingId={deleteUpload.isPending ? deleteUpload.variables : undefined}
+        />
       )}
 
       {awaitingReview.length > 0 && (
