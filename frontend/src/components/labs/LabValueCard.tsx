@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
+import type { AxiosInstance } from "axios";
 import { FileSourceBadge } from "@/components/labs/FileSourceBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLabResults } from "@/features/labs/api";
@@ -19,10 +20,12 @@ import type { LabValue } from "@/types/labs";
 interface Props {
   testAbbrev: string;
   title?: string;
+  onNavigate?: (testAbbreviation: string) => void;
+  apiClient?: AxiosInstance;
 }
 
-export function LabValueCard({ testAbbrev, title }: Props) {
-  const { data: results = [], isLoading } = useLabResults({ test: testAbbrev });
+export function LabValueCard({ testAbbrev, title, onNavigate, apiClient }: Props) {
+  const { data: results = [], isLoading } = useLabResults({ test: testAbbrev }, apiClient);
 
   if (isLoading) return <CardSkeleton />;
   if (results.length === 0) return null;
@@ -31,14 +34,9 @@ export function LabValueCard({ testAbbrev, title }: Props) {
   const latest = results[0];
   const previous = results[1];
 
-  return (
-    <Link
-      to={`/dashboard/records/labs/${testAbbrev}`}
-      className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-healthkey-brand-700 focus-visible:ring-offset-2"
-      aria-label={`Open ${title ?? latest.test.name} trend`}
-    >
-      <Card className="transition-colors hover:bg-muted/30">
-        <CardContent className="p-5">
+  const cardContent = (
+    <Card className="transition-colors hover:bg-muted/30">
+      <CardContent className="p-5">
         <div className="mb-2 flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="truncate text-base font-semibold text-foreground">
@@ -111,6 +109,28 @@ export function LabValueCard({ testAbbrev, title }: Props) {
         </div>
         </CardContent>
       </Card>
+  );
+
+  if (onNavigate) {
+    return (
+      <button
+        type="button"
+        onClick={() => onNavigate(testAbbrev)}
+        className="block w-full rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-healthkey-brand-700 focus-visible:ring-offset-2"
+        aria-label={`Open ${title ?? latest.test.name} trend`}
+      >
+        {cardContent}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      to={`/dashboard/records/labs/${testAbbrev}`}
+      className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-healthkey-brand-700 focus-visible:ring-offset-2"
+      aria-label={`Open ${title ?? latest.test.name} trend`}
+    >
+      {cardContent}
     </Link>
   );
 }
