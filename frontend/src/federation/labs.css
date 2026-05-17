@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.hk-labs-root {
+  font-family: var(--hk-font-family, 'Manrope', sans-serif);
+  --radius: 0.5rem;
+
+  /* Default CSS custom properties — host can override via theme prop */
+  --hk-color-primary: #6366f1;
+  --hk-color-success: #22c55e;
+  --hk-color-warning: #f59e0b;
+  --hk-color-danger: #ef4444;
+  --hk-color-muted: #6b7280;
+
+  /* shadcn tokens needed by the UI components */
+  --background: 0 0% 100%;
+  --foreground: 224 71% 4%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 71% 4%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 71% 4%;
+  --primary: 243 75% 59%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 220 9% 46%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%;
+  --accent: 220 14% 96%;
+  --accent-foreground: 224 71% 4%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 243 75% 59%;
+
+  /* healthkey brand tokens */
+  --brand-25: 243 75% 97%;
+  --brand-50: 243 75% 95%;
+  --brand-200: 243 75% 80%;
+  --brand-700: 243 75% 59%;
+  --brand-primary-alt: 160 84% 39%;
+  --brand-green-500: 142 71% 45%;
+  --success-50: 142 76% 97%;
+  --success-200: 142 71% 80%;
+  --success-700: 142 71% 45%;
+  --warning-50: 38 92% 97%;
+  --warning-200: 38 92% 80%;
+  --warning-700: 38 92% 50%;
+  --error-50: 0 84% 97%;
+  --error-200: 0 84% 80%;
+  --error-700: 0 84% 60%;
+}
