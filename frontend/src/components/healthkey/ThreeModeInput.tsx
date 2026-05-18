@@ -6,6 +6,7 @@
  * Phase 1: only "Type it in" is wired up. Upload + Connect are placeholders
  * (Phase 2). Cards still render so the affordance is visible.
  */
+import type { ReactNode } from "react";
 import { FileText, Link2, Pencil } from "lucide-react";
 
 type Mode = "manual" | "upload" | "ehr";
@@ -17,7 +18,7 @@ interface Props {
 }
 
 export function ThreeModeInput({ active, onChange, disabled = {} }: Props) {
-  const items: { mode: Mode; label: string; icon: JSX.Element; hint?: string; disabled?: boolean }[] = [
+  const items: { mode: Mode; label: string; icon: ReactNode; hint?: string; disabled?: boolean }[] = [
     { mode: "manual", label: "Type it in", icon: <Pencil className="h-6 w-6" /> },
     {
       mode: "upload",

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
@@ -22,14 +23,14 @@ import { Summary } from "./pages/onboarding/Summary";
 import { Welcome } from "./pages/onboarding/Welcome";
 import { DashboardShell } from "./components/layout/DashboardShell";
 
-function ProtectedRoute({ children }: { children: JSX.Element }) {
+function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <FullScreenSpinner />;
   if (!isAuthenticated) return <Navigate to="/auth/sign-in" replace />;
   return children;
 }
 
-function PublicOnlyRoute({ children }: { children: JSX.Element }) {
+function PublicOnlyRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <FullScreenSpinner />;
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
