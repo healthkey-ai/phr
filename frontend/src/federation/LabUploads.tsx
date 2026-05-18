@@ -1,3 +1,5 @@
+import { injectStyles } from "./injectStyles";
+injectStyles();
 import { useState } from "react";
 import { Loader2, Upload, Trash2, RotateCcw } from "lucide-react";
 

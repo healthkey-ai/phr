@@ -1,3 +1,5 @@
+import { injectStyles } from "./injectStyles";
+injectStyles();
 import { useMemo, useState } from "react";
 import { ArrowLeft, Trash2 } from "lucide-react";
 
