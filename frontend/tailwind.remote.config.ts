@@ -4,7 +4,6 @@ import baseConfig from "./tailwind.config";
 const config: Config = {
   ...baseConfig,
   prefix: "",
-  important: ".hk-labs-root",
   content: [
     "./src/federation/**/*.{ts,tsx}",
     "./src/components/labs/**/*.{ts,tsx}",
