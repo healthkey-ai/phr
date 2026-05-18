@@ -26,14 +26,22 @@ class PartnerAuthentication(BaseAuthentication):
     def authenticate(self, request):
         header = request.META.get("HTTP_AUTHORIZATION", "")
         if not header.startswith("Bearer "):
+            logger.debug("partner_auth: no Bearer token")
             return None
 
         token = header[7:]
         providers = get_providers()
         if not providers:
+            logger.warning("partner_auth: no providers configured")
             return None
 
         unverified = decode_jwt_unverified(token)
+        logger.info(
+            "partner_auth: iss=%s sub=%s email=%s",
+            (unverified or {}).get("iss", "?"),
+            (unverified or {}).get("sub", "?"),
+            (unverified or {}).get("email", "?"),
+        )
 
         for provider in providers:
             if not provider.can_handle(token, unverified):
@@ -41,12 +49,15 @@ class PartnerAuthentication(BaseAuthentication):
 
             claims = provider.verify(token)
             if claims is None:
+                logger.warning("partner_auth: %s.verify returned None", type(provider).__name__)
                 continue
 
             field, value = provider.user_lookup(claims)
             user = self._get_or_create(provider, claims, field, value)
+            logger.info("partner_auth: authenticated user=%s (id=%s) via %s", user, user.pk, type(provider).__name__)
             return (user, claims.raw)
 
+        logger.warning("partner_auth: no provider handled the token")
         return None
 
     @staticmethod
