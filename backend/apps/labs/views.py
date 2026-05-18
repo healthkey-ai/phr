@@ -12,6 +12,8 @@ GET    /api/v1/labs/uploads/                  → List uploads
 GET    /api/v1/labs/uploads/{id}/             → Poll upload status
 DELETE /api/v1/labs/uploads/{id}/             → Delete upload + associated values
 """
+import traceback
+
 from django.conf import settings
 import logging
 
@@ -72,6 +74,18 @@ class LabValueViewSet(
             qs = qs.filter(measured_at__lte=date_to)
         return qs
 
+    def list(self, request, *args, **kwargs):
+        logger.info(
+            "results_list: user=%s (id=%s) auth=%s",
+            request.user, getattr(request.user, "pk", None),
+            type(request.auth).__name__ if request.auth is not None else "None",
+        )
+        try:
+            return super().list(request, *args, **kwargs)
+        except Exception:
+            logger.error("results_list FAILED:\n%s", traceback.format_exc())
+            raise
+
     def get_serializer_class(self):
         if self.action == "create":
             return LabValueCreateSerializer
@@ -121,11 +135,27 @@ class UploadJobViewSet(
             return UploadJobCreateSerializer
         return UploadJobSerializer
 
+    def list(self, request, *args, **kwargs):
+        logger.info(
+            "uploads_list: user=%s (id=%s) auth=%s",
+            request.user, getattr(request.user, "pk", None),
+            type(request.auth).__name__ if request.auth is not None else "None",
+        )
+        try:
+            return super().list(request, *args, **kwargs)
+        except Exception:
+            logger.error("uploads_list FAILED:\n%s", traceback.format_exc())
+            raise
+
     def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.check_stale_processing()
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+        try:
+            instance = self.get_object()
+            instance.check_stale_processing()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except Exception:
+            logger.error("uploads_retrieve FAILED:\n%s", traceback.format_exc())
+            raise
 
     def create(self, request, *args, **kwargs):
         if not getattr(settings, "LAB_UPLOAD_ENABLED", False):
