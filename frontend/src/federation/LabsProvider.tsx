@@ -4,9 +4,11 @@ import type { AxiosInstance } from "axios";
 import { LabsContext } from "./LabsContext";
 import type { LabsThemeTokens } from "./types";
 import { injectStyles } from "./injectStyles";
+import { assertLabsTokens } from "./assertLabsTokens";
 
 // Inject styles once at module load
 injectStyles();
+assertLabsTokens();
 
 interface LabsProviderProps {
   apiClient: AxiosInstance;

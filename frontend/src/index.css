@@ -397,3 +397,53 @@
     0 -2px 0 0 rgba(10, 13, 18, 0.05) inset,
     0 1px 2px 0 rgba(10, 13, 18, 0.05);
 }
+
+/*
+ * --hk-labs-* host-side token bridge.
+ * Maps host design tokens into the remote's public contract.
+ * Unlayered so it always wins over the remote's @layer theme fallbacks.
+ * Each var() includes a hardcoded fallback for out-of-sync deploys.
+ */
+:root {
+  --hk-labs-bg-primary: var(--app-bg-primary, 0 0% 100%);
+  --hk-labs-bg-secondary: var(--app-bg-secondary, 0 0% 98%);
+  --hk-labs-bg-active: var(--app-bg-active, 0 0% 98%);
+
+  --hk-labs-text-primary: var(--text-primary-900, 216 17% 14%);
+  --hk-labs-text-secondary: var(--text-secondary-700, 220 9% 32%);
+  --hk-labs-text-tertiary: var(--text-quaternary-500, 218 8% 46%);
+  --hk-labs-text-disabled: var(--text-disabled, 0 0% 83%);
+  --hk-labs-text-brand: var(--text-brand-secondary-700, 212 87% 33%);
+  --hk-labs-text-white: var(--text-white, 0 0% 100%);
+
+  --hk-labs-border-secondary: var(--border-secondary, 0 0% 91.4%);
+
+  --hk-labs-gray-50: var(--gray-50, 0 0% 98%);
+  --hk-labs-gray-100: var(--gray-100, 0 0% 96%);
+  --hk-labs-gray-200: var(--gray-200, 0 0% 91.4%);
+  --hk-labs-gray-700: var(--gray-700, 220 9% 32%);
+
+  --hk-labs-brand-25: var(--brand-25, 199 100% 97%);
+  --hk-labs-brand-50: var(--brand-50, 199 100% 92%);
+  --hk-labs-brand-200: var(--brand-200, 199 100% 64%);
+  --hk-labs-brand-700: var(--brand-700, 212 87% 33%);
+  --hk-labs-brand-alt: var(--brand-primary-alt, 212 95% 40%);
+  --hk-labs-brand-green: var(--brand-green-500, 146 70% 45%);
+
+  --hk-labs-link-primary: var(--link-primary, 212 95% 40%);
+  --hk-labs-link-hover: var(--link-primary-hover, 212 87% 33%);
+
+  --hk-labs-success-50: var(--success-50, 152 88% 95%);
+  --hk-labs-success-200: var(--success-200, 152 68% 81%);
+  --hk-labs-success-700: var(--success-700, 152 91% 29%);
+
+  --hk-labs-warning-50: var(--warning-50, 48 100% 96%);
+  --hk-labs-warning-200: var(--warning-200, 43 98% 77%);
+  --hk-labs-warning-700: var(--warning-700, 25 95% 37%);
+
+  --hk-labs-error-50: var(--error-50, 4 86% 97%);
+  --hk-labs-error-200: var(--error-200, 5 86% 89%);
+  --hk-labs-error-700: var(--error-700, 5 79% 40%);
+
+  --hk-labs-radius: var(--radius, 0.5rem);
+}

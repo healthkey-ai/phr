@@ -7,15 +7,10 @@ export function injectStyles() {
   injected = true;
 
   const imports: string[] = [];
-  let rest = css.replace(
+  const rest = css.replace(
     /@import\s+(?:url\([^)]+\)|"[^"]+"|'[^']+')\s*;?/g,
     (match) => { imports.push(match); return ""; },
   );
-
-  // Scope :root selectors to .hk-labs-root so remote theme/fallback vars
-  // don't leak into the host's global scope. The remote's internal Tailwind
-  // layers (theme, base, utilities) merge with the host's layers naturally.
-  rest = rest.replace(/:root/g, ".hk-labs-root");
 
   if (imports.length > 0) {
     const fontStyle = document.createElement("style");
