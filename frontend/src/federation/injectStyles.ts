@@ -1,4 +1,4 @@
-import css from "./federation.css?inline";
+import css from "./labs.css?inline";
 
 let injected = false;
 
