@@ -2,9 +2,8 @@ import dns from "node:dns";
 import path from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { federation } from "@module-federation/vite";
-import tailwindcss from "tailwindcss";
-import autoprefixer from "autoprefixer";
 
 dns.setDefaultResultOrder("ipv4first");
 
@@ -30,6 +29,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       devHarnessRedirect(),
       react(),
+      tailwindcss(),
       federation({
         name: "labs_remote",
         filename: "remoteEntry.js",
@@ -55,14 +55,6 @@ export default defineConfig(({ mode }) => {
         dts: false,
       }),
     ],
-    css: {
-      postcss: {
-        plugins: [
-          tailwindcss({ config: path.resolve(__dirname, "tailwind.remote.config.ts") }),
-          autoprefixer(),
-        ],
-      },
-    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),

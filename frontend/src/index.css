@@ -1,205 +1,290 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@custom-variant dark (&:is(.dark *));
 
 /*
- * HealthKey color tokens — values sourced from cancerbot/ui.v2/client/global.css.
- * Single source of truth for both shadcn semantic tokens and the healthkey.* namespace.
+ * HealthKey Design System — theme tokens.
+ *
+ * Two color systems:
+ *  1. shadcn semantic tokens (background/foreground/card/muted/...) — used by shadcn primitives
+ *  2. healthkey.* namespace + brand/success/warning/error scales — used directly in app code
+ *
+ * All values reference CSS custom properties defined in the :root / .dark blocks below.
  */
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+@theme inline {
+  --font-sans: "Manrope", -apple-system, "Roboto", "Helvetica", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Menlo", monospace;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+  /* Custom typography scale */
+  --text-display: 48px;
+  --text-display--line-height: 56px;
+  --text-display--font-weight: 800;
+  --text-h1: 32px;
+  --text-h1--line-height: 40px;
+  --text-h1--font-weight: 700;
+  --text-h2: 24px;
+  --text-h2--line-height: 32px;
+  --text-h2--font-weight: 700;
+  --text-h3: 20px;
+  --text-h3--line-height: 28px;
+  --text-h3--font-weight: 600;
+  --text-h4: 18px;
+  --text-h4--line-height: 24px;
+  --text-h4--font-weight: 600;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-lg--font-weight: 500;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-body--font-weight: 500;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+  --text-body-sm--font-weight: 500;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+  /* shadcn semantic tokens */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+  /* Sidebar tokens */
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+  /* HealthKey Design System namespace */
+  --color-healthkey-bg-primary: hsl(var(--app-bg-primary));
+  --color-healthkey-bg-secondary: hsl(var(--app-bg-secondary));
+  --color-healthkey-bg-active: hsl(var(--app-bg-active));
+  --color-healthkey-text-primary: hsl(var(--text-primary-900));
+  --color-healthkey-text-secondary: hsl(var(--text-secondary-700));
+  --color-healthkey-text-tertiary: hsl(var(--text-quaternary-500));
+  --color-healthkey-text-quaternary: hsl(var(--text-quaternary-500));
+  --color-healthkey-text-disabled: hsl(var(--text-disabled));
+  --color-healthkey-text-brand: hsl(var(--text-brand-secondary-700));
+  --color-healthkey-text-white: hsl(var(--text-white));
+  --color-healthkey-border-secondary: hsl(var(--border-secondary));
+  --color-healthkey-gray-50: hsl(var(--gray-50));
+  --color-healthkey-gray-100: hsl(var(--gray-100));
+  --color-healthkey-gray-200: hsl(var(--gray-200));
+  --color-healthkey-gray-700: hsl(var(--gray-700));
+  --color-healthkey-brand-25: hsl(var(--brand-25));
+  --color-healthkey-brand-50: hsl(var(--brand-50));
+  --color-healthkey-brand-200: hsl(var(--brand-200));
+  --color-healthkey-brand-700: hsl(var(--brand-700));
+  --color-healthkey-brand-alt: hsl(var(--brand-primary-alt));
+  --color-healthkey-brand-green: hsl(var(--brand-green-500));
+  --color-healthkey-link-primary: hsl(var(--link-primary));
+  --color-healthkey-link-hover: hsl(var(--link-primary-hover));
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+  /* Direct brand scale */
+  --color-brand-25: hsl(var(--brand-25));
+  --color-brand-50: hsl(var(--brand-50));
+  --color-brand-200: hsl(var(--brand-200));
+  --color-brand-700: hsl(var(--brand-700));
+  --color-brand-alt: hsl(var(--brand-primary-alt));
+  --color-brand-green: hsl(var(--brand-green-500));
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+  /* Status scales */
+  --color-success-50: hsl(var(--success-50));
+  --color-success-200: hsl(var(--success-200));
+  --color-success-700: hsl(var(--success-700));
+  --color-warning-50: hsl(var(--warning-50));
+  --color-warning-200: hsl(var(--warning-200));
+  --color-warning-700: hsl(var(--warning-700));
+  --color-error-50: hsl(var(--error-50));
+  --color-error-200: hsl(var(--error-200));
+  --color-error-700: hsl(var(--error-700));
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+  /* Border radius */
+  --radius-none: 0;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-DEFAULT: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-full: 9999px;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+  /* Box shadows */
+  --shadow-sm: 0 1px 2px rgba(10, 13, 18, 0.05);
+  --shadow-DEFAULT: 0 4px 6px rgba(10, 13, 18, 0.07);
+  --shadow-md: 0 4px 6px rgba(10, 13, 18, 0.07);
+  --shadow-lg: 0 10px 15px rgba(10, 13, 18, 0.1);
+  --shadow-xl: 0 20px 25px rgba(10, 13, 18, 0.15);
 
-    --radius: 0.5rem;
+  /* Animations */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+/*
+ * HealthKey color tokens — light mode.
+ */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  --radius: 0.5rem;
 
-    /* HealthKey Design System — Single Source of Truth */
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 240 5.3% 26.1%;
+  --sidebar-primary: 240 5.9% 10%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 240 4.8% 95.9%;
+  --sidebar-accent-foreground: 240 5.9% 10%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 217.2 91.2% 59.8%;
 
-    /* Background Colors */
-    --app-bg-secondary: 0 0% 98%;
-    --app-bg-primary: 0 0% 100%;
-    --app-bg-active: 0 0% 98%;
+  --app-bg-secondary: 0 0% 98%;
+  --app-bg-primary: 0 0% 100%;
+  --app-bg-active: 0 0% 98%;
+  --text-primary-900: 216 17% 14%;
+  --text-secondary-700: 220 9% 32%;
+  --text-quaternary-500: 218 8% 46%;
+  --text-disabled: 0 0% 83%;
+  --text-brand-secondary-700: 212 87% 33%;
+  --text-white: 0 0% 100%;
+  --border-secondary: 0 0% 91.4%;
+  --gray-50: 0 0% 98%;
+  --gray-100: 0 0% 96%;
+  --gray-200: 0 0% 91.4%;
+  --gray-700: 220 9% 32%;
+  --brand-25: 199 100% 97%;
+  --brand-50: 199 100% 92%;
+  --brand-200: 199 100% 64%;
+  --brand-700: 212 87% 33%;
+  --brand-primary-alt: 212 95% 40%;
+  --brand-green-500: 146 70% 45%;
+  --success-50: 152 88% 95%;
+  --success-200: 152 68% 81%;
+  --success-700: 152 91% 29%;
+  --warning-50: 48 100% 96%;
+  --warning-200: 43 98% 77%;
+  --warning-700: 25 95% 37%;
+  --error-50: 4 86% 97%;
+  --error-200: 5 86% 89%;
+  --error-700: 5 79% 40%;
+  --link-primary: 212 95% 40%;
+  --link-primary-hover: 212 87% 33%;
+}
 
-    /* Text Colors */
-    --text-primary-900: 216 17% 14%;
-    --text-secondary-700: 220 9% 32%;
-    --text-quaternary-500: 218 8% 46%;
-    --text-disabled: 0 0% 83%;
-    --text-brand-secondary-700: 212 87% 33%;
-    --text-white: 0 0% 100%;
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
 
-    /* Border Colors */
-    --border-secondary: 0 0% 91.4%;
+  --sidebar-background: 240 5.9% 10%;
+  --sidebar-foreground: 240 4.8% 95.9%;
+  --sidebar-primary: 224.3 76.3% 48%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 240 3.7% 15.9%;
+  --sidebar-accent-foreground: 240 4.8% 95.9%;
+  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar-ring: 217.2 91.2% 59.8%;
 
-    /* Gray Scale */
-    --gray-50: 0 0% 98%;
-    --gray-100: 0 0% 96%;
-    --gray-200: 0 0% 91.4%;
-    --gray-700: 220 9% 32%;
-
-    /* Brand Colors */
-    --brand-25: 199 100% 97%;
-    --brand-50: 199 100% 92%;
-    --brand-200: 199 100% 64%;
-    --brand-700: 212 87% 33%;
-    --brand-primary-alt: 212 95% 40%;
-    --brand-green-500: 146 70% 45%;
-
-    /* Success Colors */
-    --success-50: 152 88% 95%;
-    --success-200: 152 68% 81%;
-    --success-700: 152 91% 29%;
-
-    /* Warning Colors */
-    --warning-50: 48 100% 96%;
-    --warning-200: 43 98% 77%;
-    --warning-700: 25 95% 37%;
-
-    /* Error Colors */
-    --error-50: 4 86% 97%;
-    --error-200: 5 86% 89%;
-    --error-700: 5 79% 40%;
-
-    /* Semantic Link Colors */
-    --link-primary: 212 95% 40%;
-    --link-primary-hover: 212 87% 33%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-
-    /* HealthKey Design System — Dark */
-
-    /* Background Colors */
-    --app-bg-secondary: 220 13% 10%;
-    --app-bg-primary: 220 13% 13%;
-    --app-bg-active: 220 13% 16%;
-
-    /* Text Colors */
-    --text-primary-900: 216 17% 92%;
-    --text-secondary-700: 220 9% 72%;
-    --text-quaternary-500: 218 8% 55%;
-    --text-disabled: 0 0% 35%;
-    --text-brand-secondary-700: 212 87% 67%;
-    --text-white: 0 0% 100%;
-
-    /* Border Colors */
-    --border-secondary: 220 13% 22%;
-
-    /* Gray Scale */
-    --gray-50: 220 13% 10%;
-    --gray-100: 220 13% 14%;
-    --gray-200: 220 13% 22%;
-    --gray-700: 220 9% 72%;
-
-    /* Brand Colors */
-    --brand-25: 199 40% 12%;
-    --brand-50: 199 50% 18%;
-    --brand-200: 199 70% 35%;
-    --brand-700: 212 87% 60%;
-    --brand-primary-alt: 212 95% 65%;
-    --brand-green-500: 146 70% 45%;
-
-    /* Success Colors */
-    --success-50: 152 40% 12%;
-    --success-200: 152 50% 25%;
-    --success-700: 152 70% 45%;
-
-    /* Warning Colors */
-    --warning-50: 48 50% 12%;
-    --warning-200: 43 60% 30%;
-    --warning-700: 25 85% 55%;
-
-    /* Error Colors */
-    --error-50: 4 50% 12%;
-    --error-200: 5 60% 28%;
-    --error-700: 5 70% 55%;
-
-    /* Semantic Link Colors */
-    --link-primary: 212 95% 65%;
-    --link-primary-hover: 212 87% 60%;
-  }
+  --app-bg-secondary: 220 13% 10%;
+  --app-bg-primary: 220 13% 13%;
+  --app-bg-active: 220 13% 16%;
+  --text-primary-900: 216 17% 92%;
+  --text-secondary-700: 220 9% 72%;
+  --text-quaternary-500: 218 8% 55%;
+  --text-disabled: 0 0% 35%;
+  --text-brand-secondary-700: 212 87% 67%;
+  --text-white: 0 0% 100%;
+  --border-secondary: 220 13% 22%;
+  --gray-50: 220 13% 10%;
+  --gray-100: 220 13% 14%;
+  --gray-200: 220 13% 22%;
+  --gray-700: 220 9% 72%;
+  --brand-25: 199 40% 12%;
+  --brand-50: 199 50% 18%;
+  --brand-200: 199 70% 35%;
+  --brand-700: 212 87% 60%;
+  --brand-primary-alt: 212 95% 65%;
+  --brand-green-500: 146 70% 45%;
+  --success-50: 152 40% 12%;
+  --success-200: 152 50% 25%;
+  --success-700: 152 70% 45%;
+  --warning-50: 48 50% 12%;
+  --warning-200: 43 60% 30%;
+  --warning-700: 25 85% 55%;
+  --error-50: 4 50% 12%;
+  --error-200: 5 60% 28%;
+  --error-700: 5 70% 55%;
+  --link-primary: 212 95% 65%;
+  --link-primary-hover: 212 87% 60%;
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: "Manrope", -apple-system, Roboto, Helvetica, sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
@@ -213,25 +298,102 @@
     white-space: pre;
   }
 
-  /* Focus ring (a11y baseline per design doc §9.1) */
   *:focus-visible {
-    @apply outline-none ring-2 ring-brand-700 ring-offset-2;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+    --tw-ring-color: var(--color-brand-700);
+    --tw-ring-offset-width: 2px;
   }
 }
 
-@layer utilities {
-  .skip-link {
-    @apply absolute left-2 top-2 z-50 -translate-y-16 rounded-md bg-brand-700 px-4 py-2 text-white focus:translate-y-0;
-  }
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
 
-  .shadow-sm-soft {
-    box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
-  }
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
 
-  .shadow-card {
-    box-shadow:
-      0 0 0 1px rgba(10, 13, 18, 0.18) inset,
-      0 -2px 0 0 rgba(10, 13, 18, 0.05) inset,
-      0 1px 2px 0 rgba(10, 13, 18, 0.05);
+/*
+ * tailwindcss-animate compatibility — keyframes + utilities for
+ * Dialog, Sheet, Select, and other Radix-based components.
+ */
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+      scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1))
+      rotate(var(--tw-enter-rotate, 0));
   }
+}
+
+@keyframes exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+      scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1))
+      rotate(var(--tw-exit-rotate, 0));
+  }
+}
+
+@utility animate-in {
+  animation: enter 150ms ease-out;
+}
+@utility animate-out {
+  animation: exit 150ms ease-in forwards;
+}
+@utility fade-in-0 {
+  --tw-enter-opacity: 0;
+}
+@utility fade-out-0 {
+  --tw-exit-opacity: 0;
+}
+@utility zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+@utility zoom-out-95 {
+  --tw-exit-scale: 0.95;
+}
+@utility slide-in-from-top-2 {
+  --tw-enter-translate-y: -0.5rem;
+}
+@utility slide-in-from-bottom-2 {
+  --tw-enter-translate-y: 0.5rem;
+}
+@utility slide-in-from-left-2 {
+  --tw-enter-translate-x: -0.5rem;
+}
+@utility slide-in-from-right-2 {
+  --tw-enter-translate-x: 0.5rem;
+}
+
+@utility skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: 0.5rem;
+  z-index: 50;
+  transform: translateY(-4rem);
+  border-radius: calc(var(--radius) - 2px);
+  background-color: var(--color-brand-700);
+  padding: 0.5rem 1rem;
+  color: white;
+  &:focus {
+    transform: translateY(0);
+  }
+}
+
+@utility shadow-sm-soft {
+  box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+}
+
+@utility shadow-card {
+  box-shadow:
+    0 0 0 1px rgba(10, 13, 18, 0.18) inset,
+    0 -2px 0 0 rgba(10, 13, 18, 0.05) inset,
+    0 1px 2px 0 rgba(10, 13, 18, 0.05);
 }

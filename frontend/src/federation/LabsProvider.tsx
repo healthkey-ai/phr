@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { AxiosInstance } from "axios";
 import { LabsContext } from "./LabsContext";
@@ -44,13 +44,14 @@ export function LabsProvider({
   className,
   children,
 }: LabsProviderProps) {
-  const internalQC = useRef(
-    new QueryClient({
+  const internalQC = useMemo(
+    () => new QueryClient({
       defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
     }),
+    [],
   );
 
-  const qc = externalQC ?? internalQC.current;
+  const qc = externalQC ?? internalQC;
   const cssVars = themeToVars(theme ?? {});
 
   const content = (

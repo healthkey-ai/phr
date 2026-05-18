@@ -8,6 +8,7 @@ interface LabsContextValue {
 
 const LabsContext = createContext<LabsContextValue | null>(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useLabsContext(): LabsContextValue {
   const ctx = useContext(LabsContext);
   if (!ctx) {

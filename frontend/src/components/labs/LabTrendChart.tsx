@@ -139,22 +139,22 @@ export function LabTrendChart({ testAbbrev, apiClient }: Props) {
                 element handles this), so it reads as "area under the curve"
                 rather than a rectangular band. */}
             <linearGradient id="labTrendFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--brand-700))" stopOpacity={0.25} />
-              <stop offset="100%" stopColor="hsl(var(--brand-700))" stopOpacity={0.02} />
+              <stop offset="0%" stopColor="var(--color-brand-700)" stopOpacity={0.25} />
+              <stop offset="100%" stopColor="var(--color-brand-700)" stopOpacity={0.02} />
             </linearGradient>
           </defs>
 
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
           <XAxis
             dataKey="label"
-            stroke="hsl(var(--muted-foreground))"
+            stroke="var(--color-muted-foreground)"
             fontSize={11}
             tickMargin={6}
             padding={{ left: 8, right: 8 }}
           />
           <YAxis
             domain={[yMin, yMax]}
-            stroke="hsl(var(--muted-foreground))"
+            stroke="var(--color-muted-foreground)"
             fontSize={11}
             width={40}
             tickMargin={2}
@@ -168,7 +168,7 @@ export function LabTrendChart({ testAbbrev, apiClient }: Props) {
           {refMin != null && (
             <ReferenceLine
               y={refMin}
-              stroke="hsl(var(--muted-foreground))"
+              stroke="var(--color-muted-foreground)"
               strokeDasharray="4 3"
               strokeWidth={1.5}
               ifOverflow="extendDomain"
@@ -177,7 +177,7 @@ export function LabTrendChart({ testAbbrev, apiClient }: Props) {
           {refMax != null && (
             <ReferenceLine
               y={refMax}
-              stroke="hsl(var(--muted-foreground))"
+              stroke="var(--color-muted-foreground)"
               strokeDasharray="4 3"
               strokeWidth={1.5}
               ifOverflow="extendDomain"
@@ -185,20 +185,20 @@ export function LabTrendChart({ testAbbrev, apiClient }: Props) {
           )}
 
           <Tooltip
-            cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "3 3" }}
+            cursor={{ stroke: "var(--color-muted-foreground)", strokeWidth: 1, strokeDasharray: "3 3" }}
             contentStyle={{
-              backgroundColor: "hsl(var(--card))",
-              border: "1px solid hsl(var(--border))",
+              backgroundColor: "var(--color-card)",
+              border: "1px solid var(--color-border)",
               borderRadius: 8,
               fontSize: 12,
               padding: "6px 10px",
             }}
             labelStyle={{
-              color: "hsl(var(--foreground))",
+              color: "var(--color-foreground)",
               fontWeight: 600,
               marginBottom: 2,
             }}
-            itemStyle={{ color: "hsl(var(--foreground))", padding: 0 }}
+            itemStyle={{ color: "var(--color-foreground)", padding: 0 }}
             // Header line: use the raw ISO date field from the payload for a
             // human-readable "March 15, 2026" instead of the short axis label.
             labelFormatter={(_label, payload) => {
@@ -224,7 +224,7 @@ export function LabTrendChart({ testAbbrev, apiClient }: Props) {
           <Area
             type="monotone"
             dataKey="value"
-            stroke="hsl(var(--brand-700))"
+            stroke="var(--color-brand-700)"
             strokeWidth={2}
             fill="url(#labTrendFill)"
             fillOpacity={1}
@@ -239,10 +239,10 @@ export function LabTrendChart({ testAbbrev, apiClient }: Props) {
               };
               const color =
                 payload.status === "in_range"
-                  ? "hsl(var(--success-700))"
+                  ? "var(--color-success-700)"
                   : payload.status === "unknown"
-                    ? "hsl(var(--muted-foreground))"
-                    : "hsl(var(--warning-700))";
+                    ? "var(--color-muted-foreground)"
+                    : "var(--color-warning-700)";
               return (
                 <Dot
                   key={key}
@@ -250,14 +250,14 @@ export function LabTrendChart({ testAbbrev, apiClient }: Props) {
                   cy={cy}
                   r={5}
                   fill={color}
-                  stroke="hsl(var(--background))"
+                  stroke="var(--color-background)"
                   strokeWidth={2}
                 />
               );
             }}
             activeDot={{
               r: 7,
-              stroke: "hsl(var(--background))",
+              stroke: "var(--color-background)",
               strokeWidth: 2,
             }}
           />

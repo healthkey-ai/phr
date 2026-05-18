@@ -1,124 +1,303 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@source "./**/*.tsx";
+@source "../components/labs/**/*.tsx";
+@source "../components/ui/**/*.tsx";
+@source "../components/healthkey/**/*.tsx";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Manrope", -apple-system, "Roboto", "Helvetica", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+
+  --text-display: 48px;
+  --text-display--line-height: 56px;
+  --text-display--font-weight: 800;
+  --text-h1: 32px;
+  --text-h1--line-height: 40px;
+  --text-h1--font-weight: 700;
+  --text-h2: 24px;
+  --text-h2--line-height: 32px;
+  --text-h2--font-weight: 700;
+  --text-h3: 20px;
+  --text-h3--line-height: 28px;
+  --text-h3--font-weight: 600;
+  --text-h4: 18px;
+  --text-h4--line-height: 24px;
+  --text-h4--font-weight: 600;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-lg--font-weight: 500;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-body--font-weight: 500;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+  --text-body-sm--font-weight: 500;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-healthkey-bg-primary: hsl(var(--app-bg-primary));
+  --color-healthkey-bg-secondary: hsl(var(--app-bg-secondary));
+  --color-healthkey-bg-active: hsl(var(--app-bg-active));
+  --color-healthkey-text-primary: hsl(var(--text-primary-900));
+  --color-healthkey-text-secondary: hsl(var(--text-secondary-700));
+  --color-healthkey-text-tertiary: hsl(var(--text-quaternary-500));
+  --color-healthkey-text-quaternary: hsl(var(--text-quaternary-500));
+  --color-healthkey-text-disabled: hsl(var(--text-disabled));
+  --color-healthkey-text-brand: hsl(var(--text-brand-secondary-700));
+  --color-healthkey-text-white: hsl(var(--text-white));
+  --color-healthkey-border-secondary: hsl(var(--border-secondary));
+  --color-healthkey-gray-50: hsl(var(--gray-50));
+  --color-healthkey-gray-100: hsl(var(--gray-100));
+  --color-healthkey-gray-200: hsl(var(--gray-200));
+  --color-healthkey-gray-700: hsl(var(--gray-700));
+  --color-healthkey-brand-25: hsl(var(--brand-25));
+  --color-healthkey-brand-50: hsl(var(--brand-50));
+  --color-healthkey-brand-200: hsl(var(--brand-200));
+  --color-healthkey-brand-700: hsl(var(--brand-700));
+  --color-healthkey-brand-alt: hsl(var(--brand-primary-alt));
+  --color-healthkey-brand-green: hsl(var(--brand-green-500));
+  --color-healthkey-link-primary: hsl(var(--link-primary));
+  --color-healthkey-link-hover: hsl(var(--link-primary-hover));
+
+  --color-brand-25: hsl(var(--brand-25));
+  --color-brand-50: hsl(var(--brand-50));
+  --color-brand-200: hsl(var(--brand-200));
+  --color-brand-700: hsl(var(--brand-700));
+  --color-brand-alt: hsl(var(--brand-primary-alt));
+  --color-brand-green: hsl(var(--brand-green-500));
+
+  --color-success-50: hsl(var(--success-50));
+  --color-success-200: hsl(var(--success-200));
+  --color-success-700: hsl(var(--success-700));
+  --color-warning-50: hsl(var(--warning-50));
+  --color-warning-200: hsl(var(--warning-200));
+  --color-warning-700: hsl(var(--warning-700));
+  --color-error-50: hsl(var(--error-50));
+  --color-error-200: hsl(var(--error-200));
+  --color-error-700: hsl(var(--error-700));
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-DEFAULT: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(10, 13, 18, 0.05);
+  --shadow-DEFAULT: 0 4px 6px rgba(10, 13, 18, 0.07);
+  --shadow-md: 0 4px 6px rgba(10, 13, 18, 0.07);
+  --shadow-lg: 0 10px 15px rgba(10, 13, 18, 0.1);
+  --shadow-xl: 0 20px 25px rgba(10, 13, 18, 0.15);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
 
 /*
- * Wrapped in a CSS layer so host app (ht-phr) styles take precedence.
- * Host's unlayered styles (or styles in a higher-priority layer) will
- * override these variables and utility rules.
+ * Fallback CSS variables for standalone dev harness.
+ * In a host app the host supplies its own :root vars via a higher-priority
+ * cascade layer.
  */
-@layer phr-remote {
-  @tailwind base;
-  @tailwind components;
-  @tailwind utilities;
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  --radius: 0.5rem;
 
-  /*
-   * CSS variables defined at :root so Radix portals (which render at
-   * document.body, outside .hk-labs-root) can still resolve them.
-   * In a real host app, the host supplies its own :root vars — this
-   * block is primarily for the standalone dev harness.
-   */
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+  --app-bg-secondary: 0 0% 98%;
+  --app-bg-primary: 0 0% 100%;
+  --app-bg-active: 0 0% 98%;
+  --text-primary-900: 216 17% 14%;
+  --text-secondary-700: 220 9% 32%;
+  --text-quaternary-500: 218 8% 46%;
+  --text-disabled: 0 0% 83%;
+  --text-brand-secondary-700: 212 87% 33%;
+  --text-white: 0 0% 100%;
+  --border-secondary: 0 0% 91.4%;
+  --gray-50: 0 0% 98%;
+  --gray-100: 0 0% 96%;
+  --gray-200: 0 0% 91.4%;
+  --gray-700: 220 9% 32%;
+  --brand-25: 199 100% 97%;
+  --brand-50: 199 100% 92%;
+  --brand-200: 199 100% 64%;
+  --brand-700: 212 87% 33%;
+  --brand-primary-alt: 212 95% 40%;
+  --brand-green-500: 146 70% 45%;
+  --success-50: 152 88% 95%;
+  --success-200: 152 68% 81%;
+  --success-700: 152 91% 29%;
+  --warning-50: 48 100% 96%;
+  --warning-200: 43 98% 77%;
+  --warning-700: 25 95% 37%;
+  --error-50: 4 86% 97%;
+  --error-200: 5 86% 89%;
+  --error-700: 5 79% 40%;
+  --link-primary: 212 95% 40%;
+  --link-primary-hover: 212 87% 33%;
+}
 
-    /* HealthKey design system tokens — needed by Button, Card, etc. */
-    --app-bg-secondary: 0 0% 98%;
-    --app-bg-primary: 0 0% 100%;
-    --app-bg-active: 0 0% 98%;
-    --text-primary-900: 216 17% 14%;
-    --text-secondary-700: 220 9% 32%;
-    --text-quaternary-500: 218 8% 46%;
-    --text-disabled: 0 0% 83%;
-    --text-brand-secondary-700: 212 87% 33%;
-    --text-white: 0 0% 100%;
-    --border-secondary: 0 0% 91.4%;
-    --gray-50: 0 0% 98%;
-    --gray-100: 0 0% 96%;
-    --gray-200: 0 0% 91.4%;
-    --gray-700: 220 9% 32%;
-    --brand-25: 199 100% 97%;
-    --brand-50: 199 100% 92%;
-    --brand-200: 199 100% 64%;
-    --brand-700: 212 87% 33%;
-    --brand-primary-alt: 212 95% 40%;
-    --brand-green-500: 146 70% 45%;
-    --success-50: 152 88% 95%;
-    --success-200: 152 68% 81%;
-    --success-700: 152 91% 29%;
-    --warning-50: 48 100% 96%;
-    --warning-200: 43 98% 77%;
-    --warning-700: 25 95% 37%;
-    --error-50: 4 86% 97%;
-    --error-200: 5 86% 89%;
-    --error-700: 5 79% 40%;
-    --link-primary: 212 95% 40%;
-    --link-primary-hover: 212 87% 33%;
+.hk-labs-root {
+  font-family: var(--hk-font-family, 'Manrope', sans-serif);
+  --radius: var(--radius, 0.5rem);
+
+  --hk-color-primary: var(--hk-color-primary, #6366f1);
+  --hk-color-success: var(--hk-color-success, #22c55e);
+  --hk-color-warning: var(--hk-color-warning, #f59e0b);
+  --hk-color-danger: var(--hk-color-danger, #ef4444);
+  --hk-color-muted: var(--hk-color-muted, #6b7280);
+
+  --background: var(--background, 0 0% 100%);
+  --foreground: var(--foreground, 222.2 84% 4.9%);
+  --card: var(--card, 0 0% 100%);
+  --card-foreground: var(--card-foreground, 222.2 84% 4.9%);
+  --popover: var(--popover, 0 0% 100%);
+  --popover-foreground: var(--popover-foreground, 222.2 84% 4.9%);
+  --primary: var(--primary, 222.2 47.4% 11.2%);
+  --primary-foreground: var(--primary-foreground, 210 40% 98%);
+  --secondary: var(--secondary, 210 40% 96.1%);
+  --secondary-foreground: var(--secondary-foreground, 222.2 47.4% 11.2%);
+  --muted: var(--muted, 210 40% 96.1%);
+  --muted-foreground: var(--muted-foreground, 215.4 16.3% 46.9%);
+  --accent: var(--accent, 210 40% 96.1%);
+  --accent-foreground: var(--accent-foreground, 222.2 47.4% 11.2%);
+  --destructive: var(--destructive, 0 84.2% 60.2%);
+  --destructive-foreground: var(--destructive-foreground, 210 40% 98%);
+  --border: var(--border, 214.3 31.8% 91.4%);
+  --input: var(--input, 214.3 31.8% 91.4%);
+  --ring: var(--ring, 222.2 84% 4.9%);
+
+  --brand-25: var(--brand-25, 199 100% 97%);
+  --brand-50: var(--brand-50, 199 100% 92%);
+  --brand-200: var(--brand-200, 199 100% 64%);
+  --brand-700: var(--brand-700, 212 87% 33%);
+  --brand-primary-alt: var(--brand-primary-alt, 212 95% 40%);
+  --brand-green-500: var(--brand-green-500, 146 70% 45%);
+  --success-50: var(--success-50, 152 88% 95%);
+  --success-200: var(--success-200, 152 68% 81%);
+  --success-700: var(--success-700, 152 91% 29%);
+  --warning-50: var(--warning-50, 48 100% 96%);
+  --warning-200: var(--warning-200, 43 98% 77%);
+  --warning-700: var(--warning-700, 25 95% 37%);
+  --error-50: var(--error-50, 4 86% 97%);
+  --error-200: var(--error-200, 5 86% 89%);
+  --error-700: var(--error-700, 5 79% 40%);
+}
+
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+      scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1))
+      rotate(var(--tw-enter-rotate, 0));
   }
+}
 
-  .hk-labs-root {
-    font-family: var(--hk-font-family, 'Manrope', sans-serif);
-    --radius: var(--radius, 0.5rem);
-
-    /* Default CSS custom properties — host can override via :root or theme prop */
-    --hk-color-primary: var(--hk-color-primary, #6366f1);
-    --hk-color-success: var(--hk-color-success, #22c55e);
-    --hk-color-warning: var(--hk-color-warning, #f59e0b);
-    --hk-color-danger: var(--hk-color-danger, #ef4444);
-    --hk-color-muted: var(--hk-color-muted, #6b7280);
-
-    /* shadcn tokens needed by the UI components — fallback to standard HK values */
-    --background: var(--background, 0 0% 100%);
-    --foreground: var(--foreground, 222.2 84% 4.9%);
-    --card: var(--card, 0 0% 100%);
-    --card-foreground: var(--card-foreground, 222.2 84% 4.9%);
-    --popover: var(--popover, 0 0% 100%);
-    --popover-foreground: var(--popover-foreground, 222.2 84% 4.9%);
-    --primary: var(--primary, 222.2 47.4% 11.2%);
-    --primary-foreground: var(--primary-foreground, 210 40% 98%);
-    --secondary: var(--secondary, 210 40% 96.1%);
-    --secondary-foreground: var(--secondary-foreground, 222.2 47.4% 11.2%);
-    --muted: var(--muted, 210 40% 96.1%);
-    --muted-foreground: var(--muted-foreground, 215.4 16.3% 46.9%);
-    --accent: var(--accent, 210 40% 96.1%);
-    --accent-foreground: var(--accent-foreground, 222.2 47.4% 11.2%);
-    --destructive: var(--destructive, 0 84.2% 60.2%);
-    --destructive-foreground: var(--destructive-foreground, 210 40% 98%);
-    --border: var(--border, 214.3 31.8% 91.4%);
-    --input: var(--input, 214.3 31.8% 91.4%);
-    --ring: var(--ring, 222.2 84% 4.9%);
-
-    /* healthkey brand tokens */
-    --brand-25: var(--brand-25, 199 100% 97%);
-    --brand-50: var(--brand-50, 199 100% 92%);
-    --brand-200: var(--brand-200, 199 100% 64%);
-    --brand-700: var(--brand-700, 212 87% 33%);
-    --brand-primary-alt: var(--brand-primary-alt, 212 95% 40%);
-    --brand-green-500: var(--brand-green-500, 146 70% 45%);
-    --success-50: var(--success-50, 152 88% 95%);
-    --success-200: var(--success-200, 152 68% 81%);
-    --success-700: var(--success-700, 152 91% 29%);
-    --warning-50: var(--warning-50, 48 100% 96%);
-    --warning-200: var(--warning-200, 43 98% 77%);
-    --warning-700: var(--warning-700, 25 95% 37%);
-    --error-50: var(--error-50, 4 86% 97%);
-    --error-200: var(--error-200, 5 86% 89%);
-    --error-700: var(--error-700, 5 79% 40%);
+@keyframes exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+      scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1))
+      rotate(var(--tw-exit-rotate, 0));
   }
+}
+
+@utility animate-in {
+  animation: enter 150ms ease-out;
+}
+@utility animate-out {
+  animation: exit 150ms ease-in forwards;
+}
+@utility fade-in-0 {
+  --tw-enter-opacity: 0;
+}
+@utility fade-out-0 {
+  --tw-exit-opacity: 0;
+}
+@utility zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+@utility zoom-out-95 {
+  --tw-exit-scale: 0.95;
+}
+@utility slide-in-from-top-2 {
+  --tw-enter-translate-y: -0.5rem;
+}
+@utility slide-in-from-bottom-2 {
+  --tw-enter-translate-y: 0.5rem;
+}
+@utility slide-in-from-left-2 {
+  --tw-enter-translate-x: -0.5rem;
+}
+@utility slide-in-from-right-2 {
+  --tw-enter-translate-x: 0.5rem;
+}
+
+@utility shadow-sm-soft {
+  box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+}
+
+@utility shadow-card {
+  box-shadow:
+    0 0 0 1px rgba(10, 13, 18, 0.18) inset,
+    0 -2px 0 0 rgba(10, 13, 18, 0.05) inset,
+    0 1px 2px 0 rgba(10, 13, 18, 0.05);
 }
