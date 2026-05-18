@@ -217,7 +217,7 @@ export function LabUploadDialog({ open, onOpenChange, apiClient }: Props) {
             pushing the dialog off the screen
           - flex (vs shadcn's default grid) gives us predictable sizing:
             header + footer are shrink-0, the body in between takes flex-1 */}
-      <DialogContent className="flex max-h-[85vh] min-w-0 flex-col gap-4 sm:max-w-lg">
+      <DialogContent className="flex max-h-[85vh] min-w-0 flex-col gap-4 max-w-lg w-[calc(100%-2rem)] sm:w-full">
         <DialogHeader className="min-w-0 shrink-0">
           <DialogTitle>{titleFor(phase)}</DialogTitle>
           <DialogDescription>{descriptionFor(phase)}</DialogDescription>
