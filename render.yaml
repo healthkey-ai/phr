@@ -225,12 +225,9 @@ services:
         value: public, max-age=31536000, immutable
 
     routes:
-      # Serve federation remote assets from dist/remote/
-      - type: rewrite
-        source: /remote/*
-        destination: /remote/*
-
-      # Everything else falls back to index.html for React Router
+      # Falls back to index.html for React Router client-side routing.
+      # Static files (including /remote/remoteEntry.js) are served directly
+      # before this rewrite applies.
       - type: rewrite
         source: /*
         destination: /index.html
