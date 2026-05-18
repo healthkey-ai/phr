@@ -65,7 +65,7 @@ export default defineConfig(({ mode }) => {
       target: "esnext",
     },
     server: {
-      port: 5174,
+      port: 5175,
       proxy: {
         "/api": {
           target: apiProxyTarget,

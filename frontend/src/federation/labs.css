@@ -137,9 +137,9 @@
 
 /*
  * Fallback CSS variables for standalone dev harness.
- * In a host app the host supplies its own :root vars via a higher-priority
- * cascade layer.
+ * Wrapped in @layer so host app's unlayered :root always wins.
  */
+@layer remote-defaults {
 :root {
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
@@ -194,52 +194,16 @@
   --link-primary: 212 95% 40%;
   --link-primary-hover: 212 87% 33%;
 }
+} /* @layer remote-defaults */
 
 .hk-labs-root {
   font-family: var(--hk-font-family, 'Manrope', sans-serif);
-  --radius: var(--radius, 0.5rem);
 
   --hk-color-primary: var(--hk-color-primary, #6366f1);
   --hk-color-success: var(--hk-color-success, #22c55e);
   --hk-color-warning: var(--hk-color-warning, #f59e0b);
   --hk-color-danger: var(--hk-color-danger, #ef4444);
   --hk-color-muted: var(--hk-color-muted, #6b7280);
-
-  --background: var(--background, 0 0% 100%);
-  --foreground: var(--foreground, 222.2 84% 4.9%);
-  --card: var(--card, 0 0% 100%);
-  --card-foreground: var(--card-foreground, 222.2 84% 4.9%);
-  --popover: var(--popover, 0 0% 100%);
-  --popover-foreground: var(--popover-foreground, 222.2 84% 4.9%);
-  --primary: var(--primary, 222.2 47.4% 11.2%);
-  --primary-foreground: var(--primary-foreground, 210 40% 98%);
-  --secondary: var(--secondary, 210 40% 96.1%);
-  --secondary-foreground: var(--secondary-foreground, 222.2 47.4% 11.2%);
-  --muted: var(--muted, 210 40% 96.1%);
-  --muted-foreground: var(--muted-foreground, 215.4 16.3% 46.9%);
-  --accent: var(--accent, 210 40% 96.1%);
-  --accent-foreground: var(--accent-foreground, 222.2 47.4% 11.2%);
-  --destructive: var(--destructive, 0 84.2% 60.2%);
-  --destructive-foreground: var(--destructive-foreground, 210 40% 98%);
-  --border: var(--border, 214.3 31.8% 91.4%);
-  --input: var(--input, 214.3 31.8% 91.4%);
-  --ring: var(--ring, 222.2 84% 4.9%);
-
-  --brand-25: var(--brand-25, 199 100% 97%);
-  --brand-50: var(--brand-50, 199 100% 92%);
-  --brand-200: var(--brand-200, 199 100% 64%);
-  --brand-700: var(--brand-700, 212 87% 33%);
-  --brand-primary-alt: var(--brand-primary-alt, 212 95% 40%);
-  --brand-green-500: var(--brand-green-500, 146 70% 45%);
-  --success-50: var(--success-50, 152 88% 95%);
-  --success-200: var(--success-200, 152 68% 81%);
-  --success-700: var(--success-700, 152 91% 29%);
-  --warning-50: var(--warning-50, 48 100% 96%);
-  --warning-200: var(--warning-200, 43 98% 77%);
-  --warning-700: var(--warning-700, 25 95% 37%);
-  --error-50: var(--error-50, 4 86% 97%);
-  --error-200: var(--error-200, 5 86% 89%);
-  --error-700: var(--error-700, 5 79% 40%);
 }
 
 @keyframes enter {

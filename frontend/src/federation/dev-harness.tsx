@@ -6,9 +6,8 @@ import axios, { type AxiosInstance } from "axios";
 
 import { LabUploads } from "./LabUploads";
 import { LabResults } from "./LabResults";
-import "./labs.css";
 
-const API_BASE = "http://localhost:9000/api/v1";
+const API_BASE = "http://localhost:5175/api/v1";
 
 function loadTokens(): { access: string; refresh: string } | null {
   const raw = localStorage.getItem("dev_phr_tokens");

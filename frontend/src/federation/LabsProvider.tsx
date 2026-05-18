@@ -3,6 +3,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { AxiosInstance } from "axios";
 import { LabsContext } from "./LabsContext";
 import type { LabsThemeTokens } from "./types";
+import { injectStyles } from "./injectStyles";
+
+// Inject styles once at module load
+injectStyles();
 
 interface LabsProviderProps {
   apiClient: AxiosInstance;
