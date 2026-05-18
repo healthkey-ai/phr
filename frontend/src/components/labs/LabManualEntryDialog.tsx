@@ -222,7 +222,7 @@ export function LabManualEntryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit lab result" : "Add a lab result"}</DialogTitle>
           <DialogDescription>
