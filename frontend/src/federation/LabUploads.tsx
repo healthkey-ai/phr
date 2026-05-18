@@ -1,5 +1,3 @@
-import { injectStyles } from "./injectStyles";
-injectStyles();
 import { useState } from "react";
 import { Loader2, Upload, Trash2, RotateCcw } from "lucide-react";
 
@@ -14,10 +12,7 @@ import {
 } from "./hooks";
 import { LabUploadDialog } from "@/components/labs/LabUploadDialog";
 
-function LabUploadsInner({
-  onUploadComplete: _onUploadComplete,
-  onResultsSaved: _onResultsSaved,
-}: Pick<LabUploadsProps, "onUploadComplete" | "onResultsSaved">) {
+function LabUploadsInner() {
   const { apiClient } = useLabsContext();
   const [dialogOpen, setDialogOpen] = useState(false);
   const { data: uploads = [], isLoading } = useLabUploads();
@@ -298,8 +293,8 @@ export function LabUploads({
   queryClient,
   className,
   theme,
-  onUploadComplete,
-  onResultsSaved,
+  onUploadComplete: _onUploadComplete,
+  onResultsSaved: _onResultsSaved,
 }: LabUploadsProps) {
   return (
     <LabsProvider
@@ -309,10 +304,7 @@ export function LabUploads({
       theme={theme}
       className={className}
     >
-      <LabUploadsInner
-        onUploadComplete={onUploadComplete}
-        onResultsSaved={onResultsSaved}
-      />
+      <LabUploadsInner />
     </LabsProvider>
   );
 }

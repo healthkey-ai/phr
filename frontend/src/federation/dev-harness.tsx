@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { StrictMode, useCallback, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient } from "@tanstack/react-query";
@@ -5,9 +6,8 @@ import axios, { type AxiosInstance } from "axios";
 
 import { LabUploads } from "./LabUploads";
 import { LabResults } from "./LabResults";
-import "./labs.css";
 
-const API_BASE = "http://localhost:9000/api/v1";
+const API_BASE = "http://localhost:5175/api/v1";
 
 function loadTokens(): { access: string; refresh: string } | null {
   const raw = localStorage.getItem("dev_phr_tokens");
@@ -15,7 +15,9 @@ function loadTokens(): { access: string; refresh: string } | null {
   try {
     const parsed = JSON.parse(raw);
     if (parsed.access && parsed.refresh) return parsed;
-  } catch {}
+  } catch {
+    return null;
+  }
   return null;
 }
 
@@ -64,7 +66,7 @@ function createApiClient(
 function App() {
   const [tokens, setTokens] = useState(loadTokens);
   const [events, setEvents] = useState<string[]>([]);
-  const queryClientRef = useRef(new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } }));
+  const queryClient = useMemo(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } }), []);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSessionExpired = useCallback(() => {
@@ -155,7 +157,7 @@ function App() {
       <section style={{ marginBottom: 32 }}>
         <LabUploads
           apiClient={apiClient}
-          queryClient={queryClientRef.current}
+          queryClient={queryClient}
           onUploadComplete={(upload) => logEvent("onUploadComplete", { id: upload.id, status: upload.status })}
           onResultsSaved={(res) => logEvent("onResultsSaved", { saved: res.saved_count })}
         />
@@ -166,7 +168,7 @@ function App() {
       <section style={{ marginBottom: 32 }}>
         <LabResults
           apiClient={apiClient}
-          queryClient={queryClientRef.current}
+          queryClient={queryClient}
           onResultDeleted={(id) => logEvent("onResultDeleted", { id })}
         />
       </section>

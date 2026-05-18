@@ -2,6 +2,7 @@ import dns from "node:dns";
 import path from "node:path";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { federation } from "@module-federation/vite";
 // Force Node to resolve `localhost` to 127.0.0.1 (IPv4) before ::1 (IPv6).
 // Node 18+ honors the system's IPv6 preference, but Django's dev server only
@@ -15,6 +16,7 @@ export default defineConfig(function (_a) {
     return {
         plugins: [
             react(),
+            tailwindcss(),
             federation({
                 name: "labs_remote",
                 filename: "remoteEntry.js",

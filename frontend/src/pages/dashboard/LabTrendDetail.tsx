@@ -91,11 +91,11 @@ export function LabTrendDetail() {
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               {prettyCategory(test?.category)}
             </p>
-            <h1 className="text-h1 text-foreground">{test?.name ?? abbreviation}</h1>
+            <h1 className="text-h1 text-healthkey-text-secondary">{test?.name ?? abbreviation}</h1>
             {latest && (
               <p className="mt-2 text-base text-muted-foreground">
                 Latest:{" "}
-                <span className="font-mono text-foreground">
+                <span className="font-mono text-healthkey-text-secondary">
                   {formatLatest(latest)}
                 </span>
                 {latest.measured_at && (
@@ -136,11 +136,11 @@ export function LabTrendDetail() {
 
       {/* History list */}
       <section>
-        <h2 className="mb-3 text-h3 text-foreground">History</h2>
+        <h2 className="mb-3 text-h3 text-healthkey-text-secondary">History</h2>
         {results.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <p className="text-base text-foreground">No measurements yet</p>
+              <p className="text-base text-healthkey-text-secondary">No measurements yet</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Add your first value to start tracking this test over time.
               </p>
@@ -161,7 +161,7 @@ export function LabTrendDetail() {
                 <li key={r.id} className="flex items-center gap-3 px-4 py-3 sm:px-6">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
-                      <span className="font-mono text-base text-foreground">
+                      <span className="font-mono text-sm text-healthkey-text-secondary">
                         {formatValue(r)}
                       </span>
                       {r.unit && (

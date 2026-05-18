@@ -39,7 +39,7 @@ export function LabValueCard({ testAbbrev, title, onNavigate, apiClient }: Props
       <CardContent className="p-5">
         <div className="mb-2 flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="truncate text-base font-semibold text-foreground">
+            <h3 className="truncate text-base font-semibold text-healthkey-text-secondary">
               {title ?? latest.test.name}
             </h3>
             {latest.test.loinc_name && latest.test.loinc_name !== latest.test.name && (
@@ -62,7 +62,7 @@ export function LabValueCard({ testAbbrev, title, onNavigate, apiClient }: Props
         */}
         <div className="flex items-center gap-4">
           <div className="min-w-0">
-            <div className="font-mono text-2xl font-semibold text-foreground">
+            <div className="font-mono text-xl font-semibold text-healthkey-text-secondary">
               {formatValue(latest)}
               {latest.unit && (
                 <span className="ml-1 text-sm font-normal text-muted-foreground">
