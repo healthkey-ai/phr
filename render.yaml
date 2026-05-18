@@ -220,9 +220,12 @@ services:
       - path: /remote/*
         name: Access-Control-Allow-Methods
         value: GET
-      - path: /remote/*
+      - path: /remote/assets/*
         name: Cache-Control
         value: public, max-age=31536000, immutable
+      - path: /remote/remoteEntry.js
+        name: Cache-Control
+        value: no-cache
 
     routes:
       # Falls back to index.html for React Router client-side routing.
