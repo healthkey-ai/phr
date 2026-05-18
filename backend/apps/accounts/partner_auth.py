@@ -8,6 +8,7 @@ This ensures tokens are never leaked to providers that shouldn't see them.
 from __future__ import annotations
 
 import logging
+import traceback
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
@@ -47,13 +48,30 @@ class PartnerAuthentication(BaseAuthentication):
             if not provider.can_handle(token, unverified):
                 continue
 
-            claims = provider.verify(token)
+            try:
+                claims = provider.verify(token)
+            except Exception as exc:
+                logger.error(
+                    "partner_auth: %s.verify raised %s: %s\n%s",
+                    type(provider).__name__, type(exc).__name__, exc,
+                    traceback.format_exc(),
+                )
+                raise
+
             if claims is None:
                 logger.warning("partner_auth: %s.verify returned None", type(provider).__name__)
                 continue
 
             field, value = provider.user_lookup(claims)
-            user = self._get_or_create(provider, claims, field, value)
+            try:
+                user = self._get_or_create(provider, claims, field, value)
+            except Exception as exc:
+                logger.error(
+                    "partner_auth: _get_or_create failed for %s=%s: %s\n%s",
+                    field, value, exc, traceback.format_exc(),
+                )
+                raise
+
             logger.info("partner_auth: authenticated user=%s (id=%s) via %s", user, user.pk, type(provider).__name__)
             return (user, claims.raw)
 
