@@ -102,4 +102,15 @@ class PartnerAuthentication(BaseAuthentication):
             )
             return user
         except IntegrityError:
-            return User.objects.get(**{field: value})
+            email = claims.email or defaults.get("email", "")
+            try:
+                user = User.objects.get(**{field: value})
+            except User.DoesNotExist:
+                user = User.objects.get(email=email)
+                setattr(user, field, value)
+                user.save(update_fields=[field])
+                logger.info(
+                    "partner_auth: linked %s=%s to existing user %d (%s)",
+                    field, value, user.pk, email,
+                )
+            return user
