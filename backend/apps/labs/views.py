@@ -219,14 +219,14 @@ class UploadJobViewSet(
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
 
-        return Response(
-            {
-                "saved_count": len(result["saved"]),
-                "skipped_count": result["skipped"],
-                "results": LabValueSerializer(result["saved"], many=True).data,
-            },
-            status=status.HTTP_200_OK,
-        )
+        response_data = {
+            "saved_count": len(result["saved"]),
+            "skipped_count": result["skipped"],
+            "results": LabValueSerializer(result["saved"], many=True).data,
+        }
+        if result["validation_errors"]:
+            response_data["validation_errors"] = result["validation_errors"]
+        return Response(response_data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"])
     def extract(self, request, pk=None):

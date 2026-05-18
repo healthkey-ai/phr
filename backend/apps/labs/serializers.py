@@ -482,19 +482,42 @@ class _AcceptedRowSerializer(serializers.Serializer):
 
 class UploadJobCommitSerializer(serializers.Serializer):
     accepted = serializers.ListField(
-        child=_AcceptedRowSerializer(),
+        child=serializers.DictField(),
         allow_empty=True,
     )
 
     def validate(self, attrs):
         upload = self.context["upload"]
         parsed_count = len(upload.parsed_results or [])
-        for row in attrs["accepted"]:
+
+        valid_rows: list[dict] = []
+        validation_errors: list[dict] = []
+
+        for i, raw_row in enumerate(attrs["accepted"]):
+            row_ser = _AcceptedRowSerializer(data=raw_row)
+            if not row_ser.is_valid():
+                validation_errors.append({
+                    "index": i,
+                    "source_index": raw_row.get("source_index"),
+                    "test_type_id": raw_row.get("test_type_id"),
+                    "errors": row_ser.errors,
+                })
+                continue
+
+            row = row_ser.validated_data
             if row["source_index"] >= parsed_count:
-                raise serializers.ValidationError(
-                    {"accepted": f"source_index {row['source_index']} is out of range "
-                                 f"for this upload (parsed_results has {parsed_count})."}
-                )
+                validation_errors.append({
+                    "index": i,
+                    "source_index": row["source_index"],
+                    "test_type_id": row.get("test_type_id"),
+                    "errors": {"source_index": f"Out of range (parsed_results has {parsed_count})."},
+                })
+                continue
+
+            valid_rows.append(row)
+
+        attrs["_valid_rows"] = valid_rows
+        attrs["_validation_errors"] = validation_errors
         return attrs
 
     def save(self, **kwargs):
@@ -508,7 +531,7 @@ class UploadJobCommitSerializer(serializers.Serializer):
         skipped = 0
 
         with transaction.atomic():
-            for row in self.validated_data["accepted"]:
+            for row in self.validated_data["_valid_rows"]:
                 test_entry: LabTestEntry = row["_test_entry"]
                 parsed = parsed_results[row["source_index"]]
 
@@ -530,4 +553,8 @@ class UploadJobCommitSerializer(serializers.Serializer):
                 result.save()
                 saved.append(result)
 
-        return {"saved": saved, "skipped": skipped}
+        return {
+            "saved": saved,
+            "skipped": skipped,
+            "validation_errors": self.validated_data["_validation_errors"],
+        }
