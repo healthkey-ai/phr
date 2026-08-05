@@ -2,9 +2,8 @@
 Health check endpoints for deploy pipelines and uptime monitors.
 
 Two tiers:
-  - /health-check/   → liveness: process is running + can reach the DB
-  - /health-check/ready/ → readiness: migrations applied, catalog loaded,
-                           Celery broker reachable (when configured)
+  - /health-check/       → liveness: process is running + can reach the DB
+  - /health-check/ready/ → readiness: DB reachable and migrations applied
 
 Render's blueprint points at `/health-check/`. Platform failover / deploy
 gating should prefer the liveness route — it's cheap and sufficient for
@@ -53,10 +52,8 @@ class LivenessView(APIView):
 class ReadinessView(APIView):
     """GET /health-check/ready/ — deeper check for full readiness.
 
-    Validates that the labs catalog fixture has been loaded (a common
-    deploy failure mode — forgetting the post-deploy loaddata) and that
-    the Celery broker URL resolves when configured. Returns 503 on any
-    failure so deploy gates can catch half-broken releases.
+    Verifies the DB is reachable and migrations have been applied, so deploy
+    gates can catch a release that booted against an unmigrated database.
     """
 
     permission_classes = [AllowAny]
@@ -74,30 +71,20 @@ class ReadinessView(APIView):
             checks["db"] = f"error: {exc}"
             ok = False
 
-        # Labs catalog — empty catalog means fixture wasn't loaded
-        try:
-            from apps.labs.models import LabTestType
-            count = LabTestType.objects.count()
-            checks["labs_catalog"] = f"ok ({count} tests)" if count > 0 else "empty"
-            if count == 0:
-                ok = False
-        except Exception as exc:  # noqa: BLE001
-            checks["labs_catalog"] = f"error: {exc}"
-            ok = False
-
-        # Celery broker — only when configured
-        broker_url = getattr(settings, "CELERY_BROKER_URL", "")
-        if broker_url:
+        # Pending migrations — a booted-but-unmigrated instance must not
+        # pass readiness.
+        if ok:
             try:
-                import redis
-                r = redis.Redis.from_url(broker_url, socket_connect_timeout=2)
-                r.ping()
-                checks["celery_broker"] = "ok"
+                from django.db.migrations.executor import MigrationExecutor
+
+                executor = MigrationExecutor(connections["default"])
+                plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
+                checks["migrations"] = "ok" if not plan else f"{len(plan)} pending"
+                if plan:
+                    ok = False
             except Exception as exc:  # noqa: BLE001
-                checks["celery_broker"] = f"error: {exc}"
+                checks["migrations"] = f"error: {exc}"
                 ok = False
-        else:
-            checks["celery_broker"] = "not configured"
 
         payload = {
             "status": "ready" if ok else "not-ready",

@@ -1,12 +1,14 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 /*
  * HealthKey color tokens — values sourced from cancerbot/ui.v2/client/global.css.
- * Single source of truth for both shadcn semantic tokens and the healthkey.* namespace.
+ * The :root / .dark blocks are the single source of truth; the @theme block
+ * maps them onto Tailwind utilities (bg-*, text-*, border-*, …).
  */
 @layer base {
   :root {
@@ -191,14 +193,157 @@
   }
 }
 
+@theme inline {
+  /* Fonts */
+  --font-sans: "Manrope", -apple-system, Roboto, Helvetica, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Type scale (docs/patient-app-design.md §2.3) */
+  --text-display: 48px;
+  --text-display--line-height: 56px;
+  --text-display--font-weight: 800;
+  --text-h1: 32px;
+  --text-h1--line-height: 40px;
+  --text-h1--font-weight: 700;
+  --text-h2: 24px;
+  --text-h2--line-height: 32px;
+  --text-h2--font-weight: 700;
+  --text-h3: 20px;
+  --text-h3--line-height: 28px;
+  --text-h3--font-weight: 600;
+  --text-h4: 18px;
+  --text-h4--line-height: 24px;
+  --text-h4--font-weight: 600;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-lg--font-weight: 500;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-body--font-weight: 500;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+  --text-body-sm--font-weight: 500;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+
+  /* shadcn semantic tokens */
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  /* HealthKey Design System namespace */
+  --color-healthkey-bg-primary: hsl(var(--app-bg-primary));
+  --color-healthkey-bg-secondary: hsl(var(--app-bg-secondary));
+  --color-healthkey-bg-active: hsl(var(--app-bg-active));
+  --color-healthkey-text-primary: hsl(var(--text-primary-900));
+  --color-healthkey-text-secondary: hsl(var(--text-secondary-700));
+  --color-healthkey-text-tertiary: hsl(var(--text-quaternary-500));
+  --color-healthkey-text-quaternary: hsl(var(--text-quaternary-500));
+  --color-healthkey-text-disabled: hsl(var(--text-disabled));
+  --color-healthkey-text-brand: hsl(var(--text-brand-secondary-700));
+  --color-healthkey-text-white: hsl(var(--text-white));
+  --color-healthkey-border-secondary: hsl(var(--border-secondary));
+  --color-healthkey-gray-50: hsl(var(--gray-50));
+  --color-healthkey-gray-100: hsl(var(--gray-100));
+  --color-healthkey-gray-200: hsl(var(--gray-200));
+  --color-healthkey-gray-700: hsl(var(--gray-700));
+  --color-healthkey-brand-25: hsl(var(--brand-25));
+  --color-healthkey-brand-50: hsl(var(--brand-50));
+  --color-healthkey-brand-200: hsl(var(--brand-200));
+  --color-healthkey-brand-700: hsl(var(--brand-700));
+  --color-healthkey-brand-alt: hsl(var(--brand-primary-alt));
+  --color-healthkey-brand-green: hsl(var(--brand-green-500));
+  --color-healthkey-link-primary: hsl(var(--link-primary));
+  --color-healthkey-link-hover: hsl(var(--link-primary-hover));
+
+  /* Direct brand scale (matches healthkey exactly: 25/50/200/700/alt) */
+  --color-brand-25: hsl(var(--brand-25));
+  --color-brand-50: hsl(var(--brand-50));
+  --color-brand-200: hsl(var(--brand-200));
+  --color-brand-700: hsl(var(--brand-700));
+  --color-brand-alt: hsl(var(--brand-primary-alt));
+  --color-brand-green: hsl(var(--brand-green-500));
+
+  /* Status scales (matches healthkey: 50/200/700) */
+  --color-success-50: hsl(var(--success-50));
+  --color-success-200: hsl(var(--success-200));
+  --color-success-700: hsl(var(--success-700));
+  --color-warning-50: hsl(var(--warning-50));
+  --color-warning-200: hsl(var(--warning-200));
+  --color-warning-700: hsl(var(--warning-700));
+  --color-error-50: hsl(var(--error-50));
+  --color-error-200: hsl(var(--error-200));
+  --color-error-700: hsl(var(--error-700));
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Shadows — near-black navy ink per cancerbot ui.v2 */
+  --shadow-sm: 0 1px 2px rgba(10, 13, 18, 0.05);
+  --shadow-md: 0 4px 6px rgba(10, 13, 18, 0.07);
+  --shadow-lg: 0 10px 15px rgba(10, 13, 18, 0.1);
+  --shadow-xl: 0 20px 25px rgba(10, 13, 18, 0.15);
+
+  /* Accordion animation (Radix) */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
 @layer base {
   * {
-    @apply border-border;
+    border-color: var(--color-border);
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: "Manrope", -apple-system, Roboto, Helvetica, sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -215,23 +360,36 @@
 
   /* Focus ring (a11y baseline per design doc §9.1) */
   *:focus-visible {
-    @apply outline-none ring-2 ring-brand-700 ring-offset-2;
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--color-background),
+      0 0 0 4px var(--color-brand-700);
   }
 }
 
-@layer utilities {
-  .skip-link {
-    @apply absolute left-2 top-2 z-50 -translate-y-16 rounded-md bg-brand-700 px-4 py-2 text-white focus:translate-y-0;
-  }
+@utility skip-link {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 50;
+  transform: translateY(-4rem);
+  border-radius: var(--radius-md);
+  background-color: var(--color-brand-700);
+  padding: 0.5rem 1rem;
+  color: white;
 
-  .shadow-sm-soft {
-    box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+  &:focus {
+    transform: translateY(0);
   }
+}
 
-  .shadow-card {
-    box-shadow:
-      0 0 0 1px rgba(10, 13, 18, 0.18) inset,
-      0 -2px 0 0 rgba(10, 13, 18, 0.05) inset,
-      0 1px 2px 0 rgba(10, 13, 18, 0.05);
-  }
+@utility shadow-sm-soft {
+  box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+}
+
+@utility shadow-card {
+  box-shadow:
+    0 0 0 1px rgba(10, 13, 18, 0.18) inset,
+    0 -2px 0 0 rgba(10, 13, 18, 0.05) inset,
+    0 1px 2px 0 rgba(10, 13, 18, 0.05);
 }

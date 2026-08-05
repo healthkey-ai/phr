@@ -1,7 +1,25 @@
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import User
+from .tokens import set_shared_claims
+
+
+class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """SimpleJWT defaults to USERNAME_FIELD, which the User model sets to 'email'.
+
+    Adds the shared cross-service claims so any phr-issued token is
+    self-describing for sibling services.
+    """
+
+    username_field = "email"
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        set_shared_claims(token, user)
+        return token
 
 
 class RegisterSerializer(serializers.ModelSerializer):

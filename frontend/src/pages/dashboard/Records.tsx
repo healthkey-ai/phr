@@ -4,17 +4,8 @@
  *
  * Phase 1: shows the structured record. Lab trends + timeline + conflicts come in Phase 2.
  */
-import { useMemo, useState } from "react";
-import { Plus, Upload } from "lucide-react";
-
 import { DataSourceBadge } from "@/components/healthkey/DataSourceBadge";
-import { LabManualEntryDialog } from "@/components/labs/LabManualEntryDialog";
-import { LabUploadDialog } from "@/components/labs/LabUploadDialog";
-import { LabValueCard } from "@/components/labs/LabValueCard";
-import { RecordsChangeLog } from "@/components/labs/RecordsChangeLog";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useCatalog, useLabResults } from "@/features/labs/api";
 import { usePatientInfo } from "@/features/patient-profile/api";
 
 export function Records() {
@@ -127,8 +118,18 @@ export function Records() {
         </Card>
       </section>
 
-      {/* Lab values */}
-      <LabsSection />
+      {/* Lab values — provided by the HealthKey Labs service */}
+      <section className="mb-6">
+        <h2 className="mb-3 text-h3 text-foreground">Lab values</h2>
+        <Card>
+          <CardContent className="p-6">
+            <EmptyState
+              title="Lab tracking moves to HealthKey Labs"
+              body="Uploads, results, and trends live in the Labs service and will appear here once it's connected to your account."
+            />
+          </CardContent>
+        </Card>
+      </section>
 
       {/* Connected sources placeholder */}
       <section>
@@ -143,97 +144,7 @@ export function Records() {
         </Card>
       </section>
 
-      <RecordsChangeLog />
     </div>
-  );
-}
-
-/**
- * Labs section — lists unique test cards for whatever the patient has entered.
- * Empty state points at the manual entry dialog.
- */
-function LabsSection() {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const { data: results = [], isLoading } = useLabResults();
-  const { data: catalog } = useCatalog();
-
-  const categoryGroups = useMemo(() => {
-    const seen = new Set<string>();
-    const groups = new Map<string, string[]>();
-    for (const r of results) {
-      if (seen.has(r.test.abbreviation)) continue;
-      seen.add(r.test.abbreviation);
-      const cat = r.test.category || "Other";
-      const list = groups.get(cat);
-      if (list) list.push(r.test.abbreviation);
-      else groups.set(cat, [r.test.abbreviation]);
-    }
-    return Array.from(groups.entries()).sort(([a], [b]) => {
-      if (a === "Other") return 1;
-      if (b === "Other") return -1;
-      return a.localeCompare(b);
-    });
-  }, [results]);
-
-  return (
-    <section className="mb-6">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-h3 text-foreground">Lab values</h2>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => setUploadOpen(true)}
-          >
-            <Upload className="mr-1 h-4 w-4" /> Upload report
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => setDialogOpen(true)}
-            disabled={!catalog}
-          >
-            <Plus className="mr-1 h-4 w-4" /> Add lab result
-          </Button>
-        </div>
-      </div>
-
-      {isLoading ? (
-        <Card>
-          <CardContent className="p-6">
-            <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-          </CardContent>
-        </Card>
-      ) : categoryGroups.length === 0 ? (
-        <Card>
-          <CardContent className="p-6">
-            <EmptyState
-              title="No lab values yet"
-              body="Upload a lab report, or add values manually to see them trend over time."
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {categoryGroups.map(([category, abbrevs]) => (
-            <div key={category}>
-              <h3 className="mb-2 text-sm font-semibold text-foreground">
-                {category}
-              </h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {abbrevs.map((abbrev) => (
-                  <LabValueCard key={abbrev} testAbbrev={abbrev} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <LabManualEntryDialog open={dialogOpen} onOpenChange={setDialogOpen} />
-      <LabUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
-    </section>
   );
 }
 

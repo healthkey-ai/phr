@@ -1,4 +1,21 @@
 
+## Project context
+
+HealthKey PHR portal — the identity provider for the HealthKey service family.
+No Firebase: accounts live in this service's Postgres (`accounts_user`), auth is
+SimpleJWT (RS256 + JWKS in prod, HS256 dev fallback). Sibling services verify
+phr-issued tokens via `GET /api/v1/auth/jwks/` or `POST /api/v1/auth/introspect/`.
+
+- `backend/` — Django 5 + DRF. Apps: `accounts` (user, JWT, JWKS/introspect),
+  `patient_profile` (PatientInfo + versions), `health` (probes). Postgres via
+  `docker compose up -d db` (host port 5433); tests run on SQLite.
+- `frontend/` — Vite + React 19 + Tailwind 4. Portal shell modeled on ht-phr
+  (`src/components/layout/`), design tokens from cancerbot ui.v2 in
+  `src/index.css`. Backend proxy target: 127.0.0.1:9000.
+- Labs features were extracted to the hk-labs service; pre-extraction code is
+  on the `archive/*` branches. Git flow is dev → main; never merge archived
+  branches back.
+
 ## Skill routing
 
 When the user's request matches an available skill, ALWAYS invoke it using the Skill

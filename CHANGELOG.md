@@ -1,5 +1,43 @@
 # Changelog
 
+## Portal rebuild — phr as identity provider, no Firebase (2026-08-05)
+
+Fresh implementation of the PHR portal on `dev`, modeled on the ht-phr host app
+with the cancerbot ui.v2 color schema. Pre-rebuild code is archived on
+`archive/dev-2026-08-05` / `archive/main-2026-08-05`.
+
+### Backend
+
+- **Labs extracted**: `apps/labs`, LOINC data, Celery/Redis, object storage, and
+  LLM extraction removed — they live in the hk-labs service now. Requirements
+  trimmed from 18 to 10 packages.
+- **phr is the identity provider**: accounts stay in phr Postgres
+  (`accounts_user`). Tokens now carry `email` + `identity_level` claims, refresh
+  rotation + blacklist enabled, `POST /api/v1/auth/logout/` blacklists.
+- **Service-to-service auth**: `GET /api/v1/auth/jwks/` (RFC 7517, RS256 when a
+  `JWT_PRIVATE_KEY`/`JWT_PUBLIC_KEY` PEM pair is set) and
+  `POST /api/v1/auth/introspect/` (RFC 7662-shaped) so hk-labs & friends verify
+  phr tokens without shared secrets. `JWT_ISSUER` claim added.
+- Readiness probe rewritten: DB + pending-migrations check (the old one imported
+  a deleted labs model and always 503'd).
+- DRF throttling enabled (anon 30/min, user 120/min). 14 backend tests passing.
+- `render.yaml` slimmed to backend + frontend + Postgres (worker/Redis removed).
+- docker-compose db moved to host port 5433 to coexist with a local Postgres.
+
+### Frontend
+
+- **Stack**: React 18 → 19, Tailwind 3 → 4 (CSS-first config in `src/index.css`),
+  recharts/zod removed, lucide-react bumped.
+- **Portal shell modeled on ht-phr**: grouped sidebar (Overview / My Health /
+  Account) with disabled "Labs — Soon" entry, header with signed-in email +
+  sign-out, mobile drawer. Replaces the old 4-tab bottom-nav shell.
+- **Routes**: `/login`, `/signup` (old `/auth/sign-*` paths redirect), dashboard
+  pages unchanged, labs routes removed; Records shows a HealthKey Labs
+  placeholder section.
+- cancerbot ui.v2 tokens preserved verbatim (Manrope, brand blue ramp,
+  `shadow-card`, variable-driven dark mode).
+- No Firebase anywhere in the tree.
+
 ## Lab editor + trend chart polish + detail UX (2026-04-15)
 
 A round of polish on top of the lab trend detail route: per-row editing, a better chart, a proper sparkline, a colored trend badge, and a few UX knots straightened out.

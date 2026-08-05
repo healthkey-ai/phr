@@ -1,23 +1,19 @@
-# HealthKey — Render blueprint
+# HealthKey PHR portal — Render blueprint
 #
-# Four services + one database:
-#   1. healthkey-redis       — Redis key-value store (Celery broker + cache)
-#   2. healthkey-db          — Postgres 16 (primary operational database)
-#   3. healthkey-backend     — Django web service (DRF API + admin + health)
-#   4. healthkey-worker      — Celery worker (async jobs, lab extraction pipeline)
-#   5. healthkey-frontend    — Vite static site (patient app UI)
+# Two services + one database:
+#   1. healthkey-db          — Postgres 16 (user accounts + patient profiles;
+#                              THE identity database for the HealthKey family)
+#   2. healthkey-backend     — Django web service (DRF API + admin + health)
+#   3. healthkey-frontend    — Vite static site (portal UI)
 #
-# The worker service is in place from Phase 2a onward even though the Phase 2a
-# feature set doesn't submit tasks yet. Having the broker + worker running
-# lets Phase 2b (upload + extraction) land without a blueprint change — the
-# infrastructure is already there, we just start calling `.delay()`.
+# phr is the identity provider: sibling services (hk-labs, fhir importers, …)
+# verify phr-issued RS256 JWTs offline via GET /api/v1/auth/jwks/, or call
+# POST /api/v1/auth/introspect/ for revocation-aware checks. Set the
+# JWT_PRIVATE_KEY / JWT_PUBLIC_KEY PEM pair in the dashboard to enable RS256.
 #
-# Env var layout:
-#   - `healthkey-core-env` group holds the plain shared values (settings
-#     module, DEBUG, JWT lifetimes, feature flags). Cross-service references
-#     (fromDatabase, fromService) are NOT supported inside envVarGroups, so
-#     DATABASE_URL / CELERY_BROKER_URL / CELERY_RESULT_BACKEND live inline on
-#     each service that needs them. Keeping the duplication tight + small.
+# Env var layout: the `healthkey-core-env` group holds plain shared values.
+# Cross-service references (fromDatabase) are NOT supported inside
+# envVarGroups, so DATABASE_URL lives inline on the backend service.
 
 envVarGroups:
   - name: healthkey-core-env
@@ -39,73 +35,23 @@ envVarGroups:
       - key: CORS_ALLOWED_ORIGINS
         sync: false
 
-      # ── JWT lifetimes (patient app auth) ──────────────────────────────────
+      # ── JWT (phr is the token issuer for the service family) ─────────────
       - key: JWT_ACCESS_LIFETIME_MINUTES
         value: "15"
       - key: JWT_REFRESH_LIFETIME_DAYS
         value: "7"
-
-      # ── LLM vendor (Phase 2c onward — lab upload extraction) ──────────────
-      # LAB_UPLOAD_ENABLED stays "False" until the BAA with the active provider
-      # is signed (see TODOS.md / docs/patient-app-lab-upload-design.md §14).
-      # Flipping to "True" in the dashboard is the feature-flag rollout.
-      - key: LAB_UPLOAD_ENABLED
-        value: "False"
-      - key: LAB_LLM_PROVIDER
-        value: "claude"            # "claude" | "openai"
-      - key: ANTHROPIC_API_KEY
-        sync: false            # set in dashboard, never committed
-      - key: OPENAI_API_KEY
-        sync: false            # set in dashboard when LAB_LLM_PROVIDER=openai
-      - key: LAB_OPENAI_MODEL
-        value: "gpt-4o"
-
-      # ── Shared file storage (§9.1 of lab upload design doc) ──────────────
-      # Web + worker services live in separate containers so the local
-      # filesystem isn't shared. Uploads route to object storage so the
-      # worker can read what the web process wrote.
-      #
-      # Precedence: if GS_BUCKET_NAME is set, GCS is used. Else if
-      # AWS_STORAGE_BUCKET_NAME is set, S3 is used. Else FileSystemStorage
-      # (dev only). Pick one — setting both just ignores S3.
-
-      # Google Cloud Storage ────────────────────────────────────────────────
-      - key: GS_BUCKET_NAME
+      - key: JWT_ISSUER
+        value: "healthkey-phr"
+      # RSA keypair (PEM). Set both in the dashboard; never commit. With these
+      # set, tokens are RS256 and siblings verify via /api/v1/auth/jwks/.
+      - key: JWT_PRIVATE_KEY
         sync: false
-      - key: GS_PROJECT_ID
+      - key: JWT_PUBLIC_KEY
         sync: false
-      # Paste the full service-account key JSON as the value here (single
-      # line or multi-line both work in the Render dashboard). Never commit.
-      - key: GS_CREDENTIALS_JSON
-        sync: false
-
-      # S3-compatible (AWS, R2, B2) ─────────────────────────────────────────
-      - key: AWS_STORAGE_BUCKET_NAME
-        sync: false
-      - key: AWS_S3_REGION_NAME
-        value: "us-east-1"
-      - key: AWS_ACCESS_KEY_ID
-        sync: false
-      - key: AWS_SECRET_ACCESS_KEY
-        sync: false
-      # Leave blank for AWS S3. Set to "https://<account>.r2.cloudflarestorage.com"
-      # for R2, etc. when using an S3-compatible non-AWS backend.
-      - key: AWS_S3_ENDPOINT_URL
-        sync: false
-      - key: AWS_S3_ENCRYPTION
-        value: "AES256"     # bump to "aws:kms" once a KMS key is provisioned
 
 services:
   # ─────────────────────────────────────────────────────────────────────────
-  # 1. Redis (Render Key Value) — Celery broker + result backend
-  # ─────────────────────────────────────────────────────────────────────────
-  - type: keyvalue
-    name: healthkey-redis
-    plan: free               # free tier has 25MB — enough for Phase 2a/b volume
-    ipAllowList: []          # internal-only (services in this blueprint)
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # 2. Django web service (DRF API + admin + health checks)
+  # 1. Django web service (DRF API + admin + health checks)
   # ─────────────────────────────────────────────────────────────────────────
   - type: web
     name: healthkey-backend
@@ -115,9 +61,8 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
 
-    # Runs once per deploy before traffic is routed. Migrates the DB, loads
-    # the lab catalog fixture, collects static files. Idempotent, so replays
-    # on redeploy are safe.
+    # Runs once per deploy before traffic is routed. Migrates the DB and
+    # collects static files. Idempotent, so replays on redeploy are safe.
     preDeployCommand: ./scripts/pre-deploy.sh
 
     healthCheckPath: /health-check/
@@ -125,70 +70,14 @@ services:
     envVars:
       - fromGroup: healthkey-core-env
 
-      # ── Cross-service refs (must live inline; not allowed in groups) ──
+      # Cross-service ref (must live inline; not allowed in groups)
       - key: DATABASE_URL
         fromDatabase:
           name: healthkey-db
           property: connectionString
-      - key: CELERY_BROKER_URL
-        fromService:
-          type: keyvalue
-          name: healthkey-redis
-          property: connectionString
-      - key: CELERY_RESULT_BACKEND
-        fromService:
-          type: keyvalue
-          name: healthkey-redis
-          property: connectionString
 
   # ─────────────────────────────────────────────────────────────────────────
-  # 3. Celery worker service (async jobs — Phase 2b+ lab extraction pipeline)
-  # ─────────────────────────────────────────────────────────────────────────
-  # Boots even in Phase 2a (no tasks yet) so the broker + worker wiring is
-  # verified before Phase 2b introduces real tasks. `config.celery` auto-
-  # discovers any app's `tasks.py`, so new tasks ship without a blueprint
-  # change.
-  - type: worker
-    name: healthkey-worker
-    runtime: docker
-    plan: starter
-
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
-
-    # Override the Dockerfile's gunicorn CMD to run the Celery worker.
-    # --concurrency=2 matches the starter plan's 0.5 CPU — spinning up more
-    # workers than the box can run just thrashes. Bump with the plan.
-    dockerCommand: >
-      celery -A config worker
-      --loglevel=info
-      --concurrency=2
-      --max-tasks-per-child=100
-      --without-gossip
-      --without-mingle
-
-    envVars:
-      - fromGroup: healthkey-core-env
-
-      # ── Cross-service refs (same as backend; the worker needs the same
-      # database + broker as the web process) ─────────────────────────────
-      - key: DATABASE_URL
-        fromDatabase:
-          name: healthkey-db
-          property: connectionString
-      - key: CELERY_BROKER_URL
-        fromService:
-          type: keyvalue
-          name: healthkey-redis
-          property: connectionString
-      - key: CELERY_RESULT_BACKEND
-        fromService:
-          type: keyvalue
-          name: healthkey-redis
-          property: connectionString
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # 4. Vite frontend (static site)
+  # 2. Vite frontend (static site)
   # ─────────────────────────────────────────────────────────────────────────
   - type: web
     name: healthkey-frontend
@@ -213,7 +102,7 @@ services:
 
 databases:
   - name: healthkey-db
-    plan: basic-256mb          # ~256MB storage, ample for Phase 2a
+    plan: basic-256mb
     postgresMajorVersion: "16"
     databaseName: healthkey
     # The Postgres service emits a `connectionString` property that Django

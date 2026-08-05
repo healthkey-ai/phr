@@ -80,6 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = () => {
+    const refresh = authStore.getRefreshToken();
+    if (refresh) {
+      // Best-effort server-side blacklist; local state clears regardless.
+      api.post("/auth/logout/", { refresh }).catch(() => {});
+    }
     authStore.clear();
     queryClient.clear();
   };

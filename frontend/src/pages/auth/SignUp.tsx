@@ -1,5 +1,5 @@
 /**
- * Sign Up — /auth/sign-up
+ * Sign Up — /signup
  * Per docs/patient-app-design.md §5.1.
  *
  * Hierarchy: Brand → "Create your account" → email/password → CTA → terms.
@@ -196,7 +196,7 @@ export function SignUp() {
 
           <p className="text-center text-body text-muted-foreground">
             Already have an account?{" "}
-            <Link to="/auth/sign-in" className="font-semibold text-brand-700 hover:underline">
+            <Link to="/login" className="font-semibold text-brand-700 hover:underline">
               Sign in
             </Link>
           </p>

@@ -6,7 +6,8 @@ services:
       POSTGRES_USER: healthkey
       POSTGRES_PASSWORD: dev_only_change_in_prod
     ports:
-      - "5432:5432"
+      # 5433 on the host: leaves any locally-installed Postgres on 5432 alone
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
