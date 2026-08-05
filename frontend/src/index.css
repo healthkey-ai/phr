@@ -1,0 +1,360 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * HealthKey design system — palette sourced from cancerbot ui.v2
+ * (client/global.css). All colors are HSL triplets consumed as
+ * hsl(var(--x)); dark mode re-points the variables (no dark: sprinkling).
+ *
+ *   Brand: deep blue #0B4A9D (--brand-700), link blue #0559C6 (--brand-primary-alt)
+ *   Font: Manrope
+ */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 212 87% 33%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 212 87% 33%;
+  --radius: 0.5rem;
+
+  /* Backgrounds */
+  --app-bg-primary: 0 0% 100%;
+  --app-bg-secondary: 0 0% 98%;
+  --app-bg-active: 0 0% 98%;
+
+  /* Text */
+  --text-primary-900: 216 17% 14%;
+  --text-secondary-700: 220 9% 32%;
+  --text-quaternary-500: 218 8% 46%;
+  --text-disabled: 0 0% 83%;
+  --text-brand-secondary-700: 212 87% 33%;
+  --text-white: 0 0% 100%;
+
+  /* Borders */
+  --border-secondary: 0 0% 91.4%;
+
+  /* Gray scale */
+  --gray-50: 0 0% 98%;
+  --gray-100: 0 0% 96%;
+  --gray-200: 0 0% 91.4%;
+  --gray-700: 220 9% 32%;
+
+  /* Brand — blue ramp + green accent */
+  --brand-25: 199 100% 97%;
+  --brand-50: 199 100% 92%;
+  --brand-200: 199 100% 64%;
+  --brand-700: 212 87% 33%;
+  --brand-primary-alt: 212 95% 40%;
+  --brand-green-500: 146 70% 45%;
+
+  /* Semantic */
+  --success-50: 152 88% 95%;
+  --success-200: 152 68% 81%;
+  --success-700: 152 91% 29%;
+  --warning-50: 48 100% 96%;
+  --warning-200: 43 98% 77%;
+  --warning-700: 25 95% 37%;
+  --error-50: 4 86% 97%;
+  --error-200: 5 86% 89%;
+  --error-700: 5 79% 40%;
+
+  /* Links */
+  --link-primary: 212 95% 40%;
+  --link-primary-hover: 212 87% 33%;
+
+  /* hk-labs federation contract — themed to the HealthKey blue ramp */
+  --hk-labs-bg-primary: var(--app-bg-primary);
+  --hk-labs-bg-secondary: var(--app-bg-secondary);
+  --hk-labs-bg-active: var(--app-bg-active);
+  --hk-labs-text-primary: var(--text-primary-900);
+  --hk-labs-text-secondary: var(--text-secondary-700);
+  --hk-labs-text-tertiary: var(--text-quaternary-500);
+  --hk-labs-text-disabled: var(--text-disabled);
+  --hk-labs-text-brand: var(--text-brand-secondary-700);
+  --hk-labs-text-white: var(--text-white);
+  --hk-labs-border-secondary: var(--border-secondary);
+  --hk-labs-gray-50: var(--gray-50);
+  --hk-labs-gray-100: var(--gray-100);
+  --hk-labs-gray-200: var(--gray-200);
+  --hk-labs-gray-700: var(--gray-700);
+  --hk-labs-brand-25: var(--brand-25);
+  --hk-labs-brand-50: var(--brand-50);
+  --hk-labs-brand-200: var(--brand-200);
+  --hk-labs-brand-700: var(--brand-700);
+  --hk-labs-brand-alt: var(--brand-primary-alt);
+  --hk-labs-brand-green: var(--brand-green-500);
+  --hk-labs-link-primary: var(--link-primary);
+  --hk-labs-link-hover: var(--link-primary-hover);
+  --hk-labs-success-50: var(--success-50);
+  --hk-labs-success-200: var(--success-200);
+  --hk-labs-success-700: var(--success-700);
+  --hk-labs-warning-50: var(--warning-50);
+  --hk-labs-warning-200: var(--warning-200);
+  --hk-labs-warning-700: var(--warning-700);
+  --hk-labs-error-50: var(--error-50);
+  --hk-labs-error-200: var(--error-200);
+  --hk-labs-error-700: var(--error-700);
+  --hk-labs-radius: 0.5rem;
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 212 87% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
+
+  --app-bg-secondary: 220 13% 10%;
+  --app-bg-primary: 220 13% 13%;
+  --app-bg-active: 220 13% 16%;
+
+  --text-primary-900: 216 17% 92%;
+  --text-secondary-700: 220 9% 72%;
+  --text-quaternary-500: 218 8% 55%;
+  --text-disabled: 0 0% 35%;
+  --text-brand-secondary-700: 212 87% 67%;
+  --text-white: 0 0% 100%;
+
+  --border-secondary: 220 13% 22%;
+
+  --gray-50: 220 13% 10%;
+  --gray-100: 220 13% 14%;
+  --gray-200: 220 13% 22%;
+  --gray-700: 220 9% 72%;
+
+  --brand-25: 199 40% 12%;
+  --brand-50: 199 50% 18%;
+  --brand-200: 199 70% 35%;
+  --brand-700: 212 87% 60%;
+  --brand-primary-alt: 212 95% 65%;
+  --brand-green-500: 146 70% 45%;
+
+  --success-50: 152 40% 12%;
+  --success-200: 152 50% 25%;
+  --success-700: 152 70% 45%;
+  --warning-50: 48 50% 12%;
+  --warning-200: 43 60% 30%;
+  --warning-700: 25 85% 55%;
+  --error-50: 4 50% 12%;
+  --error-200: 5 60% 28%;
+  --error-700: 5 70% 55%;
+
+  --link-primary: 212 95% 65%;
+  --link-primary-hover: 212 87% 60%;
+}
+
+@theme inline {
+  /* shadcn semantic tokens */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --radius: 0.5rem;
+
+  /* HealthKey namespace */
+  --color-healthkey-bg-primary: hsl(var(--app-bg-primary));
+  --color-healthkey-bg-secondary: hsl(var(--app-bg-secondary));
+  --color-healthkey-bg-active: hsl(var(--app-bg-active));
+  --color-healthkey-text-primary: hsl(var(--text-primary-900));
+  --color-healthkey-text-secondary: hsl(var(--text-secondary-700));
+  --color-healthkey-text-tertiary: hsl(var(--text-quaternary-500));
+  --color-healthkey-text-quaternary: hsl(var(--text-quaternary-500));
+  --color-healthkey-text-disabled: hsl(var(--text-disabled));
+  --color-healthkey-text-brand: hsl(var(--text-brand-secondary-700));
+  --color-healthkey-text-white: hsl(var(--text-white));
+  --color-healthkey-border-secondary: hsl(var(--border-secondary));
+  --color-healthkey-gray-50: hsl(var(--gray-50));
+  --color-healthkey-gray-100: hsl(var(--gray-100));
+  --color-healthkey-gray-200: hsl(var(--gray-200));
+  --color-healthkey-gray-700: hsl(var(--gray-700));
+  --color-healthkey-link-primary: hsl(var(--link-primary));
+  --color-healthkey-link-hover: hsl(var(--link-primary-hover));
+
+  /* Brand scale */
+  --color-brand-25: hsl(var(--brand-25));
+  --color-brand-50: hsl(var(--brand-50));
+  --color-brand-200: hsl(var(--brand-200));
+  --color-brand-700: hsl(var(--brand-700));
+  --color-brand-alt: hsl(var(--brand-primary-alt));
+  --color-brand-green: hsl(var(--brand-green-500));
+  --color-brand: hsl(var(--brand-700));
+  --color-brand-dark: hsl(var(--link-primary-hover));
+  --color-brand-light: hsl(var(--brand-200));
+
+  /* Status scales */
+  --color-success-50: hsl(var(--success-50));
+  --color-success-200: hsl(var(--success-200));
+  --color-success-700: hsl(var(--success-700));
+  --color-warning-50: hsl(var(--warning-50));
+  --color-warning-200: hsl(var(--warning-200));
+  --color-warning-700: hsl(var(--warning-700));
+  --color-error-50: hsl(var(--error-50));
+  --color-error-200: hsl(var(--error-200));
+  --color-error-700: hsl(var(--error-700));
+
+  --font-sans: "Manrope", -apple-system, "Roboto", "Helvetica", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+
+  /* Shadows — near-black navy ink per cancerbot ui.v2 */
+  --shadow-default: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+  --shadow-lg: 0 10px 15px rgba(10, 13, 18, 0.1);
+
+  /* Custom font sizes shared with federated components */
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  pre,
+  code {
+    overflow-x: auto;
+    white-space: pre;
+  }
+}
+
+/* cancerbot ui.v2 signature card shadow — crisp 1px inset ring + subtle
+   bottom bevel, no actual border. */
+@utility shadow-card {
+  box-shadow:
+    0 0 0 1px rgba(10, 13, 18, 0.18) inset,
+    0 -2px 0 0 rgba(10, 13, 18, 0.05) inset,
+    0 1px 2px 0 rgba(10, 13, 18, 0.05);
+}
+
+@utility shadow-sm-soft {
+  box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
+}
+
+/* Remap any remote's indigo defaults onto the HealthKey brand blue. */
+.hk-labs-root {
+  --color-indigo-600: hsl(var(--brand-primary-alt));
+  --color-indigo-700: hsl(var(--brand-700));
+}
+
+/* Normalize federated-component headings to match the host style.
+   Specificity (0,1,1) beats Tailwind single-class utilities (0,1,0). */
+.federated-content :is(h1, h2) {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 500;
+  color: hsl(var(--foreground) / 0.7);
+}
+.federated-content h3 {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: hsl(var(--foreground) / 0.7);
+}
+
+/*
+ * tailwindcss-animate compatibility — keyframes used by federated Dialog/
+ * Sheet components (animate-in, animate-out, fade-in/out, zoom-in/out).
+ */
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+      scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1))
+      rotate(var(--tw-enter-rotate, 0));
+  }
+}
+
+@keyframes exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+      scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1))
+      rotate(var(--tw-exit-rotate, 0));
+  }
+}
+
+@utility animate-in {
+  animation: enter 150ms ease-out;
+}
+@utility animate-out {
+  animation: exit 150ms ease-in forwards;
+}
+@utility fade-in-0 {
+  --tw-enter-opacity: 0;
+}
+@utility fade-out-0 {
+  --tw-exit-opacity: 0;
+}
+@utility zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+@utility zoom-out-95 {
+  --tw-exit-scale: 0.95;
+}
