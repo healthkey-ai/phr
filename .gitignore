@@ -228,3 +228,5 @@ loinc-codes-aliases.zip
 loinc-codes-aliases.zip.unpacked/
 loinc-codes-aliases*/
 curated_loinc_aliases.json
+backend/healthtree-test-firebase.json
+frontend/.mf/diagnostics/latest.json
