@@ -3,10 +3,11 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   UserCircle,
-  ClipboardList,
   TestTubes,
   Upload,
   FileHeart,
+  Search,
+  Microscope,
   Link2,
   ChevronDown,
   Menu,
@@ -38,11 +39,13 @@ const navGroups: NavGroup[] = [
   {
     label: "My Health",
     items: [
-      { label: "Health Profile", to: "/profile", icon: UserCircle },
-      { label: "Patient Record", to: "/patient/record", icon: ClipboardList },
-      { label: "Upload Lab Reports", to: "/labs/uploads", icon: Upload },
-      { label: "Lab Results", to: "/labs/results", icon: TestTubes },
+      // Only items with a connected federated module are enabled.
+      { label: "Health Profile", to: "/patient/record", icon: UserCircle },
       { label: "Connect Records", to: "/connect/records", icon: FileHeart, disabled: true },
+      { label: "Upload Lab Reports", to: "/labs/uploads", icon: Upload, disabled: true },
+      { label: "Lab Results", to: "/labs/results", icon: TestTubes, disabled: true },
+      { label: "Find Treatments", to: "/treatments", icon: Search, disabled: true },
+      { label: "Find Trials", to: "/trials", icon: Microscope, disabled: true },
     ],
   },
   {
