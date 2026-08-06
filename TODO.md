@@ -1,13 +1,5 @@
 # TODO
 
-- [ ] **Quick win: serve Lab Results from promop's remote (no new deploys)** ([#41](https://github.com/healthkey-ai/phr/issues/41))
-  promop's deployed remote already exposes `./LabResults` (backed by its
-  OMOP measurements) on the same `remoteEntry.js` phr loads for the
-  Health Profile. Point the Lab Results pages at
-  `labs_results_remote/LabResults` with `usePromopApi`, re-enable the
-  "Lab Results" menu item, verify on phr-ipyr. ~1 hour; uploads still
-  wait for hk-labs below.
-
 - [ ] **Deploy hk-labs to GCP AND Render; federate it like promop** ([#42](https://github.com/healthkey-ai/phr/issues/42))
   hk-labs (`../hk-labs`) holds the extracted labs stack (upload pipeline,
   LOINC matching, results UI, `labs_remote` exposing `./LabUploads` /
@@ -57,6 +49,10 @@
 
 ## Done
 
+- [x] Lab Results served from promop's federated remote (#41 / PR #46) —
+  menu item enabled, verified live on phr-ipyr; review hardening included
+  (person-provisioning warm-up, URL-encoded concept codes, back-nav and
+  scroll-restore fixes, recharts unshared).
 - [x] Local `patient_profile` app removed — the federated promop PatientInfo
   is the single patient-data store; registration no longer creates local
   profile rows and `/api/v1/profile/` is gone.
