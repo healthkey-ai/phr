@@ -11,7 +11,6 @@ import LabResultsPage from "@/pages/labs/LabResultsPage";
 import LabResultDetailPage from "@/pages/labs/LabResultDetailPage";
 import LabUploadsPage from "@/pages/labs/LabUploadsPage";
 import PatientRecordPage from "@/pages/patient/PatientRecordPage";
-import ProfilePage from "@/pages/profile/ProfilePage";
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
 import RolesPage from "@/pages/admin/RolesPage";
 
@@ -35,11 +34,16 @@ export default function App() {
             {/* Authenticated — sidebar layout */}
             <Route element={<Guard allow={(u) => !!u}><AppLayout /></Guard>}>
               <Route path="/dashboard" element={<DashboardPage />} />
+              {/* Labs routes stay registered while their menu items are
+                  disabled: deep links keep working during the hk-labs
+                  transition and degrade to the remote-unavailable card. */}
               <Route path="/labs/results" element={<LabResultsPage />} />
               <Route path="/labs/results/:test" element={<LabResultDetailPage />} />
               <Route path="/labs/uploads" element={<LabUploadsPage />} />
               <Route path="/patient/record" element={<PatientRecordPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
+              {/* The local profile page was replaced by the federated Health
+                  Profile (promop PatientInfo) at /patient/record. */}
+              <Route path="/profile" element={<Navigate to="/patient/record" replace />} />
             </Route>
 
             {/* Admin (requires ADMIN role) */}

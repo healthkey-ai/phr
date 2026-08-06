@@ -1,12 +1,13 @@
-import { lazy, Suspense, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { RemoteBoundary } from "@/components/RemoteFallback";
 import { useLabsApi } from "@/hooks/useApi";
+import { lazyRemote } from "@/lib/lazyRemote";
 
 const SCROLL_KEY = "lab-results-scroll";
-const LabResults = lazy(() => import("labs_remote/LabResults"));
+const LabResults = lazyRemote(() => import("labs_remote/LabResults"));
 
 export default function LabResultsPage() {
   const apiClient = useLabsApi();

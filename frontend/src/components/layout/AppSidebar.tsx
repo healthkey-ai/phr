@@ -3,10 +3,11 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   UserCircle,
-  ClipboardList,
   TestTubes,
   Upload,
   FileHeart,
+  Search,
+  Microscope,
   Link2,
   ChevronDown,
   Menu,
@@ -38,11 +39,17 @@ const navGroups: NavGroup[] = [
   {
     label: "My Health",
     items: [
-      { label: "Health Profile", to: "/profile", icon: UserCircle },
-      { label: "Patient Record", to: "/patient/record", icon: ClipboardList },
-      { label: "Upload Lab Reports", to: "/labs/uploads", icon: Upload },
-      { label: "Lab Results", to: "/labs/results", icon: TestTubes },
+      // Only items with a connected federated module are enabled. The labs
+      // routes stay registered in App.tsx so deep links keep working during
+      // the hk-labs transition; /connect/records, /treatments, /trials and
+      // /share have NO routes yet — register them before enabling the item,
+      // or the catch-all silently bounces users to /dashboard.
+      { label: "Health Profile", to: "/patient/record", icon: UserCircle },
       { label: "Connect Records", to: "/connect/records", icon: FileHeart, disabled: true },
+      { label: "Upload Lab Reports", to: "/labs/uploads", icon: Upload, disabled: true },
+      { label: "Lab Results", to: "/labs/results", icon: TestTubes, disabled: true },
+      { label: "Find Treatments", to: "/treatments", icon: Search, disabled: true },
+      { label: "Find Trials", to: "/trials", icon: Microscope, disabled: true },
     ],
   },
   {
@@ -75,7 +82,8 @@ function NavGroupSection({ group, iconOnly }: { group: NavGroup; iconOnly: boole
               return (
                 <span
                   key={item.to}
-                  title={iconOnly ? item.label : undefined}
+                  aria-disabled="true"
+                  title={iconOnly ? item.label : "Coming soon"}
                   className={cn(
                     "flex items-center rounded text-muted-foreground/50 cursor-not-allowed",
                     iconOnly ? "justify-center p-2" : "gap-2.5 px-2.5 py-1.5 text-sm"

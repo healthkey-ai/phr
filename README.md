@@ -31,7 +31,7 @@ phr/
 │       ├── components/      # layout (sidebar/header shells), ui (shadcn), guards
 │       ├── contexts/        # AuthContext (JWT session)
 │       ├── hooks/           # useApi (pre-authed clients per service), useAuth
-│       ├── pages/           # auth, dashboard, profile, patient + labs (federated), admin
+│       ├── pages/           # auth, dashboard, patient + labs (federated), admin
 │       └── lib/             # authStore (access in memory, refresh in localStorage)
 └── Dockerfile               # single container: Django serves API + built SPA
 ```

@@ -1,11 +1,15 @@
 import { useMemo } from "react";
 import axios from "axios";
 import { authStore } from "@/lib/authStore";
+import { refreshAccessToken } from "@/api/client";
 
 /**
  * Pre-authenticated axios factory for a sibling service. The phr-issued
  * access token is attached per request; the remote component only ever
- * sees an opaque configured client.
+ * sees an opaque configured client. On 401 the client refreshes the
+ * access token (deduped with the host client's refresh) and retries once
+ * — without this, a user lingering on a federated page past token TTL
+ * gets bare 401s inside the remote with no recovery.
  */
 function useServiceApi(baseURL: string) {
   return useMemo(() => {
@@ -21,6 +25,24 @@ function useServiceApi(baseURL: string) {
       }
       return config;
     });
+
+    client.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response?.status === 401 && !error.config._retry && authStore.getRefreshToken()) {
+          error.config._retry = true;
+          try {
+            const token = await refreshAccessToken();
+            error.config.headers.Authorization = `Bearer ${token}`;
+            return client.request(error.config);
+          } catch {
+            // Refresh failed — session is gone; the host auth store clears
+            // and the guard redirects on the next route interaction.
+          }
+        }
+        return Promise.reject(error as Error);
+      },
+    );
 
     return client;
   }, [baseURL]);
