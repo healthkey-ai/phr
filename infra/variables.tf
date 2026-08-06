@@ -34,3 +34,15 @@ variable "cors_allowed_origins" {
   type        = string
   default     = ""
 }
+
+variable "promop_remote_url" {
+  description = "Origin serving promop's federation remote (remoteEntry.js under /remote/)."
+  type        = string
+  default     = "https://promop-staging.onrender.com/remote"
+}
+
+variable "promop_api_url" {
+  description = "promop API base used by the federated PatientInfo component."
+  type        = string
+  default     = "https://promop-staging.onrender.com/api"
+}
