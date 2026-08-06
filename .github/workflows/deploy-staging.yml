@@ -1,0 +1,58 @@
+name: Deploy staging
+
+on:
+  push:
+    branches: [dev]
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Deploy to Render (staging)
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        id: trigger
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_ID: ${{ vars.RENDER_STAGING_SERVICE_ID }}
+        run: |
+          DEPLOY_ID=$(curl -sf -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            "https://api.render.com/v1/services/$SERVICE_ID/deploys" \
+            -d '{}' | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
+          echo "deploy_id=$DEPLOY_ID" >> "$GITHUB_OUTPUT"
+          echo "Triggered deploy $DEPLOY_ID"
+
+      - name: Wait for deploy to go live
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_ID: ${{ vars.RENDER_STAGING_SERVICE_ID }}
+          DEPLOY_ID: ${{ steps.trigger.outputs.deploy_id }}
+        run: |
+          for i in $(seq 1 60); do
+            STATUS=$(curl -sf -H "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/services/$SERVICE_ID/deploys/$DEPLOY_ID" \
+              | python3 -c "import json,sys; print(json.load(sys.stdin)['status'])")
+            echo "[$i] $STATUS"
+            case "$STATUS" in
+              live) exit 0 ;;
+              build_failed|update_failed|pre_deploy_failed|canceled|deactivated)
+                echo "Deploy failed with status: $STATUS"; exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "Timed out waiting for deploy"; exit 1
+
+      - name: Smoke check
+        run: |
+          curl -sf --max-time 30 https://phr-ipyr.onrender.com/api/v1/health/
+          curl -sf --max-time 30 https://phr-ipyr.onrender.com/api/v1/auth/jwks/ >/dev/null
+          echo "staging healthy"

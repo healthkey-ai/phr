@@ -1,0 +1,17 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to production (not configured)
+    runs-on: ubuntu-latest
+    steps:
+      - name: No-op
+        run: |
+          echo "Production deployment is not set up yet."
+          echo "When production infrastructure exists (see infra/), mirror"
+          echo "deploy-staging.yml with the production service id + a"
+          echo "production health check."
