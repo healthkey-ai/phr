@@ -33,6 +33,21 @@
      deployment phr should consume, re-enable "Upload Lab Reports" (and
      "Lab Results", if not already on promop's) in AppSidebar.
 
+- [ ] **Multi-installation identity: promop as identity host (see docs/identity-architecture.md)**
+  Decisions made 2026-08-06: family auth API contract (phr's endpoint
+  shapes) implementable by any identity host; iss = installation origin;
+  1 branded install = 1 promop Organization; embedded login form primary,
+  OIDC SSO via promop's /o/ optional. Build order:
+  1. promop: enable OIDC issuance (OIDC_RSA_PRIVATE_KEY/ISS_ENDPOINT +
+     claims validator) — JWKS is already routed, just keyless.
+  2. promop: contract endpoints (login/refresh/logout/jwks/introspect,
+     org-scoped, RS256).
+  3. Services: trusted-issuer registry (generalize PhrTokenProvider in
+     promop + hk-labs); phr installs set JWT_ISSUER to their origin.
+  4. promop: per-org branding + redirect allow-list + per-brand
+     APP_BASE_URL emails; canonical email-resolution rule; tighten
+     CsrfExemptSessionAuthentication.
+
 - [ ] **Turn off `DEBUG` on promop staging and production**
   Both Render services still run with `DEBUG=True` (Django debug pages +
   allow-all CORS on a live clinical app). Flipping it requires setting
