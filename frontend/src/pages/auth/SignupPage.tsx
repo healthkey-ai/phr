@@ -28,11 +28,16 @@ export default function SignupPage() {
       {
         onSuccess: async () => { await reload(); navigate("/dashboard"); },
         onError: (err) => {
-          const detail = (err as { response?: { data?: Record<string, string[]> } })
-            .response?.data;
-          const firstMessage = detail && Object.values(detail).flat()[0];
+          // Only DRF field-error objects carry a useful message; a 500's
+          // HTML body is a string, and Object.values on a string yields
+          // characters (the infamous empty-looking "<" alert).
+          const detail = (err as { response?: { data?: unknown } }).response?.data;
+          let firstMessage: unknown;
+          if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+            firstMessage = Object.values(detail as Record<string, unknown>).flat()[0];
+          }
           setError(
-            typeof firstMessage === "string"
+            typeof firstMessage === "string" && firstMessage.length > 1
               ? firstMessage
               : "Registration failed. Please try again.",
           );
