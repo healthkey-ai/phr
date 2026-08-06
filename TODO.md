@@ -1,12 +1,5 @@
 # TODO
 
-- [ ] **Decide the fate of the local `patient_profile` data/endpoint**
-  The federated Health Profile (promop PatientInfo) replaced the local
-  profile page, but `/api/v1/profile/` (onboarding_step + JSONB details)
-  still exists and registration still creates rows. Any details users
-  entered pre-federation are stranded there. Options: migrate details into
-  promop, repurpose the app as onboarding-state-only, or remove it.
-
 - [ ] **Add lab uploads + results to hk-labs and federate it like promop**
   The extracted labs code (upload pipeline, LOINC matching, results UI,
   `labs_remote` federation with `./LabUploads` / `./LabResults`) lives on
@@ -29,6 +22,9 @@
 
 ## Done
 
+- [x] Local `patient_profile` app removed — the federated promop PatientInfo
+  is the single patient-data store; registration no longer creates local
+  profile rows and `/api/v1/profile/` is gone.
 - [x] promop-staging wired to phr (`PHR_BASE_URL` + CORS set, promop PR #388
   merged, remote served at `/remote/remoteEntry.js`, phr tokens verified via
   deployed JWKS).

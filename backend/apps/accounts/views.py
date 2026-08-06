@@ -34,10 +34,6 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Every account gets an (empty) patient profile from day one.
-        from apps.patient_profile.models import PatientProfile
-        PatientProfile.objects.get_or_create(user=user)
-
         return Response(
             {"user": UserSerializer(user).data, "tokens": tokens_for_user(user)},
             status=status.HTTP_201_CREATED,

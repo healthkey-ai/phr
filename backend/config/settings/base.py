@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     "corsheaders",
     # Local apps
     "apps.accounts",
-    "apps.patient_profile",
     "apps.health",
 ]
 

@@ -7,8 +7,9 @@ fallback). Sibling services verify phr-issued tokens via
 `GET /api/v1/auth/jwks/` or `POST /api/v1/auth/introspect/`.
 
 - `backend/` — Django 5 + DRF. Apps: `accounts` (email-first user, JWT,
-  JWKS/introspection, ADMIN/MEDICAL_RECORDS roles), `patient_profile`
-  (onboarding state + JSONB details), `health`. Run on 127.0.0.1:9000.
+  JWKS/introspection, ADMIN/MEDICAL_RECORDS roles), `health`. Patient
+  data lives in federated services (promop), not here. Run on
+  127.0.0.1:9000.
 - `frontend/` — Vite + React 19 + Tailwind 4, Module Federation host
   (`phr_host`) consuming hk-labs' `labs_remote`. Design system: cancerbot
   ui.v2 palette (Manrope, HealthKey blue #0B4A9D) in `src/index.css`,

@@ -22,7 +22,6 @@ phr/
 ├── backend/                 # Django 5 + DRF
 │   ├── apps/
 │   │   ├── accounts/        # Email-first User, JWT, JWKS + introspection, roles
-│   │   ├── patient_profile/ # Onboarding state + JSONB health details
 │   │   └── health/          # Health check
 │   ├── config/              # settings, urls, wsgi
 │   └── tests/
@@ -75,7 +74,7 @@ App at http://localhost:5173/ — proxies `/api` to the backend.
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /api/v1/auth/register/` | Create account (+ empty profile), returns user + token pair |
+| `POST /api/v1/auth/register/` | Create account, returns user + token pair |
 | `POST /api/v1/auth/login/` | Email/password → access + refresh JWT |
 | `POST /api/v1/auth/refresh/` | Rotate refresh → new pair (old refresh blacklisted) |
 | `POST /api/v1/auth/logout/` | Blacklist a refresh token |
