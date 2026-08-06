@@ -63,7 +63,9 @@ resource "render_web_service" "backend" {
       branch          = var.deploy_branch
       dockerfile_path = "./Dockerfile"
       context         = "."
-      auto_deploy     = true
+      # Deploys are driven by the deploy-staging GitHub workflow after CI
+      # passes — Render must not race it with its own push-triggered deploy.
+      auto_deploy     = false
     }
   }
 
