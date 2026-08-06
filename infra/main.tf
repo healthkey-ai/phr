@@ -92,5 +92,10 @@ resource "render_web_service" "backend" {
 
     # Same-origin SPA; CORS list stays empty unless another origin needs in.
     CORS_ALLOWED_ORIGINS = { value = var.cors_allowed_origins }
+
+    # Federated-remote origins — consumed at Docker BUILD time (the
+    # Dockerfile declares matching ARGs) and baked into the SPA bundle.
+    VITE_PROMOP_REMOTE_URL = { value = var.promop_remote_url }
+    VITE_PROMOP_API_URL    = { value = var.promop_api_url }
   }
 }

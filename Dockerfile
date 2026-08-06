@@ -1,5 +1,19 @@
 # Stage 1: Build frontend
 FROM node:22-alpine AS frontend-build
+
+# Federated-remote origins are baked into the bundle at build time. Render
+# passes service env vars into Docker builds for ARG-declared names — set
+# these on the service (infra/main.tf) or the SPA falls back to localhost
+# defaults and the federated pages can't load their modules.
+ARG VITE_PROMOP_REMOTE_URL
+ARG VITE_PROMOP_API_URL
+ARG VITE_LABS_REMOTE_URL
+ARG VITE_LABS_API_URL
+ENV VITE_PROMOP_REMOTE_URL=$VITE_PROMOP_REMOTE_URL \
+    VITE_PROMOP_API_URL=$VITE_PROMOP_API_URL \
+    VITE_LABS_REMOTE_URL=$VITE_LABS_REMOTE_URL \
+    VITE_LABS_API_URL=$VITE_LABS_API_URL
+
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
