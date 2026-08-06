@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const apiProxyTarget = env.VITE_API_PROXY_TARGET || "http://localhost:9000";
   const labsRemoteUrl = env.VITE_LABS_REMOTE_URL || "http://localhost:5175";
+  const promopRemoteUrl = env.VITE_PROMOP_REMOTE_URL || "http://localhost:3001";
 
   const enableFederation = mode !== "test";
 
@@ -22,10 +23,12 @@ export default defineConfig(({ mode }) => {
       name: "federation-stubs",
       enforce: "pre",
       resolveId(id) {
-        if (id.startsWith("labs_remote/")) return `\0${id}`;
+        if (id.startsWith("labs_remote/") || id.startsWith("labs_results_remote/"))
+          return `\0${id}`;
       },
       load(id) {
-        if (id.startsWith("\0labs_remote/")) return STUB;
+        if (id.startsWith("\0labs_remote/") || id.startsWith("\0labs_results_remote/"))
+          return STUB;
       },
     };
   }
@@ -107,6 +110,13 @@ export default defineConfig(({ mode }) => {
                   type: "module",
                   name: "labs_remote",
                   entry: `${labsRemoteUrl}/remoteEntry.js`,
+                },
+                // promop — patient record (PatientInfo). The remote's name is
+                // "labs_results_remote" on the promop side; keep it verbatim.
+                labs_results_remote: {
+                  type: "module",
+                  name: "labs_results_remote",
+                  entry: `${promopRemoteUrl}/remoteEntry.js`,
                 },
               },
               dts: false,

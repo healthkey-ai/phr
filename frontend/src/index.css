@@ -112,6 +112,40 @@
   --hk-labs-error-200: var(--error-200);
   --hk-labs-error-700: var(--error-700);
   --hk-labs-radius: 0.5rem;
+
+  /* promop federation contract (PatientInfo remote) — same ramp */
+  --promop-bg-primary: var(--app-bg-primary);
+  --promop-bg-secondary: var(--app-bg-secondary);
+  --promop-bg-active: var(--app-bg-active);
+  --promop-text-primary: var(--text-primary-900);
+  --promop-text-secondary: var(--text-secondary-700);
+  --promop-text-tertiary: var(--text-quaternary-500);
+  --promop-text-disabled: var(--text-disabled);
+  --promop-text-brand: var(--text-brand-secondary-700);
+  --promop-text-white: var(--text-white);
+  --promop-border-secondary: var(--border-secondary);
+  --promop-gray-50: var(--gray-50);
+  --promop-gray-100: var(--gray-100);
+  --promop-gray-200: var(--gray-200);
+  --promop-gray-700: var(--gray-700);
+  --promop-brand-25: var(--brand-25);
+  --promop-brand-50: var(--brand-50);
+  --promop-brand-200: var(--brand-200);
+  --promop-brand-700: var(--brand-700);
+  --promop-brand-alt: var(--brand-primary-alt);
+  --promop-brand-green: var(--brand-green-500);
+  --promop-link-primary: var(--link-primary);
+  --promop-link-hover: var(--link-primary-hover);
+  --promop-success-50: var(--success-50);
+  --promop-success-200: var(--success-200);
+  --promop-success-700: var(--success-700);
+  --promop-warning-50: var(--warning-50);
+  --promop-warning-200: var(--warning-200);
+  --promop-warning-700: var(--warning-700);
+  --promop-error-50: var(--error-50);
+  --promop-error-200: var(--error-200);
+  --promop-error-700: var(--error-700);
+  --promop-radius: 0.5rem;
 }
 
 .dark {
@@ -298,7 +332,8 @@
 }
 
 /* Remap any remote's indigo defaults onto the HealthKey brand blue. */
-.hk-labs-root {
+.hk-labs-root,
+.promop-root {
   --color-indigo-600: hsl(var(--brand-primary-alt));
   --color-indigo-700: hsl(var(--brand-700));
 }

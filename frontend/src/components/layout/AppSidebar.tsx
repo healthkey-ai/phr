@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   UserCircle,
+  ClipboardList,
   TestTubes,
   Upload,
   FileHeart,
@@ -38,6 +39,7 @@ const navGroups: NavGroup[] = [
     label: "My Health",
     items: [
       { label: "Health Profile", to: "/profile", icon: UserCircle },
+      { label: "Patient Record", to: "/patient/record", icon: ClipboardList },
       { label: "Upload Lab Reports", to: "/labs/uploads", icon: Upload },
       { label: "Lab Results", to: "/labs/results", icon: TestTubes },
       { label: "Connect Records", to: "/connect/records", icon: FileHeart, disabled: true },

@@ -31,3 +31,10 @@ function useServiceApi(baseURL: string) {
 export function useLabsApi() {
   return useServiceApi(import.meta.env.VITE_LABS_API_URL || "http://localhost:9100/api/v1");
 }
+
+/** promop — patient record service (PatientInfo). Verifies phr-issued JWTs
+ * via its PhrTokenProvider. Base ends at the API root; the PatientInfo
+ * remote appends "/patient-info/me/". */
+export function usePromopApi() {
+  return useServiceApi(import.meta.env.VITE_PROMOP_API_URL || "http://localhost:9200/api");
+}
