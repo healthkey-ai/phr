@@ -2,8 +2,6 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from apps.patient_profile.models import PatientProfile
-
 User = get_user_model()
 
 
@@ -14,7 +12,7 @@ class TestRegister:
         self.client = APIClient()
         self.url = "/api/v1/auth/register/"
 
-    def test_creates_user_with_tokens_and_profile(self):
+    def test_creates_user_with_tokens(self):
         resp = self.client.post(
             self.url,
             {
@@ -30,9 +28,7 @@ class TestRegister:
         assert data["user"]["email"] == "new@example.com"
         assert data["user"]["first_name"] == "Jane"
         assert "access" in data["tokens"] and "refresh" in data["tokens"]
-
-        user = User.objects.get(email="new@example.com")
-        assert PatientProfile.objects.filter(user=user).exists()
+        assert User.objects.filter(email="new@example.com").exists()
 
     def test_duplicate_email(self):
         payload = {

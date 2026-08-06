@@ -9,7 +9,6 @@ from django.urls import include, path, re_path
 urlpatterns = [
     path(settings.ADMIN_URL_PATH, admin.site.urls),
     path("api/v1/auth/", include("apps.accounts.urls")),
-    path("api/v1/profile/", include("apps.patient_profile.urls")),
     path("api/v1/health/", include("apps.health.urls")),
 ]
 
