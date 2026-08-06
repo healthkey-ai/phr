@@ -47,7 +47,9 @@ const navGroups: NavGroup[] = [
       { label: "Health Profile", to: "/patient/record", icon: UserCircle },
       { label: "Connect Records", to: "/connect/records", icon: FileHeart, disabled: true },
       { label: "Upload Lab Reports", to: "/labs/uploads", icon: Upload, disabled: true },
-      { label: "Lab Results", to: "/labs/results", icon: TestTubes, disabled: true },
+      // Lab Results is served by promop's remote (OMOP measurements);
+      // uploads stay disabled until hk-labs is connected.
+      { label: "Lab Results", to: "/labs/results", icon: TestTubes },
       { label: "Find Treatments", to: "/treatments", icon: Search, disabled: true },
       { label: "Find Trials", to: "/trials", icon: Microscope, disabled: true },
     ],

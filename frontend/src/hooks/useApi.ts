@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import axios from "axios";
+import { useEffect, useMemo } from "react";
+import axios, { type AxiosInstance } from "axios";
 import { authStore } from "@/lib/authStore";
 import { refreshAccessToken } from "@/api/client";
 
@@ -59,4 +59,15 @@ export function useLabsApi() {
  * remote appends "/patient-info/me/". */
 export function usePromopApi() {
   return useServiceApi(import.meta.env.VITE_PROMOP_API_URL || "http://localhost:9200/api");
+}
+
+/** promop's /patient-info/me/ auto-provisions the Person for a first-time
+ * phr user, but its lab-results endpoints do NOT — a brand-new user whose
+ * first click is Lab Results would 404 until they visit the Health Profile
+ * once. Fire-and-forget the provisioning call on labs pages to kill the
+ * navigation-order dependency. */
+export function useEnsurePromopPerson(apiClient: AxiosInstance) {
+  useEffect(() => {
+    apiClient.get("/patient-info/me/").catch(() => {});
+  }, [apiClient]);
 }
