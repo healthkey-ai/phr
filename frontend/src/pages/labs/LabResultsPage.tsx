@@ -1,9 +1,9 @@
 import { Suspense, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useNavigationType } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { RemoteBoundary } from "@/components/RemoteFallback";
-import { usePromopApi } from "@/hooks/useApi";
+import { useEnsurePromopPerson, usePromopApi } from "@/hooks/useApi";
 import { lazyRemote } from "@/lib/lazyRemote";
 
 const SCROLL_KEY = "lab-results-scroll";
@@ -14,16 +14,20 @@ const LabResults = lazyRemote(() => import("labs_results_remote/LabResults"));
 export default function LabResultsPage() {
   const apiClient = usePromopApi();
   const navigate = useNavigate();
+  const navigationType = useNavigationType();
   const queryClient = useQueryClient();
+  useEnsurePromopPerson(apiClient);
 
   useEffect(() => {
     const saved = sessionStorage.getItem(SCROLL_KEY);
-    if (saved) {
-      sessionStorage.removeItem(SCROLL_KEY);
-      const y = parseInt(saved, 10);
-      requestAnimationFrame(() => window.scrollTo(0, y));
-    }
-  }, []);
+    if (saved === null) return;
+    sessionStorage.removeItem(SCROLL_KEY);
+    // Restore only when arriving via back/forward — a fresh visit from the
+    // sidebar must not jump to a stale offset from a previous session.
+    if (navigationType !== "POP") return;
+    const y = parseInt(saved, 10);
+    requestAnimationFrame(() => window.scrollTo(0, y));
+  }, [navigationType]);
 
   return (
     <div className="federated-content rounded-lg bg-background p-6">
@@ -34,7 +38,9 @@ export default function LabResultsPage() {
             queryClient={queryClient}
             onNavigateToDetail={(test) => {
               sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
-              navigate(`/labs/results/${test}`);
+              // concept codes can contain "/" or "%" — raw values break the
+              // :test route match or throw URI-malformed.
+              navigate(`/labs/results/${encodeURIComponent(test)}`);
             }}
           />
         </Suspense>

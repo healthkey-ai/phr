@@ -128,7 +128,9 @@ export default defineConfig(({ mode }) => {
                 "react/jsx-dev-runtime": { singleton: true, strictVersion: false },
                 "@tanstack/react-query": { singleton: true, strictVersion: false },
                 axios: { singleton: true, strictVersion: false },
-                recharts: { singleton: true, strictVersion: false },
+                // recharts deliberately NOT shared: the host doesn't chart,
+                // and sharing host v3 into promop's v2-built components
+                // would break trend charts the first time v3 loads first.
                 "@radix-ui/react-dialog": { singleton: true },
                 "@radix-ui/react-select": { singleton: true },
                 "@radix-ui/react-progress": { singleton: true },
