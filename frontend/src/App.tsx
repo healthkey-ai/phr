@@ -34,6 +34,9 @@ export default function App() {
             {/* Authenticated — sidebar layout */}
             <Route element={<Guard allow={(u) => !!u}><AppLayout /></Guard>}>
               <Route path="/dashboard" element={<DashboardPage />} />
+              {/* Labs routes stay registered while their menu items are
+                  disabled: deep links keep working during the hk-labs
+                  transition and degrade to the remote-unavailable card. */}
               <Route path="/labs/results" element={<LabResultsPage />} />
               <Route path="/labs/results/:test" element={<LabResultDetailPage />} />
               <Route path="/labs/uploads" element={<LabUploadsPage />} />

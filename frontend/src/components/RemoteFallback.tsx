@@ -28,6 +28,15 @@ export class RemoteBoundary extends Component<Props, State> {
           <p className="mt-1 text-sm text-muted-foreground">
             Please try again later.
           </p>
+          <button
+            type="button"
+            // Full reload, not state reset: a failed federated import is
+            // cached at module scope, so remounting alone can't recover.
+            onClick={() => window.location.reload()}
+            className="mt-4 rounded-md border border-border px-4 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Try again
+          </button>
         </div>
       );
     }

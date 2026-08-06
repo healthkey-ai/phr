@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLoginWithEmail } from "@/hooks/useAuth";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const { reload } = useAuth();
 
   const loginEmail = useLoginWithEmail();
+
+  // Guard stashes the originally-requested location so a bookmarked deep
+  // link survives the login round-trip.
+  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -24,7 +29,7 @@ export default function LoginPage() {
     loginEmail.mutate(
       { email, password },
       {
-        onSuccess: async () => { await reload(); navigate("/dashboard"); },
+        onSuccess: async () => { await reload(); navigate(from ?? "/dashboard"); },
         onError: () => setError("Sign-in failed. Check your email and password."),
       },
     );

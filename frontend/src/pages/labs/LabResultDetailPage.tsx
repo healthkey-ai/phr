@@ -1,11 +1,12 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { RemoteBoundary } from "@/components/RemoteFallback";
 import { useLabsApi } from "@/hooks/useApi";
+import { lazyRemote } from "@/lib/lazyRemote";
 
-const LabResults = lazy(() => import("labs_remote/LabResults"));
+const LabResults = lazyRemote(() => import("labs_remote/LabResults"));
 
 export default function LabResultDetailPage() {
   const { test } = useParams<{ test: string }>();

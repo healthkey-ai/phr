@@ -32,8 +32,11 @@ def test_login_token_carries_shared_claims(api_client, user):
     assert access["email"] == "dana@example.com"
 
 
-def test_jwks_empty_without_rsa_key(api_client, db):
-    # Dev default is HS256 — the JWKS document must be an empty key set.
+def test_jwks_empty_without_rsa_key(api_client, db, settings):
+    # HS256 mode (no RSA keypair) — the JWKS document must be an empty key
+    # set. Overridden explicitly so a developer's .env with keys configured
+    # doesn't change the outcome.
+    settings.JWT_PUBLIC_KEY = ""
     response = api_client.get("/api/v1/auth/jwks/")
     assert response.status_code == 200
     assert response.json() == {"keys": []}

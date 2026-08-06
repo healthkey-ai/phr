@@ -1,9 +1,10 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { RemoteBoundary } from "@/components/RemoteFallback";
 import { useLabsApi } from "@/hooks/useApi";
+import { lazyRemote } from "@/lib/lazyRemote";
 
-const LabUploads = lazy(() => import("labs_remote/LabUploads"));
+const LabUploads = lazyRemote(() => import("labs_remote/LabUploads"));
 
 export default function LabUploadsPage() {
   const apiClient = useLabsApi();
