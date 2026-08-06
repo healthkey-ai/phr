@@ -24,3 +24,16 @@
   `VITE_PROMOP_API_URL` (localhost) — the deployed Health Profile page points
   at localhost until the Dockerfile declares ARGs for them and the Render
   service (infra/main.tf) sets them to the promop-staging origins.
+
+- [ ] **Add lab uploads + results to hk-labs and federate it like promop**
+  The extracted labs code (upload pipeline, LOINC matching, results UI,
+  `labs_remote` federation with `./LabUploads` / `./LabResults`) lives on
+  the `archive/*` branches and per the extraction plan belongs in the
+  hk-labs repo (`../hk-labs`). Follow the promop playbook:
+  1. hk-labs: `PhrTokenProvider` (JWKS + introspection against phr),
+     `.hk-labs-root` / `--hk-labs-*` CSS namespace already distinct,
+     serve `remoteEntry.js` from the web service.
+  2. Deploy hk-labs; set `PHR_BASE_URL` + CORS to the phr origin.
+  3. phr: set `VITE_LABS_REMOTE_URL` / `VITE_LABS_API_URL` in
+     `infra/main.tf` (Dockerfile ARGs already declared), re-enable the
+     "Upload Lab Reports" / "Lab Results" menu items in AppSidebar.
