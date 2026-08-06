@@ -3,14 +3,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { RemoteBoundary } from "@/components/RemoteFallback";
-import { useLabsApi } from "@/hooks/useApi";
+import { usePromopApi } from "@/hooks/useApi";
 import { lazyRemote } from "@/lib/lazyRemote";
 
-const LabResults = lazyRemote(() => import("labs_remote/LabResults"));
+const LabResults = lazyRemote(() => import("labs_results_remote/LabResults"));
 
 export default function LabResultDetailPage() {
   const { test } = useParams<{ test: string }>();
-  const apiClient = useLabsApi();
+  const apiClient = usePromopApi();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 

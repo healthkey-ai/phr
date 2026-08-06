@@ -3,14 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { RemoteBoundary } from "@/components/RemoteFallback";
-import { useLabsApi } from "@/hooks/useApi";
+import { usePromopApi } from "@/hooks/useApi";
 import { lazyRemote } from "@/lib/lazyRemote";
 
 const SCROLL_KEY = "lab-results-scroll";
-const LabResults = lazyRemote(() => import("labs_remote/LabResults"));
+// promop's remote exposes LabResults over its OMOP measurements — the same
+// deployed remoteEntry.js the Health Profile already loads.
+const LabResults = lazyRemote(() => import("labs_results_remote/LabResults"));
 
 export default function LabResultsPage() {
-  const apiClient = useLabsApi();
+  const apiClient = usePromopApi();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
