@@ -69,6 +69,11 @@ resource "render_web_service" "backend" {
 
   health_check_path = "/api/v1/health/"
 
+  # Runs once per deploy before traffic switches — without it the database
+  # never gets migrated and every ORM endpoint 500s while health/JWKS
+  # (no-DB) stay green.
+  pre_deploy_command = "python manage.py migrate --noinput"
+
   env_vars = {
     DJANGO_SETTINGS_MODULE = { value = "config.settings.production" }
     DEBUG                  = { value = "False" }
