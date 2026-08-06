@@ -1,6 +1,6 @@
 # TODO
 
-- [ ] **Quick win: serve Lab Results from promop's remote (no new deploys)**
+- [ ] **Quick win: serve Lab Results from promop's remote (no new deploys)** ([#41](https://github.com/healthkey-ai/phr/issues/41))
   promop's deployed remote already exposes `./LabResults` (backed by its
   OMOP measurements) on the same `remoteEntry.js` phr loads for the
   Health Profile. Point the Lab Results pages at
@@ -8,7 +8,7 @@
   "Lab Results" menu item, verify on phr-ipyr. ~1 hour; uploads still
   wait for hk-labs below.
 
-- [ ] **Deploy hk-labs to GCP AND Render; federate it like promop**
+- [ ] **Deploy hk-labs to GCP AND Render; federate it like promop** ([#42](https://github.com/healthkey-ai/phr/issues/42))
   hk-labs (`../hk-labs`) holds the extracted labs stack (upload pipeline,
   LOINC matching, results UI, `labs_remote` exposing `./LabUploads` /
   `./LabResults`). It deploys to BOTH platforms:
@@ -33,7 +33,7 @@
      deployment phr should consume, re-enable "Upload Lab Reports" (and
      "Lab Results", if not already on promop's) in AppSidebar.
 
-- [ ] **Multi-installation identity: promop as identity host (see docs/identity-architecture.md)**
+- [ ] **Multi-installation identity: promop as identity host (see docs/identity-architecture.md)** ([#43](https://github.com/healthkey-ai/phr/issues/43))
   Decisions made 2026-08-06: family auth API contract (phr's endpoint
   shapes) implementable by any identity host; iss = installation origin;
   1 branded install = 1 promop Organization; embedded login form primary,
@@ -48,7 +48,7 @@
      APP_BASE_URL emails; canonical email-resolution rule; tighten
      CsrfExemptSessionAuthentication.
 
-- [ ] **Turn off `DEBUG` on promop staging and production**
+- [ ] **Turn off `DEBUG` on promop staging and production** ([#44](https://github.com/healthkey-ai/phr/issues/44))
   Both Render services still run with `DEBUG=True` (Django debug pages +
   allow-all CORS on a live clinical app). Flipping it requires setting
   `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, and a real `FIREBASE_PROJECT_ID`
