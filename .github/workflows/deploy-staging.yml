@@ -23,11 +23,38 @@ jobs:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           SERVICE_ID: ${{ vars.RENDER_STAGING_SERVICE_ID }}
         run: |
-          DEPLOY_ID=$(curl -sf -X POST \
+          set -euo pipefail
+
+          RESPONSE=$(curl -s -w '\n%{http_code}' -X POST \
             -H "Authorization: Bearer $RENDER_API_KEY" \
             -H "Content-Type: application/json" \
             "https://api.render.com/v1/services/$SERVICE_ID/deploys" \
-            -d '{}' | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
+            -d '{}')
+          CODE=${RESPONSE##*$'\n'}
+          BODY=${RESPONSE%$'\n'*}
+
+          case "$CODE" in
+            2*) ;;
+            *) echo "Render refused the deploy: HTTP $CODE $BODY"; exit 1 ;;
+          esac
+
+          DEPLOY_ID=$(printf '%s' "$BODY" | python3 -c "
+          import json, sys
+          raw = sys.stdin.read().strip()
+          print(json.loads(raw).get('id', '') if raw else '')
+          ")
+
+          # Render answers 201 with the new deploy, but 202 with an empty body
+          # when the service already has one queued — piping that straight into
+          # a JSON parser fails the run even though a deploy is on its way.
+          # Adopt the in-flight one and wait on it instead.
+          if [ -z "$DEPLOY_ID" ]; then
+            DEPLOY_ID=$(curl -sf -H "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/services/$SERVICE_ID/deploys?limit=1" \
+              | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['deploy']['id'])")
+            echo "HTTP $CODE with no body — a deploy was already queued; waiting on $DEPLOY_ID"
+          fi
+
           echo "deploy_id=$DEPLOY_ID" >> "$GITHUB_OUTPUT"
           echo "Triggered deploy $DEPLOY_ID"
 
@@ -38,9 +65,22 @@ jobs:
           DEPLOY_ID: ${{ steps.trigger.outputs.deploy_id }}
         run: |
           for i in $(seq 1 60); do
-            STATUS=$(curl -sf -H "Authorization: Bearer $RENDER_API_KEY" \
+            # Tolerate a blank answer: a transient API hiccup should cost one
+            # poll, not the whole deploy.
+            STATUS=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
               "https://api.render.com/v1/services/$SERVICE_ID/deploys/$DEPLOY_ID" \
-              | python3 -c "import json,sys; print(json.load(sys.stdin)['status'])")
+              | python3 -c "
+          import json, sys
+          try:
+              print(json.load(sys.stdin).get('status', ''))
+          except Exception:
+              print('')
+          ")
+            if [ -z "$STATUS" ]; then
+              echo "[$i] status unavailable, retrying"
+              sleep 20
+              continue
+            fi
             echo "[$i] $STATUS"
             case "$STATUS" in
               live) exit 0 ;;
