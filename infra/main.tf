@@ -188,6 +188,12 @@ locals {
     # already sets Access-Control-Allow-Origin for static files.
     CORS_ALLOWED_ORIGINS = { value = render_web_service.backend.url }
 
+    # Committed results are written to promop, which is where phr's Lab
+    # Results page reads them from — the same promop the SPA is pointed at,
+    # or saved values land in the labs database and never surface anywhere.
+    # No service token: sync forwards the patient's own bearer token.
+    CTOMOP_SYNC_URL = { value = "${var.promop_api_url}/lab-results/sync/" }
+
     # Object storage, not a Render disk: disks attach to a single service, so
     # a PDF the web service wrote would be invisible to the worker that has
     # to rasterise it. Both services address the same bucket instead.
