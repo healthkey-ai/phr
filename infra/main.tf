@@ -201,9 +201,10 @@ locals {
     GS_PROJECT_ID       = { value = var.labs_gcs_project_id }
     GS_CREDENTIALS_JSON = { value = var.labs_gcs_credentials_json }
 
-    LAB_UPLOAD_ENABLED = { value = tostring(var.labs_upload_enabled) }
-    LAB_LLM_PROVIDER   = { value = "claude" }
-    ANTHROPIC_API_KEY  = { value = var.anthropic_api_key }
+    LAB_UPLOAD_ENABLED       = { value = tostring(var.labs_upload_enabled) }
+    LAB_LOINC_MIN_CONFIDENCE = { value = var.labs_loinc_min_confidence }
+    LAB_LLM_PROVIDER         = { value = "claude" }
+    ANTHROPIC_API_KEY        = { value = var.anthropic_api_key }
   }
 }
 
