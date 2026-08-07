@@ -65,7 +65,7 @@ resource "render_web_service" "backend" {
       context         = "."
       # Deploys are driven by the deploy-staging GitHub workflow after CI
       # passes — Render must not race it with its own push-triggered deploy.
-      auto_deploy     = false
+      auto_deploy = false
     }
   }
 
@@ -98,4 +98,134 @@ resource "render_web_service" "backend" {
     VITE_PROMOP_REMOTE_URL = { value = var.promop_remote_url }
     VITE_PROMOP_API_URL    = { value = var.promop_api_url }
   }
+}
+
+# ── LABS — lab report uploads + extraction ──────────────────────────────────
+#
+# Its own Render project: labs owns its database and broker, and talks to phr
+# only over the public API (token verification via JWKS), so nothing here
+# needs to share an environment with phr.
+#
+# Two services off one image. The web service answers the API and serves the
+# federation remote at /static/remoteEntry.js; the worker runs extraction,
+# which takes 30-120s against a vision model and cannot live in a request.
+# They share the database and the broker, and nothing else — see
+# labs_upload_enabled for why that matters.
+
+resource "render_project" "labs" {
+  name = "LABS"
+  environments = {
+    staging = {
+      name             = "staging"
+      protected_status = "unprotected"
+      # Only the browser and phr reach these services, both over the public
+      # API, so nothing here needs to accept traffic from other environments.
+      network_isolated = true
+    }
+  }
+}
+
+locals {
+  labs_environment_id = render_project.labs.environments["staging"].id
+}
+
+resource "random_password" "labs_secret_key" {
+  length  = 50
+  special = false
+}
+
+resource "render_postgres" "labs_db" {
+  name           = "labs-db"
+  plan           = "basic_256mb"
+  region         = var.region
+  version        = "16"
+  database_name  = "hk_labs"
+  database_user  = "hk_labs"
+  environment_id = local.labs_environment_id
+}
+
+resource "render_keyvalue" "labs_broker" {
+  name           = "labs-broker"
+  plan           = "starter"
+  region         = var.region
+  environment_id = local.labs_environment_id
+  # Queued extraction jobs are work we cannot reconstruct, so never evict
+  # to reclaim memory — fail the enqueue loudly instead.
+  max_memory_policy = "noeviction"
+}
+
+locals {
+  labs_repo = "https://github.com/healthkey-ai/hk-labs"
+
+  # Both labs services run the same Django app and need identical settings;
+  # only the start command differs.
+  labs_env_vars = {
+    DJANGO_SETTINGS_MODULE = { value = "config.settings.production" }
+    DEBUG                  = { value = "False" }
+    SECRET_KEY             = { value = random_password.labs_secret_key.result }
+    ALLOWED_HOSTS          = { value = "localhost,127.0.0.1,.onrender.com" }
+    DATABASE_URL           = { value = render_postgres.labs_db.connection_info.internal_connection_string }
+
+    CELERY_BROKER_URL     = { value = "${render_keyvalue.labs_broker.connection_info.internal_connection_string}/0" }
+    CELERY_RESULT_BACKEND = { value = "${render_keyvalue.labs_broker.connection_info.internal_connection_string}/1" }
+
+    # phr issues the tokens labs verifies; PhrTokenProvider derives the
+    # JWKS and introspection URLs from this base.
+    PHR_BASE_URL = { value = render_web_service.backend.url }
+    PHR_ISSUER   = { value = "healthkey-phr" }
+
+    # The browser calls this API from the phr origin, so phr must be allowed
+    # through CORS. The federation remote is served by whitenoise, which
+    # already sets Access-Control-Allow-Origin for static files.
+    CORS_ALLOWED_ORIGINS = { value = render_web_service.backend.url }
+
+    LAB_UPLOAD_ENABLED = { value = tostring(var.labs_upload_enabled) }
+    LAB_LLM_PROVIDER   = { value = "claude" }
+    ANTHROPIC_API_KEY  = { value = var.anthropic_api_key }
+  }
+}
+
+resource "render_web_service" "labs" {
+  name           = "labs"
+  plan           = "starter"
+  region         = var.region
+  environment_id = local.labs_environment_id
+
+  runtime_source = {
+    docker = {
+      repo_url        = local.labs_repo
+      branch          = var.labs_deploy_branch
+      dockerfile_path = "./Dockerfile"
+      context         = "."
+      auto_deploy     = false
+    }
+  }
+
+  health_check_path = "/api/v1/health/"
+
+  # The health check queries the database, so it fails until migrations run.
+  pre_deploy_command = "python manage.py migrate --noinput"
+
+  env_vars = local.labs_env_vars
+}
+
+resource "render_background_worker" "labs_worker" {
+  name           = "labs-worker"
+  plan           = "starter"
+  region         = var.region
+  environment_id = local.labs_environment_id
+
+  runtime_source = {
+    docker = {
+      repo_url        = local.labs_repo
+      branch          = var.labs_deploy_branch
+      dockerfile_path = "./Dockerfile"
+      context         = "."
+      auto_deploy     = false
+    }
+  }
+
+  start_command = "celery -A config worker --loglevel=info --concurrency=2 --max-tasks-per-child=100 --without-gossip --without-mingle"
+
+  env_vars = local.labs_env_vars
 }
