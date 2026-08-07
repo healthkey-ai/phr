@@ -46,3 +46,29 @@ variable "promop_api_url" {
   type        = string
   default     = "https://promop-staging.onrender.com/api"
 }
+
+# ── LABS ───────────────────────────────────────────────────────────────────
+
+variable "labs_deploy_branch" {
+  description = "Git branch the labs services deploy from."
+  type        = string
+  default     = "dev"
+}
+
+variable "labs_upload_enabled" {
+  description = <<-EOT
+    Gates POST /api/v1/labs/uploads/. Keep false until object storage is
+    configured: Render disks are per-service, so a PDF the web service
+    writes locally is invisible to the worker that has to rasterise it —
+    every upload would be accepted and then fail in extraction.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "anthropic_api_key" {
+  description = "Claude vision key for lab report extraction. Empty until uploads are enabled."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
