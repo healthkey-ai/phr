@@ -57,17 +57,56 @@ variable "labs_deploy_branch" {
 
 variable "labs_upload_enabled" {
   description = <<-EOT
-    Gates POST /api/v1/labs/uploads/. Keep false until object storage is
-    configured: Render disks are per-service, so a PDF the web service
-    writes locally is invisible to the worker that has to rasterise it —
-    every upload would be accepted and then fail in extraction.
+    Gates POST /api/v1/labs/uploads/. Requires object storage: Render disks
+    are per-service, so a PDF the web service writes locally is invisible to
+    the worker that has to rasterise it, and every upload would be accepted
+    and then fail in extraction.
   EOT
   type        = bool
-  default     = false
+  default     = true
+}
+
+variable "labs_url" {
+  description = <<-EOT
+    Public URL of the labs service, baked into phr's SPA at build time.
+    Pinned rather than referenced: labs reads phr's URL for PHR_BASE_URL and
+    CORS, so a direct reference back would be a dependency cycle. Update it
+    if the labs service is ever recreated.
+  EOT
+  type        = string
+  default     = "https://labs-oy0f.onrender.com"
+}
+
+variable "labs_gcs_bucket" {
+  description = <<-EOT
+    Bucket holding uploaded lab reports. Shared with the GCP deployment for
+    now — object names are UUIDs and each deployment only references its own
+    rows, so the two do not collide.
+  EOT
+  type        = string
+  default     = "hk-labs-staging-uploads"
+}
+
+variable "labs_gcs_project_id" {
+  description = "GCP project owning labs_gcs_bucket."
+  type        = string
+  default     = "ht-phr"
+}
+
+variable "labs_gcs_credentials_json" {
+  description = <<-EOT
+    Service-account key JSON for the bucket. Render cannot use workload
+    identity, so it needs a downloadable credential; the account behind it
+    should hold object access to this one bucket and nothing else. Supply
+    via TF_VAR_labs_gcs_credentials_json — never commit it.
+  EOT
+  type        = string
+  sensitive   = true
+  default     = ""
 }
 
 variable "anthropic_api_key" {
-  description = "Claude vision key for lab report extraction. Empty until uploads are enabled."
+  description = "Claude vision key for lab report extraction. Supply via TF_VAR_anthropic_api_key."
   type        = string
   sensitive   = true
   default     = ""

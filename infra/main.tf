@@ -95,8 +95,17 @@ resource "render_web_service" "backend" {
 
     # Federated-remote origins — consumed at Docker BUILD time (the
     # Dockerfile declares matching ARGs) and baked into the SPA bundle.
+    # Changing these needs a rebuild, not just a restart.
     VITE_PROMOP_REMOTE_URL = { value = var.promop_remote_url }
     VITE_PROMOP_API_URL    = { value = var.promop_api_url }
+
+    # A variable, not render_web_service.labs.url: labs reads phr's URL for
+    # PHR_BASE_URL and CORS, so referencing it back here is a dependency
+    # cycle. This is the safer side to pin — a stale labs URL breaks the
+    # federated uploads page, while a stale phr URL in labs would fail every
+    # token verification and take the whole service down.
+    VITE_LABS_REMOTE_URL = { value = "${var.labs_url}/static" }
+    VITE_LABS_API_URL    = { value = "${var.labs_url}/api/v1" }
   }
 }
 
@@ -178,6 +187,13 @@ locals {
     # through CORS. The federation remote is served by whitenoise, which
     # already sets Access-Control-Allow-Origin for static files.
     CORS_ALLOWED_ORIGINS = { value = render_web_service.backend.url }
+
+    # Object storage, not a Render disk: disks attach to a single service, so
+    # a PDF the web service wrote would be invisible to the worker that has
+    # to rasterise it. Both services address the same bucket instead.
+    GS_BUCKET_NAME      = { value = var.labs_gcs_bucket }
+    GS_PROJECT_ID       = { value = var.labs_gcs_project_id }
+    GS_CREDENTIALS_JSON = { value = var.labs_gcs_credentials_json }
 
     LAB_UPLOAD_ENABLED = { value = tostring(var.labs_upload_enabled) }
     LAB_LLM_PROVIDER   = { value = "claude" }
