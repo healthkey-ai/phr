@@ -105,6 +105,20 @@ variable "labs_gcs_credentials_json" {
   default     = ""
 }
 
+variable "labs_loinc_min_confidence" {
+  description = <<-EOT
+    Lowest self-reported extractor confidence whose LOINC code is worth
+    checking ("high" or "medium"). The code still has to survive the name,
+    specimen, unit-family and value-type gates either way — this only decides
+    which claims are examined at all.
+
+    Currently "medium", being trialled on staging. Revert to "high" if it
+    admits codes the other gates let through wrongly.
+  EOT
+  type        = string
+  default     = "medium"
+}
+
 variable "anthropic_api_key" {
   description = "Claude vision key for lab report extraction. Supply via TF_VAR_anthropic_api_key."
   type        = string
