@@ -46,9 +46,16 @@ const navGroups: NavGroup[] = [
       // or the catch-all silently bounces users to /dashboard.
       { label: "Health Profile", to: "/patient/record", icon: UserCircle },
       { label: "Connect Records", to: "/connect/records", icon: FileHeart, disabled: true },
-      { label: "Upload Lab Reports", to: "/labs/uploads", icon: Upload, disabled: true },
-      // Lab Results is served by promop's remote (OMOP measurements);
-      // uploads stay disabled until hk-labs is connected.
+      // Uploads come from hk-labs' remote — enabled only where that remote
+      // is configured (VITE_LABS_REMOTE_URL), so production stays "Coming
+      // soon" until hk-labs is deployed.
+      {
+        label: "Upload Lab Reports",
+        to: "/labs/uploads",
+        icon: Upload,
+        disabled: !import.meta.env.VITE_LABS_REMOTE_URL,
+      },
+      // Lab Results is served by promop's remote (OMOP measurements).
       { label: "Lab Results", to: "/labs/results", icon: TestTubes },
       { label: "Find Treatments", to: "/treatments", icon: Search, disabled: true },
       { label: "Find Trials", to: "/trials", icon: Microscope, disabled: true },
