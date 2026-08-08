@@ -111,7 +111,8 @@ resource "render_web_service" "backend" {
     # Empty until soc is deployed and soc_url is set, which leaves the Find
     # Treatments menu item disabled rather than pointing it at nothing.
     VITE_SOC_REMOTE_URL = { value = var.soc_url }
-    VITE_SOC_API_URL    = { value = var.soc_url != "" ? "${var.soc_url}/api" : "" }
+    # Origin only — soc's remote appends its own /api/v1 path.
+    VITE_SOC_API_URL = { value = var.soc_url }
   }
 }
 

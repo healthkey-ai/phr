@@ -62,9 +62,13 @@ export function usePromopApi() {
 }
 
 /** soc — treatment recommendations (Find Treatments). Verifies phr-issued
- * JWTs via its PhrTokenProvider, same as the other siblings. */
+ * JWTs via its PhrTokenProvider, same as the other siblings.
+ *
+ * Origin only, no path: unlike the labs remotes, soc's remote builds its own
+ * absolute path from an apiBasePath prop that defaults to "/api/v1". Giving
+ * this client a "/api" suffix produced /api/api/v1/recommend. */
 export function useSocApi() {
-  return useServiceApi(import.meta.env.VITE_SOC_API_URL || "http://localhost:9300/api");
+  return useServiceApi(import.meta.env.VITE_SOC_API_URL || "http://localhost:9300");
 }
 
 /** promop's /patient-info/me/ auto-provisions the Person for a first-time
