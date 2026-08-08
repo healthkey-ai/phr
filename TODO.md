@@ -25,32 +25,56 @@
      deployment phr should consume, re-enable "Upload Lab Reports" (and
      "Lab Results", if not already on promop's) in AppSidebar.
 
-- [ ] **Finish Find Treatments: run soc on Render and turn the menu item on** ([soc#262](https://github.com/healthkey-ai/soc/issues/262))
-  The portal side is done and verified locally — `/treatments` renders
-  `soc_remote/Recommendations`, the sidebar item enables itself off
-  `VITE_SOC_REMOTE_URL`, and patient context comes from promop's
-  `/patient-info/me/` projected onto soc's `patient_info` contract.
-  soc's own changes are in [soc#263](https://github.com/healthkey-ai/soc/pull/263):
-  portal-token auth, the remote built into the image, and a compose web
-  service. What is left:
-  1. Merge soc#263, then deploy soc so `/remoteEntry.js` is actually served
-     — `main` today has no node stage, so a service built from it starts
-     fine but serves no remote.
+- [ ] **Finish Find Treatments: settle the soc catalog, then deploy** ([soc#262](https://github.com/healthkey-ai/soc/issues/262))
+  Federation itself is done and verified end to end locally: `/treatments`
+  renders `soc_remote/Recommendations`, soc accepts portal tokens
+  (`sub="phr:<id>"`, since its `Identity.sub` is unique globally rather than
+  per issuer), the sidebar item enables itself off `VITE_SOC_REMOTE_URL`, and
+  patient context comes from promop's `/patient-info/me/` projected onto
+  soc's `patient_info` contract. Open PRs: [soc#263](https://github.com/healthkey-ai/soc/pull/263)
+  and [phr#53](https://github.com/healthkey-ai/phr/pull/53).
+
+  **Blocker — the catalog has no source on Render.** `Disease` and the
+  treatment options are populated only by `sync_collection`, which reads
+  Firestore, and the Render installation has none. A deployment would come up
+  healthy, authenticate correctly, and answer `disease_not_found` for every
+  request. Seen locally: the API stayed at `disease_not_found` until a
+  `Disease` row was inserted by hand, and even then `candidates` was empty
+  because the treatment options come from the same place. Staging has 41 for
+  myeloma; a fresh deployment has zero.
+  The models are ordinary Django models, so no Firestore-specific code is
+  needed to move the data — only an export from somewhere that has access
+  (`dumpdata core.Disease core.DiseaseMedicationDetail …` → `loaddata`, or a
+  one-off job like the LOINC load). The decision is where that export lives —
+  committed, in object storage, or Firestore credentials on the deployment
+  after all — and how it stays fresh as treatment options change.
+
+  Once that is settled:
+  1. Merge soc#263 and phr#53. soc's `main` has no node stage today, so a
+     service built from it starts fine and serves no remote.
   2. Apply the soc Terraform in `infra/main.tf` (written, **not applied**):
      Render project SOC with a web service and Postgres. No broker — the
      recommend pipeline answers inside the request. Plan was 4 to add, 1 to
-     change.
-  3. Set `soc_url` to the deployed URL and re-apply, which fills the
-     portal's `VITE_SOC_REMOTE_URL` / `VITE_SOC_API_URL` build args, then
-     rebuild the portal so they bake in. Until then the menu item stays
-     disabled by design.
-  4. Add CD so soc autodeploys on merge, matching the other services.
-  5. Seed soc's disease catalog on the deployment. Locally the pipeline
-     answers `disease_not_found` with an empty catalog — auth and wiring
-     are fine, there is simply nothing to recommend from.
-  Note the slug divergence handled in `FindTreatmentsPage`: promop emits
-  `multiple-myeloma`, soc keys the same disease as `myeloma`, and an
-  unmapped slug 404s the recommend lookup.
+     change. Set `PARTNER_AUTH_PROVIDERS` to the portal provider alone; the
+     chain is env-driven now, and listing Firebase where it cannot work only
+     logs "no credentials configured".
+  3. Load the catalog on the deployment, then confirm a real recommendation
+     returns before wiring the portal to it.
+  4. Set `soc_url` and re-apply, which fills the portal's `VITE_SOC_REMOTE_URL`
+     / `VITE_SOC_API_URL` build args, then rebuild the portal so they bake in.
+     Until then the menu item stays disabled by design.
+  5. Add CD so soc autodeploys on merge, matching the other services. Needs
+     the service to exist first — there is no service id until step 2.
+
+  Two things worth remembering:
+  - promop emits the slug `multiple-myeloma` where soc keys the same disease
+    as `myeloma`; an unmapped slug 404s the recommend lookup. Handled in
+    `FindTreatmentsPage`, but the same trap applies to any disease added later.
+  - soc requires `therapy_lines_count` (or a `lines_of_therapy` list) and
+    returns 400 rather than guessing. The portal forwards it only when promop
+    has it, so a record without it surfaces a validation error instead of
+    recommendations. Decide whether the portal should default it — inventing a
+    therapy-line count on a patient's behalf is not obviously right.
 
 - [ ] **Multi-installation identity: promop as identity host (see docs/identity-architecture.md)** ([#43](https://github.com/healthkey-ai/phr/issues/43))
   Decisions made 2026-08-06: family auth API contract (phr's endpoint
