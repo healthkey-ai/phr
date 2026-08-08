@@ -30,3 +30,13 @@ output "labs_api_url" {
   description = "Value for phr's VITE_LABS_API_URL build arg."
   value       = "${render_web_service.labs.url}/api/v1"
 }
+
+output "soc_url" {
+  description = "Public URL of the soc service (API + federation remote at /remoteEntry.js)."
+  value       = render_web_service.soc.url
+}
+
+output "soc_remote_url" {
+  description = "Value for the portal's VITE_SOC_REMOTE_URL build arg (set soc_url to this)."
+  value       = render_web_service.soc.url
+}

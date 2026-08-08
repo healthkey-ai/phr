@@ -61,6 +61,12 @@ export function usePromopApi() {
   return useServiceApi(import.meta.env.VITE_PROMOP_API_URL || "http://localhost:9200/api");
 }
 
+/** soc — treatment recommendations (Find Treatments). Verifies phr-issued
+ * JWTs via its PhrTokenProvider, same as the other siblings. */
+export function useSocApi() {
+  return useServiceApi(import.meta.env.VITE_SOC_API_URL || "http://localhost:9300/api");
+}
+
 /** promop's /patient-info/me/ auto-provisions the Person for a first-time
  * phr user, but its lab-results endpoints do NOT — a brand-new user whose
  * first click is Lab Results would 404 until they visit the Health Profile
