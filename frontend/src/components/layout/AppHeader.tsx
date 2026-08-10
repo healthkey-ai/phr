@@ -27,7 +27,7 @@ export default function AppHeader({ layout, title, className, children }: AppHea
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          <span className="max-md:hidden text-sm text-muted-foreground md:inline">
+          <span className="max-md:hidden text-sm text-header-foreground/70 md:inline">
             {user?.first_name || user?.last_name
               ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
               : user?.email}

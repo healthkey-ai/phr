@@ -251,7 +251,11 @@ export default function AppSidebar({ expanded, onToggle, mobileOpen, onMobileClo
           // compiled Tailwind into our <head> after our stylesheet, and a
           // remote's `.hidden` rule outranks our `lg:flex` by document order,
           // permanently hiding the sidebar. Media-scoped variants can't collide.
-          "max-lg:hidden lg:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200",
+          // sticky + h-svh so the footer stays on screen. Without it the aside
+          // stretches to the document height, and on any page with content the
+          // footer — Settings, Admin Panel — sits below the fold, reachable
+          // only by scrolling to the very bottom of the page.
+          "max-lg:hidden lg:flex sticky top-0 h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200",
           expanded ? "w-64" : "w-14"
         )}
       >
