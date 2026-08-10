@@ -77,6 +77,23 @@ variable "labs_url" {
   default     = "https://labs-oy0f.onrender.com"
 }
 
+variable "soc_deploy_branch" {
+  description = "Git branch the soc service deploys from."
+  type        = string
+  default     = "main"
+}
+
+variable "soc_url" {
+  description = <<-EOT
+    Public URL of the soc service, baked into the portal's SPA at build
+    time. Pinned rather than referenced for the same reason as labs_url:
+    soc reads the portal's URL for PHR_BASE_URL and CORS, so referencing it
+    back would be a dependency cycle.
+  EOT
+  type        = string
+  default     = ""
+}
+
 variable "labs_gcs_bucket" {
   description = <<-EOT
     Bucket holding uploaded lab reports. Shared with the GCP deployment for

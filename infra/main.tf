@@ -106,6 +106,13 @@ resource "render_web_service" "backend" {
     # token verification and take the whole service down.
     VITE_LABS_REMOTE_URL = { value = "${var.labs_url}/static" }
     VITE_LABS_API_URL    = { value = "${var.labs_url}/api/v1" }
+
+    # soc serves its remote from the site root, not under a static prefix.
+    # Empty until soc is deployed and soc_url is set, which leaves the Find
+    # Treatments menu item disabled rather than pointing it at nothing.
+    VITE_SOC_REMOTE_URL = { value = var.soc_url }
+    # Origin only — soc's remote appends its own /api/v1 path.
+    VITE_SOC_API_URL = { value = var.soc_url }
   }
 }
 
@@ -251,4 +258,75 @@ resource "render_background_worker" "labs_worker" {
   start_command = "celery -A config worker --loglevel=info --concurrency=2 --max-tasks-per-child=100 --without-gossip --without-mingle"
 
   env_vars = local.labs_env_vars
+}
+
+# ── SOC — treatment recommendations (Find Treatments) ───────────────────────
+#
+# One web service and a database. No broker: the recommend pipeline answers
+# in the request, and nothing runs on a schedule yet — add a worker when
+# something actually needs one.
+
+resource "render_project" "soc" {
+  name = "SOC"
+  environments = {
+    staging = {
+      name             = "staging"
+      protected_status = "unprotected"
+      network_isolated = true
+    }
+  }
+}
+
+locals {
+  soc_environment_id = render_project.soc.environments["staging"].id
+}
+
+resource "random_password" "soc_secret_key" {
+  length  = 50
+  special = false
+}
+
+resource "render_postgres" "soc_db" {
+  name           = "soc-db"
+  plan           = "basic_256mb"
+  region         = var.region
+  version        = "16"
+  database_name  = "soc"
+  database_user  = "soc"
+  environment_id = local.soc_environment_id
+}
+
+resource "render_web_service" "soc" {
+  name           = "soc"
+  plan           = "starter"
+  region         = var.region
+  environment_id = local.soc_environment_id
+
+  runtime_source = {
+    docker = {
+      repo_url        = "https://github.com/healthkey-ai/soc"
+      branch          = var.soc_deploy_branch
+      dockerfile_path = "./Dockerfile"
+      context         = "."
+      auto_deploy     = false
+    }
+  }
+
+  health_check_path  = "/healthz"
+  pre_deploy_command = "python manage.py migrate --noinput"
+
+  env_vars = {
+    DJANGO_ENV   = { value = "staging" }
+    SECRET_KEY   = { value = random_password.soc_secret_key.result }
+    DATABASE_URL = { value = render_postgres.soc_db.connection_info.internal_connection_string }
+
+    # The portal issues the tokens soc verifies; its provider derives the
+    # JWKS and introspection URLs from this base.
+    PHR_BASE_URL = { value = render_web_service.backend.url }
+    PHR_ISSUER   = { value = "healthkey-phr" }
+
+    # The browser calls this API from the portal's origin. The remote itself
+    # is served by whitenoise, which already answers cross-origin.
+    CORS_ALLOWED_ORIGINS = { value = render_web_service.backend.url }
+  }
 }

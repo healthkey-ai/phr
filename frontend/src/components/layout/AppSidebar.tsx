@@ -57,7 +57,13 @@ const navGroups: NavGroup[] = [
       },
       // Lab Results is served by promop's remote (OMOP measurements).
       { label: "Lab Results", to: "/labs/results", icon: TestTubes },
-      { label: "Find Treatments", to: "/treatments", icon: Search, disabled: true },
+      // soc's remote; enabled wherever it is configured, same rule as uploads.
+      {
+        label: "Find Treatments",
+        to: "/treatments",
+        icon: Search,
+        disabled: !import.meta.env.VITE_SOC_REMOTE_URL,
+      },
       { label: "Find Trials", to: "/trials", icon: Microscope, disabled: true },
     ],
   },
