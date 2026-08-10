@@ -66,6 +66,13 @@ const GENERIC: Brand = {
  * lightness the lavender is fine behind a large white button label and fails
  * behind small text on white, so `--text-brand-secondary-700` stays purple
  * while `--primary` and `--brand-700` go lavender.
+ *
+ * Known and accepted: white on this lavender measures **3.41:1**. That clears
+ * the 3:1 bar for large text but not WCAG AA's 4.5:1 for the 14px labels on
+ * buttons and menu items. Keeping it is a deliberate call — it is the colour
+ * lymphoma.org actually uses, and matching the brand won over the ratio.
+ * Dropping lightness to 64% reaches 4.51:1 if that trade is ever revisited.
+ * Please do not "fix" this without that conversation.
  */
 const LYMPHOMA: Brand = {
   id: "lymphoma",
@@ -100,7 +107,7 @@ const LYMPHOMA: Brand = {
     "--sidebar-active-foreground": "0 0% 100%",
 
     // Pill buttons.
-    "--radius-control": "9999px",
+    "--control-radius": "9999px",
 
     "--brand-25": "258 100% 98%",
     "--brand-50": "258 100% 95%",
@@ -140,7 +147,7 @@ const LYMPHOMA: Brand = {
     "--sidebar-active": "258 81% 70%",
     "--sidebar-active-foreground": "258 81% 78%",
 
-    "--radius-control": "9999px",
+    "--control-radius": "9999px",
 
     "--brand-25": "262 50% 16%",
     "--brand-50": "262 45% 20%",
@@ -246,30 +253,22 @@ export function saveBrandId(id: BrandId): void {
   }
 }
 
-/** Every token any brand touches — used to clear cleanly between brands. */
-const ALL_TOKENS = Array.from(
-  new Set(BRANDS.flatMap((b) => [...Object.keys(b.light), ...Object.keys(b.dark)])),
-);
-
 /**
- * Write a brand's tokens onto `root` as inline custom properties.
+ * Point the document at a brand. The values themselves live in index.css under
+ * `[data-brand="..."]`, so this only has to stamp the attribute.
  *
- * Inline beats any stylesheet declaration without `!important`, which is what
- * makes this work against the remotes' own CSS as well as our own.
- *
- * Every token is cleared first, so switching between two brands that touch
- * different token sets cannot leave the previous brand's values behind.
+ * They used to be written here as inline custom properties. That worked, but it
+ * could only run after mount, so every load showed one frame of the default
+ * palette first; and because inline styles cannot express `.dark`, it needed a
+ * MutationObserver to re-apply on theme changes. Moving the values to CSS costs
+ * nothing and removes both problems — index.html sets the attribute before
+ * React mounts, and the `.dark` variants are ordinary selectors.
  */
 export function applyBrand(
   id: BrandId,
   root: HTMLElement = document.documentElement,
-  isDark: boolean = root.classList.contains("dark"),
 ): void {
   const brand = getBrand(id);
-  const tokens = isDark ? brand.dark : brand.light;
-
-  for (const name of ALL_TOKENS) root.style.removeProperty(name);
-  for (const [name, value] of Object.entries(tokens)) {
-    root.style.setProperty(name, value);
-  }
+  if (brand.id === DEFAULT_BRAND) root.removeAttribute("data-brand");
+  else root.setAttribute("data-brand", brand.id);
 }

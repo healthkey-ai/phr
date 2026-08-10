@@ -52,7 +52,11 @@ export default function SettingsDialog({
               <label
                 key={brand.id}
                 className={cn(
+                  // The radio itself is sr-only, so the focus ring has to be
+                  // drawn by the label or keyboard users cannot see where they
+                  // are in the list.
                   "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors",
+                  "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2",
                   selected
                     ? "border-primary bg-primary/5"
                     : "border-border hover:bg-accent",

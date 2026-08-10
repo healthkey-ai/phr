@@ -13,22 +13,12 @@ const BrandContext = createContext<BrandContextValue | null>(null);
 export function BrandProvider({ children }: { children: ReactNode }) {
   const [brandId, setBrandIdState] = useState<BrandId>(() => loadBrandId());
 
-  // Applied in an effect rather than at render: writing to documentElement is
-  // a side effect on shared state, and React may render more than once.
+  // index.html already stamped the attribute before mount, so this is a no-op
+  // on first render and only does work when the user picks a different brand.
+  // Still an effect rather than inline in render: it mutates shared document
+  // state, and React may render more than once.
   useEffect(() => {
     applyBrand(brandId);
-  }, [brandId]);
-
-  // Brands carry separate light and dark token sets, and the applied values
-  // are inline on the root element, so they cannot re-resolve on their own
-  // when the theme flips. Watch the class that drives dark mode and re-apply.
-  // Nothing toggles `.dark` in the portal today; this exists so that whoever
-  // adds a theme switch does not have to discover the coupling first.
-  useEffect(() => {
-    const root = document.documentElement;
-    const observer = new MutationObserver(() => applyBrand(brandId, root));
-    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
   }, [brandId]);
 
   const setBrandId = useCallback((id: BrandId) => {
