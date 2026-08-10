@@ -1,11 +1,14 @@
 import { Check } from "lucide-react";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useBrand } from "@/contexts/BrandContext";
 import { BRANDS } from "@/lib/branding";
 import type { Brand } from "@/lib/branding";
@@ -84,6 +87,14 @@ export default function SettingsDialog({
             );
           })}
         </fieldset>
+
+        <DialogFooter>
+          {/* Every change applies immediately, so this dismisses rather than
+              confirms — hence Close, not Save, and no Cancel beside it. */}
+          <DialogClose asChild>
+            <Button variant="outline">Close</Button>
+          </DialogClose>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -83,6 +83,10 @@
   --brand-700: 212 87% 33%;
   --brand-primary-alt: 212 95% 40%;
   --brand-green-500: 146 70% 45%;
+  /* Hover for the brand CTA. Its own token, not --success-700: that is the
+     semantic success colour, so pointing the CTA at it made the button turn
+     green on hover under any brand that is not green. */
+  --brand-green-hover: var(--success-700);
 
   /* Semantic */
   --success-50: 152 88% 95%;
@@ -213,6 +217,10 @@
   --brand-700: 212 87% 60%;
   --brand-primary-alt: 212 95% 65%;
   --brand-green-500: 146 70% 45%;
+  /* Hover for the brand CTA. Its own token, not --success-700: that is the
+     semantic success colour, so pointing the CTA at it made the button turn
+     green on hover under any brand that is not green. */
+  --brand-green-hover: var(--success-700);
 
   --success-50: 152 40% 12%;
   --success-200: 152 50% 25%;
@@ -408,6 +416,7 @@
   --brand-700: 258 81% 70%;
   --brand-primary-alt: 260 90% 64%;
   --brand-green-500: 258 81% 70%;
+  --brand-green-hover: 260 90% 64%;
   --link-primary: 260 90% 64%;
   --link-primary-hover: 262 69% 18%;
   --text-brand-secondary-700: 262 69% 18%;
@@ -440,6 +449,7 @@
   --brand-700: 258 81% 70%;
   --brand-primary-alt: 258 85% 78%;
   --brand-green-500: 258 81% 70%;
+  --brand-green-hover: 258 85% 85%;
   --link-primary: 258 85% 78%;
   --link-primary-hover: 258 85% 85%;
   --text-brand-secondary-700: 258 81% 70%;
@@ -463,6 +473,7 @@
   --brand-700: 134 25% 36%;
   --brand-primary-alt: 134 25% 30%;
   --brand-green-500: 134 25% 45%;
+  --brand-green-hover: 134 25% 30%;
   --link-primary: 134 25% 30%;
   --link-primary-hover: 134 25% 24%;
   --text-brand-secondary-700: 134 25% 36%;
@@ -486,6 +497,7 @@
   --brand-700: 134 25% 55%;
   --brand-primary-alt: 134 25% 62%;
   --brand-green-500: 134 30% 60%;
+  --brand-green-hover: 134 30% 70%;
   --link-primary: 134 25% 62%;
   --link-primary-hover: 134 25% 72%;
   --text-brand-secondary-700: 134 25% 55%;
@@ -555,7 +567,7 @@ html .exact-root {
      ambers next to it — pulling the CTA to a brand colour that collides with
      the eligibility palette would read as a status, not an action. */
   --exact-color-brand-green: hsl(var(--brand-green-500));
-  --exact-color-brand-green-hover: hsl(var(--success-700));
+  --exact-color-brand-green-hover: hsl(var(--brand-green-hover));
 
   /* `--exact-border-radius` is deliberately not mapped: the trials list keeps
      its own button shape and takes only the palette. */
