@@ -125,7 +125,7 @@ variable "exact_deploy_branch" {
     fires for main, so the service would sit on a commit nothing updates.
   EOT
   type        = string
-  default     = "feat/phr-federation"
+  default     = "fix/legacy-trials-schema"
 }
 
 variable "exact_url" {
