@@ -90,19 +90,28 @@
   new one, since that project already holds another team's Production
   environment and the service running there.
 
-  **Blocked on review.** exact's `main` is governed by a ruleset requiring one
-  approving review, so #359 cannot merge, and `main` today has neither the
-  node build stage (no `/remoteEntry.js`) nor `/healthz` (health check 404s).
-  Staging currently runs the branch commit, deployed by id to verify the
-  stack. Once #359 is approved and merged:
-  1. Redeploy from `main` and confirm `/healthz` and `/remoteEntry.js`.
-  2. Set `vars.RENDER_EXACT_SERVICE_ID` (`srv-d9t2uhn10e5c7395d750`) and
-     `secrets.RENDER_API_KEY` on the exact repo so `deploy-render.yml` takes
-     over. It hangs off `workflow_run` for the `django` suite because none of
-     exact's CI workflows are `workflow_call`-able.
-  3. Merge phr#56 and rebuild the portal so `VITE_EXACT_REMOTE_URL` bakes in
-     — `exact_url` is pinned in `infra/variables.tf` already. Until the
-     rebuild the menu item stays disabled by design.
+  **Two blockers.**
+
+  1. *Review* — exact's `main` is governed by a ruleset requiring one approving
+     review, so [exact#359](https://github.com/healthkey-ai/exact/pull/359)
+     cannot merge. `main` today has neither the node build stage (no
+     `/remoteEntry.js`) nor `/healthz`, so staging is pinned to the federation
+     branch via `exact_deploy_branch`. Set that back to `"main"` the moment
+     #359 lands: the branch is deleted on merge, and `deploy-render.yml` only
+     fires for `main`.
+  2. *Corpus schema* ([exact#360](https://github.com/healthkey-ai/exact/issues/360))
+     — `GET /trials/` 500s because the shared corpus is three columns and three
+     tables behind the models. Not staging-specific: `dev`, which `exact-2`
+     runs, expects the same fields, and the public snapshot carries the same
+     stale schema. The account EXACT connects with is read-only
+     (`CREATE on public=false`), so the additive DDL needs someone with rights
+     on `ne_bc_trials`. It is written and ready in the issue.
+
+  Everything either side of that endpoint is verified live against
+  `exact-ybht.onrender.com` with a portal-issued RS256 token: `/healthz`,
+  `/remoteEntry.js` (+ CORS), `/countries/`, `/form-settings/` and
+  `/normalize-ctomop-row/` all 200, unauthenticated calls 401, and the portal
+  bundle has the exact origin baked in.
 
   Unlike soc, there is no catalog blocker: the trial corpus lives in the
   externally managed Postgres the existing instance reads, and staging shares

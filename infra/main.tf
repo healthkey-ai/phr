@@ -457,6 +457,13 @@ resource "render_web_service" "exact" {
     # already did it, before traffic switched rather than after.
     RUN_MIGRATIONS = { value = "false" }
 
+    # The shared corpus is behind the models — it is data-only, so the router
+    # never migrates it and the drift is silent until an endpoint names a
+    # column that is not there (exact#360). This lets the trial endpoints
+    # defer what the corpus lacks. Drop it once the corpus is brought up to
+    # the models; it is a stopgap, and off everywhere else.
+    TRIALS_DB_TOLERATE_MISSING_COLUMNS = { value = "true" }
+
     # The portal issues the tokens exact verifies. Only provider configured:
     # there is no Firebase on Render, and naming one that cannot work costs a
     # "no credentials configured" log line on every request.
