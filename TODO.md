@@ -76,6 +76,46 @@
     recommendations. Decide whether the portal should default it — inventing a
     therapy-line count on a patient's behalf is not obviously right.
 
+- [ ] **Finish Find Trials: get EXACT's staging deploy green** ([exact#358](https://github.com/healthkey-ai/exact/issues/358))
+  Federation is done and verified end to end locally: `/trials` renders
+  `exact_remote/TrialMatches`, EXACT accepts portal tokens (`sub="phr:<id>"`,
+  same globally-unique-`sub` reason as soc), the sidebar item enables itself
+  off `VITE_EXACT_REMOTE_URL`, and patient context is normalised by EXACT
+  itself through `/normalize-ctomop-row/` rather than a hand-written field
+  mapping. Open PRs: [exact#359](https://github.com/healthkey-ai/exact/pull/359)
+  and [phr#56](https://github.com/healthkey-ai/phr/pull/56).
+
+  Staging is provisioned — `exact` at https://exact-ybht.onrender.com, in a
+  `staging` environment added to the pre-existing EXACT project rather than a
+  new one, since that project already holds another team's Production
+  environment and the service running there.
+
+  **Blocked on review.** exact's `main` is governed by a ruleset requiring one
+  approving review, so #359 cannot merge, and `main` today has neither the
+  node build stage (no `/remoteEntry.js`) nor `/healthz` (health check 404s).
+  Staging currently runs the branch commit, deployed by id to verify the
+  stack. Once #359 is approved and merged:
+  1. Redeploy from `main` and confirm `/healthz` and `/remoteEntry.js`.
+  2. Set `vars.RENDER_EXACT_SERVICE_ID` (`srv-d9t2uhn10e5c7395d750`) and
+     `secrets.RENDER_API_KEY` on the exact repo so `deploy-render.yml` takes
+     over. It hangs off `workflow_run` for the `django` suite because none of
+     exact's CI workflows are `workflow_call`-able.
+  3. Merge phr#56 and rebuild the portal so `VITE_EXACT_REMOTE_URL` bakes in
+     — `exact_url` is pinned in `infra/variables.tf` already. Until the
+     rebuild the menu item stays disabled by design.
+
+  Unlike soc, there is no catalog blocker: the trial corpus lives in the
+  externally managed Postgres the existing instance reads, and staging shares
+  it rather than holding a copy. Two things worth remembering:
+  - `TRIALS_DATABASE_INIT_FROM_BACKUP=1` restores that corpus from a public
+    snapshot but **drops the public schema first** — fine against a database
+    of its own, destructive against the shared one. Staging leaves it unset.
+  - `CTOMOP_BASE` points at the same promop the portal reads, but only backs
+    EXACT's server-side `?person_id=` resolver, which the portal never calls.
+    That endpoint does not bind `person_id` to the requesting user, so giving
+    it a service token would let any caller read any patient's record. Left
+    empty deliberately.
+
 - [ ] **Multi-installation identity: promop as identity host (see docs/identity-architecture.md)** ([#43](https://github.com/healthkey-ai/phr/issues/43))
   Decisions made 2026-08-06: family auth API contract (phr's endpoint
   shapes) implementable by any identity host; iss = installation origin;
