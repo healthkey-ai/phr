@@ -110,9 +110,22 @@ variable "exact_environment_id" {
 }
 
 variable "exact_deploy_branch" {
-  description = "Git branch the exact service deploys from."
+  description = <<-EOT
+    Git branch the exact service deploys from.
+
+    TEMPORARY: pinned to the federation branch rather than main. exact's
+    main is governed by a ruleset requiring an approving review, and until
+    exact#359 lands, main builds an image with no federation remote and no
+    /healthz — so a deploy from it fails its health check and serves nothing
+    the portal can load. Pinning the branch lets the whole path be exercised
+    end to end meanwhile.
+
+    Set this back to "main" the moment exact#359 merges. Two things break
+    otherwise: the branch gets deleted on merge, and deploy-render.yml only
+    fires for main, so the service would sit on a commit nothing updates.
+  EOT
   type        = string
-  default     = "main"
+  default     = "feat/phr-federation"
 }
 
 variable "exact_url" {
