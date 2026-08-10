@@ -316,14 +316,20 @@ resource "render_web_service" "soc" {
   pre_deploy_command = "python manage.py migrate --noinput"
 
   env_vars = {
-    DJANGO_ENV   = { value = "staging" }
-    SECRET_KEY   = { value = random_password.soc_secret_key.result }
-    DATABASE_URL = { value = render_postgres.soc_db.connection_info.internal_connection_string }
+    DJANGO_ENV = { value = "staging" }
+    SECRET_KEY = { value = random_password.soc_secret_key.result }
+    # staging settings raise at import if this is unset, so the service would
+    # crash-loop rather than start with a permissive default.
+    ALLOWED_HOSTS = { value = ".onrender.com" }
+    DATABASE_URL  = { value = render_postgres.soc_db.connection_info.internal_connection_string }
 
     # The portal issues the tokens soc verifies; its provider derives the
-    # JWKS and introspection URLs from this base.
-    PHR_BASE_URL = { value = render_web_service.backend.url }
-    PHR_ISSUER   = { value = "healthkey-phr" }
+    # JWKS and introspection URLs from this base. It is the only identity
+    # provider here — there is no Firebase on Render, and listing a provider
+    # that cannot work only logs "no credentials configured" per request.
+    PARTNER_AUTH_PROVIDERS = { value = "accounts.providers.phr.PhrTokenProvider" }
+    PHR_BASE_URL           = { value = render_web_service.backend.url }
+    PHR_ISSUER             = { value = "healthkey-phr" }
 
     # The browser calls this API from the portal's origin. The remote itself
     # is served by whitenoise, which already answers cross-origin.
