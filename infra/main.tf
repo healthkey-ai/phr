@@ -242,6 +242,25 @@ resource "render_web_service" "labs" {
   pre_deploy_command = "python manage.py migrate --noinput"
 
   env_vars = local.labs_env_vars
+
+  lifecycle {
+    # These two live in state and nowhere else in the repo — their variables
+    # default to "" so that nothing secret is committed. That default is the
+    # danger: an apply run without TF_VAR_anthropic_api_key or
+    # TF_VAR_labs_gcs_credentials_json exported reads "" as the intended
+    # value and quietly nulls them, which takes out lab extraction and every
+    # upload while the service still reports healthy. It has come close
+    # twice.
+    #
+    # The trade: Terraform can no longer change these once set. Rotate them
+    # in the Render dashboard, or remove the entry here for the one apply
+    # that rotates it. Worth it — a rotation is a deliberate act someone is
+    # watching, an accidental wipe is not.
+    ignore_changes = [
+      env_vars["ANTHROPIC_API_KEY"],
+      env_vars["GS_CREDENTIALS_JSON"],
+    ]
+  }
 }
 
 resource "render_background_worker" "labs_worker" {
@@ -263,6 +282,17 @@ resource "render_background_worker" "labs_worker" {
   start_command = "celery -A config worker --loglevel=info --concurrency=2 --max-tasks-per-child=100 --without-gossip --without-mingle"
 
   env_vars = local.labs_env_vars
+
+  lifecycle {
+    # Same reasoning as the web service above, and it matters more here: the
+    # worker is the half that actually calls the vision model and reads the
+    # bucket, so a wipe here fails extraction in the background where no
+    # request surfaces it.
+    ignore_changes = [
+      env_vars["ANTHROPIC_API_KEY"],
+      env_vars["GS_CREDENTIALS_JSON"],
+    ]
+  }
 }
 
 # ── SOC — treatment recommendations (Find Treatments) ───────────────────────
@@ -443,5 +473,21 @@ resource "render_web_service" "exact" {
     # /api/patient-info/<id>/ itself.
     CTOMOP_BASE          = { value = trimsuffix(var.promop_api_url, "/api") }
     CTOMOP_SERVICE_TOKEN = { value = var.exact_ctomop_service_token }
+  }
+
+  lifecycle {
+    # Same trap as the labs services: the variable defaults to "" so no
+    # credential is committed, and an apply without
+    # TF_VAR_exact_trials_database_url exported would read that "" as intent
+    # and null it. exact then falls back to single-database mode and serves
+    # zero trials — from a service that still passes its health check, since
+    # /healthz deliberately does not probe this alias.
+    #
+    # CTOMOP_SERVICE_TOKEN is left out on purpose: it is empty by design, so
+    # there is nothing to protect, and ignoring it would silently swallow the
+    # apply that first sets it.
+    ignore_changes = [
+      env_vars["TRIALS_DATABASE_URL"],
+    ]
   }
 }
