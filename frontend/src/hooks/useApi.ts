@@ -71,6 +71,14 @@ export function useSocApi() {
   return useServiceApi(import.meta.env.VITE_SOC_API_URL || "http://localhost:9300");
 }
 
+/** EXACT — clinical-trial matching (Find Trials). Origin only: this remote
+ * issues relative paths (`/trials/`, `/form-settings/`) and EXACT mounts its
+ * router at the service root — unlike soc's remote, which builds its own
+ * /api/v1 prefix from an apiBasePath prop. */
+export function useExactApi() {
+  return useServiceApi(import.meta.env.VITE_EXACT_API_URL || "http://localhost:9400");
+}
+
 /** promop's /patient-info/me/ auto-provisions the Person for a first-time
  * phr user, but its lab-results endpoints do NOT — a brand-new user whose
  * first click is Lab Results would 404 until they visit the Health Profile
