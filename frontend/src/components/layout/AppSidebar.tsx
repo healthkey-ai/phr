@@ -64,7 +64,14 @@ const navGroups: NavGroup[] = [
         icon: Search,
         disabled: !import.meta.env.VITE_SOC_REMOTE_URL,
       },
-      { label: "Find Trials", to: "/trials", icon: Microscope, disabled: true },
+      // EXACT's remote; enabled wherever it is configured, same rule as the
+      // other federated items.
+      {
+        label: "Find Trials",
+        to: "/trials",
+        icon: Microscope,
+        disabled: !import.meta.env.VITE_EXACT_REMOTE_URL,
+      },
     ],
   },
   {

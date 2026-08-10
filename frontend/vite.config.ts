@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
   // soc serves its remote from the site root, not under /static/ — whitenoise
   // is configured there with WHITENOISE_ROOT rather than a static prefix.
   const socRemoteUrl = env.VITE_SOC_REMOTE_URL || "http://localhost:9300";
+  const exactRemoteUrl = env.VITE_EXACT_REMOTE_URL || "http://localhost:9400";
 
   const enableFederation = mode !== "test";
 
@@ -29,7 +30,8 @@ export default defineConfig(({ mode }) => {
         if (
           id.startsWith("labs_remote/") ||
           id.startsWith("labs_results_remote/") ||
-          id.startsWith("soc_remote/")
+          id.startsWith("soc_remote/") ||
+          id.startsWith("exact_remote/")
         )
           return `\0${id}`;
       },
@@ -37,7 +39,8 @@ export default defineConfig(({ mode }) => {
         if (
           id.startsWith("\0labs_remote/") ||
           id.startsWith("\0labs_results_remote/") ||
-          id.startsWith("\0soc_remote/")
+          id.startsWith("\0soc_remote/") ||
+          id.startsWith("\0exact_remote/")
         )
           return STUB;
       },
@@ -134,6 +137,12 @@ export default defineConfig(({ mode }) => {
                   type: "module",
                   name: "soc_remote",
                   entry: `${socRemoteUrl}/remoteEntry.js`,
+                },
+                // EXACT — clinical-trial matching (Find Trials).
+                exact_remote: {
+                  type: "module",
+                  name: "exact_remote",
+                  entry: `${exactRemoteUrl}/remoteEntry.js`,
                 },
               },
               dts: false,

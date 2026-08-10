@@ -40,3 +40,13 @@ output "soc_remote_url" {
   description = "Value for the portal's VITE_SOC_REMOTE_URL build arg (set soc_url to this)."
   value       = render_web_service.soc.url
 }
+
+output "exact_url" {
+  description = "Public URL of the exact service (API + federation remote at /remoteEntry.js)."
+  value       = render_web_service.exact.url
+}
+
+output "exact_remote_url" {
+  description = "Value for the portal's VITE_EXACT_REMOTE_URL build arg (set exact_url to this)."
+  value       = render_web_service.exact.url
+}

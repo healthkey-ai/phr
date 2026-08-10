@@ -113,6 +113,11 @@ resource "render_web_service" "backend" {
     VITE_SOC_REMOTE_URL = { value = var.soc_url }
     # Origin only — soc's remote appends its own /api/v1 path.
     VITE_SOC_API_URL = { value = var.soc_url }
+
+    # exact serves its remote from the site root too (whitenoise at "/"),
+    # and its API client is origin-only — the remote builds its own paths.
+    VITE_EXACT_REMOTE_URL = { value = var.exact_url }
+    VITE_EXACT_API_URL    = { value = var.exact_url }
   }
 }
 
@@ -237,6 +242,25 @@ resource "render_web_service" "labs" {
   pre_deploy_command = "python manage.py migrate --noinput"
 
   env_vars = local.labs_env_vars
+
+  lifecycle {
+    # These two live in state and nowhere else in the repo — their variables
+    # default to "" so that nothing secret is committed. That default is the
+    # danger: an apply run without TF_VAR_anthropic_api_key or
+    # TF_VAR_labs_gcs_credentials_json exported reads "" as the intended
+    # value and quietly nulls them, which takes out lab extraction and every
+    # upload while the service still reports healthy. It has come close
+    # twice.
+    #
+    # The trade: Terraform can no longer change these once set. Rotate them
+    # in the Render dashboard, or remove the entry here for the one apply
+    # that rotates it. Worth it — a rotation is a deliberate act someone is
+    # watching, an accidental wipe is not.
+    ignore_changes = [
+      env_vars["ANTHROPIC_API_KEY"],
+      env_vars["GS_CREDENTIALS_JSON"],
+    ]
+  }
 }
 
 resource "render_background_worker" "labs_worker" {
@@ -258,6 +282,17 @@ resource "render_background_worker" "labs_worker" {
   start_command = "celery -A config worker --loglevel=info --concurrency=2 --max-tasks-per-child=100 --without-gossip --without-mingle"
 
   env_vars = local.labs_env_vars
+
+  lifecycle {
+    # Same reasoning as the web service above, and it matters more here: the
+    # worker is the half that actually calls the vision model and reads the
+    # bucket, so a wipe here fails extraction in the background where no
+    # request surfaces it.
+    ignore_changes = [
+      env_vars["ANTHROPIC_API_KEY"],
+      env_vars["GS_CREDENTIALS_JSON"],
+    ]
+  }
 }
 
 # ── SOC — treatment recommendations (Find Treatments) ───────────────────────
@@ -334,5 +369,125 @@ resource "render_web_service" "soc" {
     # The browser calls this API from the portal's origin. The remote itself
     # is served by whitenoise, which already answers cross-origin.
     CORS_ALLOWED_ORIGINS = { value = render_web_service.backend.url }
+  }
+}
+
+# ── EXACT — clinical trial matching (Find Trials) ───────────────────────────
+#
+# One web service and a database, same shape as SOC — but unlike LABS and SOC
+# this does NOT create its own project. An EXACT project already exists and
+# holds someone else's Production environment (the `exact-2` service and its
+# database). Terraform therefore owns only the resources inside a `staging`
+# environment created alongside it, addressed by id through
+# exact_environment_id, exactly as phr's own service is.
+#
+# Importing that project to manage both environments from here was the
+# alternative and was rejected: it would put another team's production
+# environment inside this state file, one `terraform destroy` away from
+# deletion, to gain nothing staging needs.
+#
+# Three databases, and only one of them is provisioned here:
+#   default  — this service's own Django tables (auth, sessions, identities).
+#   trials   — the trial corpus, an externally managed Postgres shared with
+#              the existing exact instance. See exact_trials_database_url.
+#   promop   — not a database connection at all. Patient records reach exact
+#              over HTTP: the portal reads them in the browser with the
+#              patient's own token and posts the row to /normalize-ctomop-row/.
+#              CTOMOP_BASE below only serves exact's server-side `?person_id=`
+#              resolver, which the portal does not use.
+
+resource "random_password" "exact_secret_key" {
+  length  = 50
+  special = false
+}
+
+resource "render_postgres" "exact_db" {
+  name           = "exact-db"
+  plan           = "basic_256mb"
+  region         = var.region
+  version        = "16"
+  database_name  = "exact"
+  database_user  = "exact"
+  environment_id = var.exact_environment_id
+}
+
+resource "render_web_service" "exact" {
+  name           = "exact"
+  plan           = "starter"
+  region         = var.region
+  environment_id = var.exact_environment_id
+
+  runtime_source = {
+    docker = {
+      repo_url        = "https://github.com/healthkey-ai/exact"
+      branch          = var.exact_deploy_branch
+      dockerfile_path = "./Dockerfile"
+      context         = "."
+      auto_deploy     = false
+    }
+  }
+
+  health_check_path = "/healthz"
+
+  # No separate PostGIS step: the GeoDjango backend's prepare_database()
+  # issues CREATE EXTENSION IF NOT EXISTS postgis itself, and migrate calls
+  # it. An earlier attempt ran psql here first and failed — Render does not
+  # expand $DATABASE_URL in the pre-deploy command, so psql fell through to a
+  # local socket that does not exist.
+  #
+  # --run-syncdb matches the container entrypoint, which is what has always
+  # created tables for the apps that carry no migrations.
+  pre_deploy_command = "python manage.py migrate --run-syncdb --noinput"
+
+  env_vars = {
+    ENVIRONMENT = { value = "staging" }
+    DEBUG       = { value = "False" }
+    # settings.py raises at import when this is unset outside local/DEBUG,
+    # so the service crash-loops rather than booting on a shared default.
+    SECRET_KEY    = { value = random_password.exact_secret_key.result }
+    ALLOWED_HOSTS = { value = "localhost,127.0.0.1,.onrender.com" }
+    DATABASE_URL  = { value = render_postgres.exact_db.connection_info.internal_connection_string }
+
+    # Shared, externally managed corpus — read-only from here. See the
+    # variable's own warning about TRIALS_DATABASE_INIT_FROM_BACKUP, which is
+    # deliberately left unset: it drops the public schema before restoring.
+    TRIALS_DATABASE_URL = { value = var.exact_trials_database_url }
+
+    # The entrypoint migrates on every boot by default; pre_deploy_command
+    # already did it, before traffic switched rather than after.
+    RUN_MIGRATIONS = { value = "false" }
+
+    # The portal issues the tokens exact verifies. Only provider configured:
+    # there is no Firebase on Render, and naming one that cannot work costs a
+    # "no credentials configured" log line on every request.
+    PARTNER_AUTH_PROVIDERS = { value = "accounts.providers.phr.PhrTokenProvider" }
+    PHR_BASE_URL           = { value = render_web_service.backend.url }
+    PHR_ISSUER             = { value = "healthkey-phr" }
+
+    # The browser calls this API from the portal's origin. The remote itself
+    # is served by CorsWhiteNoiseMiddleware, which answers cross-origin.
+    CORS_ALLOWED_ORIGINS = { value = render_web_service.backend.url }
+
+    # The same promop the portal reads from — derived from promop_api_url so
+    # the two cannot drift. Origin only: the client appends
+    # /api/patient-info/<id>/ itself.
+    CTOMOP_BASE          = { value = trimsuffix(var.promop_api_url, "/api") }
+    CTOMOP_SERVICE_TOKEN = { value = var.exact_ctomop_service_token }
+  }
+
+  lifecycle {
+    # Same trap as the labs services: the variable defaults to "" so no
+    # credential is committed, and an apply without
+    # TF_VAR_exact_trials_database_url exported would read that "" as intent
+    # and null it. exact then falls back to single-database mode and serves
+    # zero trials — from a service that still passes its health check, since
+    # /healthz deliberately does not probe this alias.
+    #
+    # CTOMOP_SERVICE_TOKEN is left out on purpose: it is empty by design, so
+    # there is nothing to protect, and ignoring it would silently swallow the
+    # apply that first sets it.
+    ignore_changes = [
+      env_vars["TRIALS_DATABASE_URL"],
+    ]
   }
 }
