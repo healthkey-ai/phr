@@ -57,57 +57,100 @@ const GENERIC: Brand = {
  *   #7DFFFF cyan          #A3FF4A lime       #C7E9F0 pale cyan
  *   #F8F4FF pale lavender #4B4F58 body grey
  *
- * The lavender is their primary brand colour but sits at 71% lightness, which
- * cannot carry white text — so `--primary` is the deep purple and the lavender
- * becomes the ring/link colour, where its contrast is fine. Transcribing the
- * palette literally would have looked right in a swatch and failed in use.
+ * Refined against screenshots of the live site, which is where the exact
+ * values below come from: header #250E4D, left menu #9974F1, buttons #9974F0
+ * on a #F8F5FF page, pill-shaped with white labels.
+ *
+ * The lavender carries fills — buttons, the menu — and the deep purple carries
+ * the header and any brand-coloured *text*. That split is deliberate: at 70%
+ * lightness the lavender is fine behind a large white button label and fails
+ * behind small text on white, so `--text-brand-secondary-700` stays purple
+ * while `--primary` and `--brand-700` go lavender.
  */
 const LYMPHOMA: Brand = {
   id: "lymphoma",
   label: "Lymphoma Research Foundation",
   description: "Deep purple and lavender, from lymphoma.org.",
-  swatches: ["264 72% 18%", "262 100% 98%", "260 90% 71%"],
+  swatches: ["262 69% 18%", "258 81% 70%", "258 100% 98%"],
   light: {
-    "--primary": "264 72% 18%",
+    // Sampled from the site itself: header #250E4D, left menu #9974F1,
+    // buttons #9974F0 on a #F8F5FF page.
+    "--primary": "258 81% 70%",
     "--primary-foreground": "0 0% 100%",
-    "--secondary": "262 100% 98%",
-    "--secondary-foreground": "264 72% 18%",
-    "--accent": "262 100% 98%",
-    "--accent-foreground": "264 72% 18%",
-    "--muted": "262 100% 98%",
+    "--background": "258 100% 98%",
+    "--secondary": "258 100% 98%",
+    "--secondary-foreground": "262 69% 18%",
+    "--accent": "258 100% 98%",
+    "--accent-foreground": "262 69% 18%",
+    "--muted": "258 100% 98%",
     "--muted-foreground": "222 8% 32%",
-    "--ring": "260 90% 71%",
-    "--brand-25": "262 100% 98%",
-    "--brand-50": "262 100% 95%",
-    "--brand-200": "260 90% 85%",
-    "--brand-700": "264 72% 18%",
+    "--ring": "258 81% 70%",
+
+    // Chrome. The deep purple carries the header, the lavender the menu —
+    // both against white text, which is how the site uses them.
+    "--header-bg": "262 69% 18%",
+    "--header-foreground": "0 0% 100%",
+    "--header-border": "262 69% 18%",
+    "--sidebar-bg": "258 82% 70%",
+    "--sidebar-foreground": "0 0% 100%",
+    "--sidebar-border": "258 60% 62%",
+    "--sidebar-accent": "258 70% 62%",
+    "--sidebar-accent-foreground": "0 0% 100%",
+    "--sidebar-active": "0 0% 100%",
+    "--sidebar-active-foreground": "0 0% 100%",
+
+    // Pill buttons.
+    "--radius-control": "9999px",
+
+    "--brand-25": "258 100% 98%",
+    "--brand-50": "258 100% 95%",
+    "--brand-200": "258 82% 85%",
+    "--brand-700": "258 81% 70%",
     "--brand-primary-alt": "260 90% 64%",
-    "--brand-green-500": "90 100% 40%",
+    // Drives the federated CTAs (exact's "View Trial", hk-labs' accents), so
+    // it follows the brand rather than staying green.
+    "--brand-green-500": "258 81% 70%",
     "--link-primary": "260 90% 64%",
-    "--link-primary-hover": "264 72% 18%",
-    "--text-brand-secondary-700": "264 72% 18%",
+    "--link-primary-hover": "262 69% 18%",
+    // Brand text on white needs the deep purple; the lavender is a fill
+    // colour and cannot carry small text at 70% lightness.
+    "--text-brand-secondary-700": "262 69% 18%",
   },
   dark: {
-    // On a dark ground the relationship inverts: the lavender is the readable
-    // brand colour and the deep purple becomes the surface it sits on.
-    "--primary": "260 90% 71%",
-    "--primary-foreground": "264 72% 18%",
-    "--secondary": "264 40% 22%",
-    "--secondary-foreground": "262 100% 98%",
-    "--accent": "264 40% 22%",
-    "--accent-foreground": "262 100% 98%",
-    "--muted": "264 40% 22%",
-    "--muted-foreground": "262 30% 75%",
-    "--ring": "260 90% 71%",
-    "--brand-25": "264 50% 16%",
-    "--brand-50": "264 45% 20%",
-    "--brand-200": "260 60% 40%",
-    "--brand-700": "260 90% 71%",
-    "--brand-primary-alt": "260 90% 78%",
-    "--brand-green-500": "90 80% 55%",
-    "--link-primary": "260 90% 78%",
-    "--link-primary-hover": "260 90% 85%",
-    "--text-brand-secondary-700": "260 90% 71%",
+    // On a dark ground the lavender is the readable brand colour and the
+    // deep purple becomes the surface it sits on.
+    "--primary": "258 81% 70%",
+    "--primary-foreground": "262 69% 18%",
+    "--secondary": "262 40% 22%",
+    "--secondary-foreground": "258 100% 98%",
+    "--accent": "262 40% 22%",
+    "--accent-foreground": "258 100% 98%",
+    "--muted": "262 40% 22%",
+    "--muted-foreground": "258 30% 75%",
+    "--ring": "258 81% 70%",
+
+    "--header-bg": "262 69% 12%",
+    "--header-foreground": "0 0% 100%",
+    "--header-border": "262 40% 22%",
+    "--sidebar-bg": "262 55% 20%",
+    "--sidebar-foreground": "258 40% 88%",
+    "--sidebar-border": "262 40% 26%",
+    "--sidebar-accent": "262 45% 28%",
+    "--sidebar-accent-foreground": "0 0% 100%",
+    "--sidebar-active": "258 81% 70%",
+    "--sidebar-active-foreground": "258 81% 78%",
+
+    "--radius-control": "9999px",
+
+    "--brand-25": "262 50% 16%",
+    "--brand-50": "262 45% 20%",
+    "--brand-200": "258 60% 40%",
+    "--brand-700": "258 81% 70%",
+    "--brand-primary-alt": "258 85% 78%",
+    "--brand-green-500": "258 81% 70%",
+    "--link-primary": "258 85% 78%",
+    "--link-primary-hover": "258 85% 85%",
+    "--text-brand-secondary-700": "258 81% 70%",
   },
 };
 
