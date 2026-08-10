@@ -22,7 +22,7 @@ export default function AppLayout() {
         <AppHeader layout="app">
           <button
             onClick={() => setMobileOpen(true)}
-            className="rounded p-1.5 text-muted-foreground hover:bg-accent lg:hidden"
+            className="rounded-control p-1.5 text-header-foreground/70 hover:bg-header-foreground/10 lg:hidden"
           >
             <Menu className="h-5 w-5" />
           </button>

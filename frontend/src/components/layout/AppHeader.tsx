@@ -14,7 +14,7 @@ export default function AppHeader({ layout, title, className, children }: AppHea
   const { user, logout } = useAuth();
 
   return (
-    <header className={cn("flex h-14 items-center border-b border-border bg-card px-4 sm:px-6", className)}>
+    <header className={cn("flex h-14 items-center border-b border-header-border bg-header text-header-foreground px-4 sm:px-6", className)}>
       <div className="flex w-full items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {children}
@@ -27,7 +27,7 @@ export default function AppHeader({ layout, title, className, children }: AppHea
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          <span className="max-md:hidden text-sm text-muted-foreground md:inline">
+          <span className="max-md:hidden text-sm text-header-foreground/70 md:inline">
             {user?.first_name || user?.last_name
               ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
               : user?.email}

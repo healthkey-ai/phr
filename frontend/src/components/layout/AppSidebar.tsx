@@ -12,9 +12,11 @@ import {
   ChevronDown,
   Menu,
   Settings,
+  SlidersHorizontal,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import SettingsDialog from "@/components/settings/SettingsDialog";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -90,7 +92,7 @@ function NavGroupSection({ group, iconOnly }: { group: NavGroup; iconOnly: boole
       {!iconOnly && (
         <button
           onClick={() => setOpen(!open)}
-          className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/70 hover:text-sidebar-accent-foreground"
         >
           {group.label}
           <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !open && "-rotate-90")} />
@@ -107,7 +109,7 @@ function NavGroupSection({ group, iconOnly }: { group: NavGroup; iconOnly: boole
                   aria-disabled="true"
                   title={iconOnly ? item.label : "Coming soon"}
                   className={cn(
-                    "flex items-center rounded text-muted-foreground/50 cursor-not-allowed",
+                    "flex items-center rounded-control text-sidebar-foreground/50 cursor-not-allowed",
                     iconOnly ? "justify-center p-2" : "gap-2.5 px-2.5 py-1.5 text-sm"
                   )}
                 >
@@ -124,11 +126,11 @@ function NavGroupSection({ group, iconOnly }: { group: NavGroup; iconOnly: boole
                 title={iconOnly ? item.label : undefined}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center rounded transition-colors",
+                    "flex items-center rounded-control transition-colors",
                     iconOnly ? "justify-center p-2" : "gap-2.5 px-2.5 py-1.5 text-sm",
                     isActive
-                      ? "bg-primary/10 font-medium text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      ? "bg-sidebar-active/10 font-medium text-sidebar-active-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )
                 }
               >
@@ -143,6 +145,57 @@ function NavGroupSection({ group, iconOnly }: { group: NavGroup; iconOnly: boole
   );
 }
 
+
+/**
+ * Sidebar footer. Extracted because the mobile overlay and the desktop rail
+ * both render it — inlining it twice is how the two drifted apart before.
+ */
+function SidebarFooter({
+  iconOnly,
+  isAdmin,
+  onOpenSettings,
+}: {
+  iconOnly: boolean;
+  isAdmin: boolean;
+  onOpenSettings: () => void;
+}) {
+  const itemClass = cn(
+    "flex w-full items-center rounded-control transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+    iconOnly ? "justify-center p-2" : "gap-2.5 px-2.5 py-1.5 text-sm",
+  );
+
+  return (
+    <>
+      <button
+        onClick={onOpenSettings}
+        title={iconOnly ? "Settings" : undefined}
+        className={itemClass}
+      >
+        <SlidersHorizontal className="h-4 w-4 shrink-0" />
+        {!iconOnly && "Settings"}
+      </button>
+      {isAdmin && (
+        <NavLink
+          to="/admin"
+          title={iconOnly ? "Admin Panel" : undefined}
+          className={({ isActive }) =>
+            cn(
+              "flex items-center rounded-control transition-colors",
+              iconOnly ? "justify-center p-2" : "gap-2.5 px-2.5 py-1.5 text-sm",
+              isActive
+                ? "bg-sidebar-active/10 font-medium text-sidebar-active-foreground"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            )
+          }
+        >
+          <Settings className="h-4 w-4 shrink-0" />
+          {!iconOnly && "Admin Panel"}
+        </NavLink>
+      )}
+    </>
+  );
+}
+
 interface AppSidebarProps {
   expanded: boolean;
   onToggle: () => void;
@@ -152,9 +205,14 @@ interface AppSidebarProps {
 
 export default function AppSidebar({ expanded, onToggle, mobileOpen, onMobileClose }: AppSidebarProps) {
   const { user } = useAuth();
+  // Held here rather than in each aside: both variants are mounted at once
+  // (one hidden by a media query), so per-variant state would give two
+  // dialogs and a toggle that only works in whichever the user is not using.
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <>
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       {/* Backdrop for mobile */}
       {mobileOpen && (
         <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={onMobileClose} />
@@ -163,12 +221,12 @@ export default function AppSidebar({ expanded, onToggle, mobileOpen, onMobileClo
       {/* Mobile overlay sidebar — always full width */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-card transition-transform duration-200 lg:hidden",
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-transform duration-200 lg:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex h-14 items-center border-b border-border px-4">
-          <button onClick={onMobileClose} className="rounded p-1 text-muted-foreground hover:bg-accent">
+          <button onClick={onMobileClose} className="rounded-control p-1 text-sidebar-foreground hover:bg-sidebar-accent">
             <Menu className="h-5 w-5" />
           </button>
         </div>
@@ -177,23 +235,12 @@ export default function AppSidebar({ expanded, onToggle, mobileOpen, onMobileClo
             <NavGroupSection key={group.label} group={group} iconOnly={false} />
           ))}
         </div>
-        <div className="border-t border-border p-3">
-          {user?.claims?.ADMIN && (
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-2.5 rounded px-2.5 py-1.5 text-sm transition-colors",
-                  isActive
-                    ? "bg-primary/10 font-medium text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )
-              }
-            >
-              <Settings className="h-4 w-4 shrink-0" />
-              Admin Panel
-            </NavLink>
-          )}
+        <div className="space-y-0.5 border-t border-sidebar-border p-3">
+          <SidebarFooter
+            iconOnly={false}
+            isAdmin={!!user?.claims?.ADMIN}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
         </div>
       </aside>
 
@@ -204,12 +251,16 @@ export default function AppSidebar({ expanded, onToggle, mobileOpen, onMobileClo
           // compiled Tailwind into our <head> after our stylesheet, and a
           // remote's `.hidden` rule outranks our `lg:flex` by document order,
           // permanently hiding the sidebar. Media-scoped variants can't collide.
-          "max-lg:hidden lg:flex shrink-0 flex-col border-r border-border bg-card transition-all duration-200",
+          // sticky + h-svh so the footer stays on screen. Without it the aside
+          // stretches to the document height, and on any page with content the
+          // footer — Settings, Admin Panel — sits below the fold, reachable
+          // only by scrolling to the very bottom of the page.
+          "max-lg:hidden lg:flex sticky top-0 h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200",
           expanded ? "w-64" : "w-14"
         )}
       >
-        <div className={cn("flex h-14 items-center border-b border-border", expanded ? "px-4" : "justify-center")}>
-          <button onClick={onToggle} className="rounded p-1 text-muted-foreground hover:bg-accent">
+        <div className={cn("flex h-14 items-center border-b border-sidebar-border", expanded ? "px-4" : "justify-center")}>
+          <button onClick={onToggle} className="rounded-control p-1 text-sidebar-foreground hover:bg-sidebar-accent">
             <Menu className="h-5 w-5" />
           </button>
         </div>
@@ -218,25 +269,12 @@ export default function AppSidebar({ expanded, onToggle, mobileOpen, onMobileClo
             <NavGroupSection key={group.label} group={group} iconOnly={!expanded} />
           ))}
         </div>
-        <div className={cn("border-t border-border", expanded ? "p-3" : "p-1")}>
-          {user?.claims?.ADMIN && (
-            <NavLink
-              to="/admin"
-              title={!expanded ? "Admin Panel" : undefined}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center rounded transition-colors",
-                  expanded ? "gap-2.5 px-2.5 py-1.5 text-sm" : "justify-center p-2",
-                  isActive
-                    ? "bg-primary/10 font-medium text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )
-              }
-            >
-              <Settings className="h-4 w-4 shrink-0" />
-              {expanded && "Admin Panel"}
-            </NavLink>
-          )}
+        <div className={cn("space-y-0.5 border-t border-sidebar-border", expanded ? "p-3" : "p-1")}>
+          <SidebarFooter
+            iconOnly={!expanded}
+            isAdmin={!!user?.claims?.ADMIN}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
         </div>
       </aside>
     </>

@@ -25,6 +25,16 @@
         mq.addEventListener("change", apply);
       })();
     </script>
+    <script>
+      // Brand before first paint. The palette lives in index.css keyed off this
+      // attribute; applying it from React would land a frame late and flash the
+      // default colours. Storage can throw (private browsing) — the default
+      // brand is the right answer there, so swallow and move on.
+      try {
+        var b = localStorage.getItem("phr.brand");
+        if (b) document.documentElement.setAttribute("data-brand", b);
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root">

@@ -34,6 +34,26 @@
   --ring: 212 87% 33%;
   --radius: 0.5rem;
 
+  /* App chrome and control shape. Brands re-point these; the defaults are
+     today's look expressed as tokens, so the generic brand is a no-op.
+     `--control-radius` is buttons only — `--radius` also drives cards and
+     panels, and a pill card is not the same request as a pill button. The
+     Tailwind theme entry below reads it under a different name on purpose:
+     `--radius-control: var(--radius-control)` would be self-referential, and
+     only resolved before because this `:root` is unlayered and therefore beat
+     the layered `@theme` emit. That is luck, not design. */
+  --header-bg: var(--card);
+  --header-foreground: var(--foreground);
+  --header-border: var(--border);
+  --sidebar-bg: var(--card);
+  --sidebar-foreground: var(--muted-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-active: var(--primary);
+  --sidebar-active-foreground: var(--primary);
+  --control-radius: 0.375rem;
+
   /* Backgrounds */
   --app-bg-primary: 0 0% 100%;
   --app-bg-secondary: 0 0% 98%;
@@ -230,7 +250,19 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
+  --color-header: hsl(var(--header-bg));
+  --color-header-foreground: hsl(var(--header-foreground));
+  --color-header-border: hsl(var(--header-border));
+  --color-sidebar: hsl(var(--sidebar-bg));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-active: hsl(var(--sidebar-active));
+  --color-sidebar-active-foreground: hsl(var(--sidebar-active-foreground));
+
   --radius: 0.5rem;
+  --radius-control: var(--control-radius);
 
   /* HealthKey namespace */
   --color-healthkey-bg-primary: hsl(var(--app-bg-primary));
@@ -331,11 +363,202 @@
   box-shadow: 0 1px 2px 0 rgba(10, 13, 18, 0.05);
 }
 
+
+/*
+ * Brands. Values live here rather than in JavaScript so the palette is present
+ * on the very first paint — a script that applied them after mount produced a
+ * frame of the default blue before the brand landed. `index.html` sets
+ * `data-brand` synchronously before React mounts; everything below is plain
+ * CSS from then on.
+ *
+ * Specificity is deliberate: `[data-brand=...]` is (0,1,0), the same as the
+ * `:root` block above, so these win on source order — they must stay after it.
+ * The `.dark` variants are (0,2,0) and beat both, which is what makes dark mode
+ * work without any JavaScript watching for a class change.
+ *
+ * Only host tokens appear here. The federated remotes are re-pointed at these
+ * same tokens further down, so they follow a brand switch for free.
+ */
+
+[data-brand="lymphoma"] {
+  --primary: 258 81% 70%;
+  --primary-foreground: 0 0% 100%;
+  --background: 258 100% 98%;
+  --secondary: 258 100% 98%;
+  --secondary-foreground: 262 69% 18%;
+  --accent: 258 100% 98%;
+  --accent-foreground: 262 69% 18%;
+  --muted: 258 100% 98%;
+  --muted-foreground: 222 8% 32%;
+  --ring: 258 81% 70%;
+  --header-bg: 262 69% 18%;
+  --header-foreground: 0 0% 100%;
+  --header-border: 262 69% 18%;
+  --sidebar-bg: 258 82% 70%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-border: 258 60% 62%;
+  --sidebar-accent: 258 70% 62%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-active: 0 0% 100%;
+  --sidebar-active-foreground: 0 0% 100%;
+  --control-radius: 9999px;
+  --brand-25: 258 100% 98%;
+  --brand-50: 258 100% 95%;
+  --brand-200: 258 82% 85%;
+  --brand-700: 258 81% 70%;
+  --brand-primary-alt: 260 90% 64%;
+  --brand-green-500: 258 81% 70%;
+  --link-primary: 260 90% 64%;
+  --link-primary-hover: 262 69% 18%;
+  --text-brand-secondary-700: 262 69% 18%;
+}
+
+[data-brand="lymphoma"].dark {
+  --primary: 258 81% 70%;
+  --primary-foreground: 262 69% 18%;
+  --secondary: 262 40% 22%;
+  --secondary-foreground: 258 100% 98%;
+  --accent: 262 40% 22%;
+  --accent-foreground: 258 100% 98%;
+  --muted: 262 40% 22%;
+  --muted-foreground: 258 30% 75%;
+  --ring: 258 81% 70%;
+  --header-bg: 262 69% 12%;
+  --header-foreground: 0 0% 100%;
+  --header-border: 262 40% 22%;
+  --sidebar-bg: 262 55% 20%;
+  --sidebar-foreground: 258 40% 88%;
+  --sidebar-border: 262 40% 26%;
+  --sidebar-accent: 262 45% 28%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-active: 258 81% 70%;
+  --sidebar-active-foreground: 258 81% 78%;
+  --control-radius: 9999px;
+  --brand-25: 262 50% 16%;
+  --brand-50: 262 45% 20%;
+  --brand-200: 258 60% 40%;
+  --brand-700: 258 81% 70%;
+  --brand-primary-alt: 258 85% 78%;
+  --brand-green-500: 258 81% 70%;
+  --link-primary: 258 85% 78%;
+  --link-primary-hover: 258 85% 85%;
+  --text-brand-secondary-700: 258 81% 70%;
+}
+
+[data-brand="partner"] {
+  --primary: 134 25% 36%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 200 49% 21%;
+  --secondary-foreground: 0 0% 100%;
+  --accent: 40 11% 96%;
+  --accent-foreground: 0 0% 9.4%;
+  --muted: 40 11% 96%;
+  --muted-foreground: 0 0% 40%;
+  --destructive: 5 58% 58%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 134 25% 36%;
+  --brand-25: 134 30% 96%;
+  --brand-50: 134 28% 90%;
+  --brand-200: 134 25% 70%;
+  --brand-700: 134 25% 36%;
+  --brand-primary-alt: 134 25% 30%;
+  --brand-green-500: 134 25% 45%;
+  --link-primary: 134 25% 30%;
+  --link-primary-hover: 134 25% 24%;
+  --text-brand-secondary-700: 134 25% 36%;
+}
+
+[data-brand="partner"].dark {
+  --primary: 134 25% 55%;
+  --primary-foreground: 0 0% 9.4%;
+  --secondary: 200 40% 28%;
+  --secondary-foreground: 0 0% 100%;
+  --accent: 150 8% 20%;
+  --accent-foreground: 0 0% 98%;
+  --muted: 150 8% 20%;
+  --muted-foreground: 150 8% 70%;
+  --destructive: 5 58% 58%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 134 25% 55%;
+  --brand-25: 134 20% 14%;
+  --brand-50: 134 20% 18%;
+  --brand-200: 134 22% 35%;
+  --brand-700: 134 25% 55%;
+  --brand-primary-alt: 134 25% 62%;
+  --brand-green-500: 134 30% 60%;
+  --link-primary: 134 25% 62%;
+  --link-primary-hover: 134 25% 72%;
+  --text-brand-secondary-700: 134 25% 55%;
+}
+
 /* Remap any remote's indigo defaults onto the HealthKey brand blue. */
 .hk-labs-root,
 .promop-root {
   --color-indigo-600: hsl(var(--brand-primary-alt));
   --color-indigo-700: hsl(var(--brand-700));
+}
+
+/*
+ * soc and exact re-pointed at the host palette, so a brand switch reaches the
+ * federated panels and not just the shell around them.
+ *
+ * `html .soc-root` rather than `.soc-root` on purpose. Both remotes declare
+ * their defaults ON their own root element, and a custom property declared on
+ * an element beats one inherited from `:root` — so declaring these at `:root`
+ * would lose, whatever soc.css's comment says. Specificity (0,1,1) over their
+ * (0,1,0) wins regardless of source order, which matters because remote CSS is
+ * injected at runtime and always lands after this stylesheet.
+ *
+ * hk-labs and promop need nothing here: their contracts are already declared
+ * at the top of this file in terms of host tokens, and they consume them with
+ * `var(--host-token, fallback)`.
+ *
+ * Only tokenised colour can be reached this way. Anything a remote hard-codes
+ * outside a custom property stays as it is — and their stylesheets are
+ * cross-origin, so rewriting the rules themselves is not available either
+ * (`cssRules` throws).
+ */
+html .soc-root {
+  --soc-color-primary: hsl(var(--brand-700));
+  --soc-color-danger: hsl(var(--error-700));
+  --soc-color-success: hsl(var(--success-700));
+  --soc-color-warning: hsl(var(--warning-700));
+  --soc-color-muted: hsl(var(--text-quaternary-500));
+  --soc-color-surface: hsl(var(--card));
+  --soc-color-border: hsl(var(--border-secondary));
+  --soc-color-text: hsl(var(--text-primary-900));
+  --soc-color-text-muted: hsl(var(--text-secondary-700));
+  --soc-border-radius: var(--control-radius);
+}
+
+html .exact-root {
+  --exact-color-primary: hsl(var(--brand-700));
+  --exact-color-muted: hsl(var(--text-quaternary-500));
+  --exact-color-surface: hsl(var(--card));
+  --exact-color-border: hsl(var(--border-secondary));
+  --exact-color-text: hsl(var(--text-primary-900));
+  --exact-color-text-muted: hsl(var(--text-secondary-700));
+  --exact-color-text-tertiary: hsl(var(--text-quaternary-500));
+
+  --exact-color-success-50: hsl(var(--success-50));
+  --exact-color-success-200: hsl(var(--success-200));
+  --exact-color-success-700: hsl(var(--success-700));
+  --exact-color-warning-50: hsl(var(--warning-50));
+  --exact-color-warning-200: hsl(var(--warning-200));
+  --exact-color-warning-700: hsl(var(--warning-700));
+  --exact-color-error-50: hsl(var(--error-50));
+  --exact-color-error-200: hsl(var(--error-200));
+  --exact-color-error-700: hsl(var(--error-700));
+
+  /* The "View Trial" CTA. Left on the brand green ramp rather than the
+     primary, because exact uses eligible/potential/not-eligible greens and
+     ambers next to it — pulling the CTA to a brand colour that collides with
+     the eligibility palette would read as a status, not an action. */
+  --exact-color-brand-green: hsl(var(--brand-green-500));
+  --exact-color-brand-green-hover: hsl(var(--success-700));
+
+  /* `--exact-border-radius` is deliberately not mapped: the trials list keeps
+     its own button shape and takes only the palette. */
 }
 
 /* Normalize federated-component headings to match the host style.
