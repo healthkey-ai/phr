@@ -91,7 +91,7 @@ variable "soc_url" {
     back would be a dependency cycle.
   EOT
   type        = string
-  default     = ""
+  default     = "https://soc-o2zz.onrender.com"
 }
 
 variable "labs_gcs_bucket" {
