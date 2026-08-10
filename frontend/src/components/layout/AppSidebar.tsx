@@ -12,9 +12,11 @@ import {
   ChevronDown,
   Menu,
   Settings,
+  SlidersHorizontal,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import SettingsDialog from "@/components/settings/SettingsDialog";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -143,6 +145,57 @@ function NavGroupSection({ group, iconOnly }: { group: NavGroup; iconOnly: boole
   );
 }
 
+
+/**
+ * Sidebar footer. Extracted because the mobile overlay and the desktop rail
+ * both render it — inlining it twice is how the two drifted apart before.
+ */
+function SidebarFooter({
+  iconOnly,
+  isAdmin,
+  onOpenSettings,
+}: {
+  iconOnly: boolean;
+  isAdmin: boolean;
+  onOpenSettings: () => void;
+}) {
+  const itemClass = cn(
+    "flex w-full items-center rounded transition-colors text-muted-foreground hover:bg-accent hover:text-foreground",
+    iconOnly ? "justify-center p-2" : "gap-2.5 px-2.5 py-1.5 text-sm",
+  );
+
+  return (
+    <>
+      <button
+        onClick={onOpenSettings}
+        title={iconOnly ? "Settings" : undefined}
+        className={itemClass}
+      >
+        <SlidersHorizontal className="h-4 w-4 shrink-0" />
+        {!iconOnly && "Settings"}
+      </button>
+      {isAdmin && (
+        <NavLink
+          to="/admin"
+          title={iconOnly ? "Admin Panel" : undefined}
+          className={({ isActive }) =>
+            cn(
+              "flex items-center rounded transition-colors",
+              iconOnly ? "justify-center p-2" : "gap-2.5 px-2.5 py-1.5 text-sm",
+              isActive
+                ? "bg-primary/10 font-medium text-primary"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            )
+          }
+        >
+          <Settings className="h-4 w-4 shrink-0" />
+          {!iconOnly && "Admin Panel"}
+        </NavLink>
+      )}
+    </>
+  );
+}
+
 interface AppSidebarProps {
   expanded: boolean;
   onToggle: () => void;
@@ -152,9 +205,14 @@ interface AppSidebarProps {
 
 export default function AppSidebar({ expanded, onToggle, mobileOpen, onMobileClose }: AppSidebarProps) {
   const { user } = useAuth();
+  // Held here rather than in each aside: both variants are mounted at once
+  // (one hidden by a media query), so per-variant state would give two
+  // dialogs and a toggle that only works in whichever the user is not using.
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <>
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       {/* Backdrop for mobile */}
       {mobileOpen && (
         <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={onMobileClose} />
@@ -177,23 +235,12 @@ export default function AppSidebar({ expanded, onToggle, mobileOpen, onMobileClo
             <NavGroupSection key={group.label} group={group} iconOnly={false} />
           ))}
         </div>
-        <div className="border-t border-border p-3">
-          {user?.claims?.ADMIN && (
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-2.5 rounded px-2.5 py-1.5 text-sm transition-colors",
-                  isActive
-                    ? "bg-primary/10 font-medium text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )
-              }
-            >
-              <Settings className="h-4 w-4 shrink-0" />
-              Admin Panel
-            </NavLink>
-          )}
+        <div className="space-y-0.5 border-t border-border p-3">
+          <SidebarFooter
+            iconOnly={false}
+            isAdmin={!!user?.claims?.ADMIN}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
         </div>
       </aside>
 
@@ -218,25 +265,12 @@ export default function AppSidebar({ expanded, onToggle, mobileOpen, onMobileClo
             <NavGroupSection key={group.label} group={group} iconOnly={!expanded} />
           ))}
         </div>
-        <div className={cn("border-t border-border", expanded ? "p-3" : "p-1")}>
-          {user?.claims?.ADMIN && (
-            <NavLink
-              to="/admin"
-              title={!expanded ? "Admin Panel" : undefined}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center rounded transition-colors",
-                  expanded ? "gap-2.5 px-2.5 py-1.5 text-sm" : "justify-center p-2",
-                  isActive
-                    ? "bg-primary/10 font-medium text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )
-              }
-            >
-              <Settings className="h-4 w-4 shrink-0" />
-              {expanded && "Admin Panel"}
-            </NavLink>
-          )}
+        <div className={cn("space-y-0.5 border-t border-border", expanded ? "p-3" : "p-1")}>
+          <SidebarFooter
+            iconOnly={!expanded}
+            isAdmin={!!user?.claims?.ADMIN}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
         </div>
       </aside>
     </>

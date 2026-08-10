@@ -338,6 +338,65 @@
   --color-indigo-700: hsl(var(--brand-700));
 }
 
+/*
+ * soc and exact re-pointed at the host palette, so a brand switch reaches the
+ * federated panels and not just the shell around them.
+ *
+ * `html .soc-root` rather than `.soc-root` on purpose. Both remotes declare
+ * their defaults ON their own root element, and a custom property declared on
+ * an element beats one inherited from `:root` — so declaring these at `:root`
+ * would lose, whatever soc.css's comment says. Specificity (0,1,1) over their
+ * (0,1,0) wins regardless of source order, which matters because remote CSS is
+ * injected at runtime and always lands after this stylesheet.
+ *
+ * hk-labs and promop need nothing here: their contracts are already declared
+ * at the top of this file in terms of host tokens, and they consume them with
+ * `var(--host-token, fallback)`.
+ *
+ * Only tokenised colour can be reached this way. Anything a remote hard-codes
+ * outside a custom property stays as it is — and their stylesheets are
+ * cross-origin, so rewriting the rules themselves is not available either
+ * (`cssRules` throws).
+ */
+html .soc-root {
+  --soc-color-primary: hsl(var(--brand-700));
+  --soc-color-danger: hsl(var(--error-700));
+  --soc-color-success: hsl(var(--success-700));
+  --soc-color-warning: hsl(var(--warning-700));
+  --soc-color-muted: hsl(var(--text-quaternary-500));
+  --soc-color-surface: hsl(var(--card));
+  --soc-color-border: hsl(var(--border-secondary));
+  --soc-color-text: hsl(var(--text-primary-900));
+  --soc-color-text-muted: hsl(var(--text-secondary-700));
+}
+
+html .exact-root {
+  --exact-color-primary: hsl(var(--brand-700));
+  --exact-color-muted: hsl(var(--text-quaternary-500));
+  --exact-color-surface: hsl(var(--card));
+  --exact-color-border: hsl(var(--border-secondary));
+  --exact-color-text: hsl(var(--text-primary-900));
+  --exact-color-text-muted: hsl(var(--text-secondary-700));
+  --exact-color-text-tertiary: hsl(var(--text-quaternary-500));
+
+  --exact-color-success-50: hsl(var(--success-50));
+  --exact-color-success-200: hsl(var(--success-200));
+  --exact-color-success-700: hsl(var(--success-700));
+  --exact-color-warning-50: hsl(var(--warning-50));
+  --exact-color-warning-200: hsl(var(--warning-200));
+  --exact-color-warning-700: hsl(var(--warning-700));
+  --exact-color-error-50: hsl(var(--error-50));
+  --exact-color-error-200: hsl(var(--error-200));
+  --exact-color-error-700: hsl(var(--error-700));
+
+  /* The "View Trial" CTA. Left on the brand green ramp rather than the
+     primary, because exact uses eligible/potential/not-eligible greens and
+     ambers next to it — pulling the CTA to a brand colour that collides with
+     the eligibility palette would read as a status, not an action. */
+  --exact-color-brand-green: hsl(var(--brand-green-500));
+  --exact-color-brand-green-hover: hsl(var(--success-700));
+}
+
 /* Normalize federated-component headings to match the host style.
    Specificity (0,1,1) beats Tailwind single-class utilities (0,1,0). */
 .federated-content :is(h1, h2) {
