@@ -9,6 +9,8 @@ import {
   Search,
   Microscope,
   Link2,
+  BarChart3,
+  ExternalLink,
   ChevronDown,
   Menu,
   Settings,
@@ -19,12 +21,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import SettingsDialog from "@/components/settings/SettingsDialog";
 import { cn } from "@/lib/utils";
 
-interface NavItem {
+/**
+ * A nav item points either at a route in this app (`to`) or at another site
+ * (`href`), never both — the union is what stops an external destination being
+ * handed to NavLink, which would treat it as a path and route to a 404.
+ */
+type NavItem = {
   label: string;
-  to: string;
   icon: LucideIcon;
   disabled?: boolean;
-}
+} & ({ to: string; href?: never } | { href: string; to?: never });
 
 interface NavGroup {
   label: string;
@@ -82,6 +88,14 @@ const navGroups: NavGroup[] = [
       { label: "Share My Record", to: "/share", icon: Link2, disabled: true },
     ],
   },
+  {
+    // A different audience from everything above, which is why it is its own
+    // group rather than another entry under My Health.
+    label: "For researchers",
+    items: [
+      { label: "Analytics", href: "https://analytics.healthkey.ai", icon: BarChart3 },
+    ],
+  },
 ];
 
 function NavGroupSection({ group, iconOnly }: { group: NavGroup; iconOnly: boolean }) {
@@ -105,7 +119,7 @@ function NavGroupSection({ group, iconOnly }: { group: NavGroup; iconOnly: boole
             if (item.disabled) {
               return (
                 <span
-                  key={item.to}
+                  key={item.to ?? item.href}
                   aria-disabled="true"
                   title={iconOnly ? item.label : "Coming soon"}
                   className={cn(
@@ -116,6 +130,34 @@ function NavGroupSection({ group, iconOnly }: { group: NavGroup; iconOnly: boole
                   <Icon className="h-4 w-4 shrink-0" />
                   {!iconOnly && item.label}
                 </span>
+              );
+            }
+            if (item.href !== undefined) {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  // Another site, so a new tab: leaving the portal mid-task
+                  // would drop whatever the patient was doing. `noopener`
+                  // keeps the opened page from reaching back via window.opener.
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={iconOnly ? item.label : undefined}
+                  className={cn(
+                    "flex items-center rounded-control transition-colors",
+                    iconOnly ? "justify-center p-2" : "gap-2.5 px-2.5 py-1.5 text-sm",
+                    "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {!iconOnly && (
+                    <>
+                      <span className="flex-1">{item.label}</span>
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden="true" />
+                      <span className="sr-only">(opens in a new tab)</span>
+                    </>
+                  )}
+                </a>
               );
             }
             return (
