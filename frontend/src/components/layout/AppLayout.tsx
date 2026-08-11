@@ -26,7 +26,7 @@ export default function AppLayout() {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <HealthKeyLogo className="shrink-0" />
+          <HealthKeyLogo className="shrink-0 text-chrome-logo" />
         </AppHeader>
 
         <main className="flex-1 px-4 py-6 sm:px-6">

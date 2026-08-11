@@ -17,7 +17,7 @@
  * index.css declares them.
  */
 
-export type BrandId = "generic" | "lymphoma" | "partner";
+export type BrandId = "generic" | "lymphoma" | "flf" | "partner";
 
 export interface Brand {
   id: BrandId;
@@ -73,6 +73,28 @@ const LYMPHOMA: Brand = {
 };
 
 /**
+ * Follicular Lymphoma Foundation — theflf.org.
+ *
+ * Scraped from the site's Elementor globals: #4B0F80 deep purple (their
+ * `primary` and `accent`), #774CAB mid purple, #B68AEA light purple, #F6F0FD
+ * page tint, plus #9EE0FA blue and #9A901B olive accents.
+ *
+ * The button treatment is theirs verbatim — their own rule is
+ * `.elementor-button { background: accent }` with `:hover { background:
+ * #774CAB }`, which is exactly `--primary` and the CTA hover token here. The
+ * deep purple also backs their header bars, with white nav labels.
+ *
+ * Unlike the LRF palette this needs no contrast compromise: white on #4B0F80
+ * measures 12.51:1 and white on the #774CAB menu 6.17:1, both past AA.
+ */
+const FLF: Brand = {
+  id: "flf",
+  label: "Follicular Lymphoma Foundation",
+  description: "Deep purple and violet, from theflf.org.",
+  swatches: ["272 79% 28%", "267 38% 48%", "268 76% 97%"],
+};
+
+/**
  * Partner brand — green.
  *
  * #457350 primary, #1B3E50 secondary, #D26056 destructive, #F6F5F4 surface.
@@ -86,7 +108,7 @@ const PARTNER: Brand = {
   swatches: ["134 25% 36%", "200 49% 21%", "40 11% 96%"],
 };
 
-export const BRANDS: Brand[] = [GENERIC, LYMPHOMA, PARTNER];
+export const BRANDS: Brand[] = [GENERIC, LYMPHOMA, FLF, PARTNER];
 
 export const DEFAULT_BRAND: BrandId = "generic";
 
