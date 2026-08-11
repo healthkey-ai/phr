@@ -53,6 +53,11 @@
   --sidebar-active: var(--primary);
   --sidebar-active-foreground: var(--primary);
   --control-radius: 0.375rem;
+  /* The wordmark on the header and the admin sidebar. Defaults to the brand
+     colour, which is right on the light default chrome; a brand that colours
+     its chrome sets this to something that reads on it, since a mark left at
+     --brand-700 disappears when the chrome IS --brand-700. */
+  --chrome-logo: var(--brand-700);
 
   /* Backgrounds */
   --app-bg-primary: 0 0% 100%;
@@ -271,6 +276,7 @@
 
   --radius: 0.5rem;
   --radius-control: var(--control-radius);
+  --color-chrome-logo: hsl(var(--chrome-logo));
 
   /* HealthKey namespace */
   --color-healthkey-bg-primary: hsl(var(--app-bg-primary));
@@ -389,6 +395,7 @@
  */
 
 [data-brand="lymphoma"] {
+  --chrome-logo: 0 0% 100%;
   --primary: 258 81% 70%;
   --primary-foreground: 0 0% 100%;
   --background: 258 100% 98%;
@@ -453,6 +460,77 @@
   --link-primary: 258 85% 78%;
   --link-primary-hover: 258 85% 85%;
   --text-brand-secondary-700: 258 81% 70%;
+}
+
+[data-brand="flf"] {
+  --chrome-logo: 0 0% 100%;
+  --primary: 272 79% 28%;
+  --primary-foreground: 0 0% 100%;
+  --background: 268 76% 97%;
+  --secondary: 268 76% 97%;
+  --secondary-foreground: 272 79% 28%;
+  --accent: 268 76% 97%;
+  --accent-foreground: 272 79% 28%;
+  --muted: 268 76% 97%;
+  --muted-foreground: 0 0% 48%;
+  --ring: 268 70% 73%;
+
+  --header-bg: 272 79% 28%;
+  --header-foreground: 0 0% 100%;
+  --header-border: 272 79% 28%;
+  --sidebar-bg: 267 38% 48%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-border: 267 38% 40%;
+  --sidebar-accent: 267 38% 40%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-active: 0 0% 100%;
+  --sidebar-active-foreground: 0 0% 100%;
+
+  --brand-25: 268 76% 97%;
+  --brand-50: 268 76% 93%;
+  --brand-200: 268 70% 73%;
+  --brand-700: 272 79% 28%;
+  --brand-primary-alt: 267 38% 48%;
+  /* Their button, verbatim: accent fill, #774CAB on hover. */
+  --brand-green-500: 272 79% 28%;
+  --brand-green-hover: 267 38% 48%;
+  --link-primary: 267 38% 48%;
+  --link-primary-hover: 272 79% 28%;
+  --text-brand-secondary-700: 272 79% 28%;
+}
+
+[data-brand="flf"].dark {
+  --primary: 268 70% 73%;
+  --primary-foreground: 272 79% 18%;
+  --secondary: 272 40% 22%;
+  --secondary-foreground: 268 76% 97%;
+  --accent: 272 40% 22%;
+  --accent-foreground: 268 76% 97%;
+  --muted: 272 40% 22%;
+  --muted-foreground: 268 20% 75%;
+  --ring: 268 70% 73%;
+
+  --header-bg: 272 79% 14%;
+  --header-foreground: 0 0% 100%;
+  --header-border: 272 40% 24%;
+  --sidebar-bg: 272 45% 22%;
+  --sidebar-foreground: 268 30% 88%;
+  --sidebar-border: 272 40% 28%;
+  --sidebar-accent: 272 40% 30%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-active: 268 70% 73%;
+  --sidebar-active-foreground: 268 70% 80%;
+
+  --brand-25: 272 50% 16%;
+  --brand-50: 272 45% 20%;
+  --brand-200: 268 60% 45%;
+  --brand-700: 268 70% 73%;
+  --brand-primary-alt: 268 70% 80%;
+  --brand-green-500: 268 70% 73%;
+  --brand-green-hover: 268 70% 80%;
+  --link-primary: 268 70% 80%;
+  --link-primary-hover: 268 70% 88%;
+  --text-brand-secondary-700: 268 70% 73%;
 }
 
 [data-brand="partner"] {

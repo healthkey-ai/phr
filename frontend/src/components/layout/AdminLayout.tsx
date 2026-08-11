@@ -20,7 +20,7 @@ export default function AdminLayout({ title, navItems }: AdminLayoutProps) {
           CSS contains .hidden and would override sm:block by document order. */}
       <aside className="max-sm:hidden sticky top-0 h-svh w-60 shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground sm:block">
         <div className="flex h-14 items-center border-b border-sidebar-border px-4">
-          <HealthKeyLogo showName={false} />
+          <HealthKeyLogo showName={false} className="text-chrome-logo" />
           <span className="ml-2 text-sm font-semibold text-sidebar-foreground">{title}</span>
         </div>
         <nav className="space-y-1 p-3">

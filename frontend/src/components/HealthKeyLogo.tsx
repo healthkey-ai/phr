@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 interface HealthKeyLogoProps {
   className?: string;
   showName?: boolean;
@@ -5,7 +6,13 @@ interface HealthKeyLogoProps {
 
 export default function HealthKeyLogo({ className = "", showName = true }: HealthKeyLogoProps) {
   return (
-    <a href="/" className={`flex items-center gap-2 text-brand-700 no-underline ${className}`}>
+    // cn(), not a template string: the mark sits on the branded header and on
+    // the admin sidebar, where it has to take that surface's foreground. With
+    // string concatenation both colour classes survive and which one wins is
+    // decided by stylesheet order, so the caller's override was ignored —
+    // under a brand whose --brand-700 matches the header, the wordmark
+    // disappeared into it.
+    <a href="/" className={cn("flex items-center gap-2 text-brand-700 no-underline", className)}>
       <svg
         width="28"
         height="28"
