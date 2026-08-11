@@ -8,7 +8,6 @@ import {
   FileHeart,
   Search,
   Microscope,
-  Link2,
   BarChart3,
   ExternalLink,
   ChevronDown,
@@ -49,9 +48,9 @@ const navGroups: NavGroup[] = [
     items: [
       // Only items with a connected federated module are enabled. The labs
       // routes stay registered in App.tsx so deep links keep working during
-      // the hk-labs transition; /connect/records, /treatments, /trials and
-      // /share have NO routes yet — register them before enabling the item,
-      // or the catch-all silently bounces users to /dashboard.
+      // the hk-labs transition. /connect/records still has NO route —
+      // register one before enabling the item, or the catch-all silently
+      // bounces users to /dashboard.
       { label: "Health Profile", to: "/patient/record", icon: UserCircle },
       { label: "Connect Records", to: "/connect/records", icon: FileHeart, disabled: true },
       // Uploads come from hk-labs' remote — enabled only where that remote
@@ -80,12 +79,6 @@ const navGroups: NavGroup[] = [
         icon: Microscope,
         disabled: !import.meta.env.VITE_EXACT_REMOTE_URL,
       },
-    ],
-  },
-  {
-    label: "Sharing",
-    items: [
-      { label: "Share My Record", to: "/share", icon: Link2, disabled: true },
     ],
   },
   {
