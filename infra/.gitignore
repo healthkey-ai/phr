@@ -1,5 +1,10 @@
 .terraform/
-.terraform.lock.hcl
+# .terraform.lock.hcl is deliberately NOT ignored. It pins each provider's
+# exact version and the checksums `init` verifies downloads against, so a
+# fresh clone resolves the same providers rather than whatever the registry
+# serves that day, and a tampered download fails loudly instead of quietly
+# applying. It is also the prerequisite for serving these providers from a
+# local mirror later.
 *.tfstate
 *.tfstate.*
 *.tfvars
